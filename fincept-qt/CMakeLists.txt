@@ -1267,6 +1267,7 @@ set(ALGO_ENGINE_SOURCES
     src/algo_engine/AlgoEngineTypes.cpp
     src/algo_engine/CandleAggregator.cpp
     src/algo_engine/IndicatorEngine.cpp
+    src/algo_engine/StreamingIndicators.cpp
     src/algo_engine/ConditionEvaluator.cpp
     src/algo_engine/PositionManager.cpp
     src/algo_engine/DeploymentRunner.cpp

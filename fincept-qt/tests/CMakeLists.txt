@@ -23,7 +23,7 @@
 # signal about the unit, not about this file: extract the pure logic into a small
 # header (or a leaf .cpp) and test that. Do not grow the link line.
 #
-# Current cost of the whole suite: 4 executables, 7 translation units.
+# Current cost of the whole suite: 5 test executables + 1 benchmark, 13 translation units.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Qt Test ships with every Qt installation, so this adds no new dependency.
@@ -130,4 +130,22 @@ fincept_add_test(tst_indicator_engine
     tst_indicator_engine.cpp
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
 
-message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine")
+# src/algo_engine/StreamingIndicators.{h,cpp}: plain C++, no Qt. IndicatorEngine
+# is linked as the oracle the streaming classes are checked against bar by bar.
+fincept_add_test(tst_streaming_indicators
+    tst_streaming_indicators.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+
+# Timing comparison of the two (machine-dependent, so NOT registered with ctest):
+#   build/<preset>/tests/bench_streaming_indicators [bars]
+add_executable(bench_streaming_indicators
+    bench_streaming_indicators.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+target_link_libraries(bench_streaming_indicators PRIVATE Qt6::Core)
+target_include_directories(bench_streaming_indicators PRIVATE "${PROJECT_SOURCE_DIR}/src")
+set_target_properties(bench_streaming_indicators PROPERTIES UNITY_BUILD OFF FOLDER "tests")
+
+message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
+               "tst_streaming_indicators (+ bench_streaming_indicators)")
