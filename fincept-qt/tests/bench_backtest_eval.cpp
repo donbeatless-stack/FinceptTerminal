@@ -1,11 +1,15 @@
 // Benchmark + parity check for BacktestEngine's condition evaluation: the old
-// path (copy the trailing 500 candles each bar, recompute every operand —
-// WindowOperandSource) against the new one (SeriesOperandSource).
+// path (parse the condition JSON and copy the trailing 500 candles each bar,
+// recompute every operand — WindowOperandSource) against the new one
+// (CompiledConditions over a SeriesOperandSource), with the intermediate step
+// (series operands, JSON still parsed per bar) shown separately.
 //
-// For each strategy the entry and exit groups are evaluated at EVERY bar both
-// ways. BacktestEngine's fills depend on nothing but these verdicts, so equal
-// verdicts at every bar mean identical trades; "diff bars" counts the bars where
-// they differ. The real BacktestEngine::run (new path) is then timed end to end.
+// For each strategy the entry and exit groups are evaluated at EVERY bar the old
+// and the new way. BacktestEngine's fills depend on nothing but these verdicts,
+// so equal verdicts at every bar mean identical trades; "diff bars" counts the
+// bars where they differ, and "verdicts#" fingerprints the old path's verdicts
+// so a change to the evaluator itself shows up as a changed checksum. The real
+// BacktestEngine::run is then timed end to end.
 //
 // Not registered with ctest: timings are machine-dependent. Usage:
 //   bench_backtest_eval [bars]        (default 20000)
@@ -25,6 +29,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <random>
@@ -146,9 +151,13 @@ int main(int argc, char** argv) {
     const QVector<OhlcvCandle> candles = make_walk(bars);
     using clock = std::chrono::steady_clock;
 
-    std::printf("BacktestEngine condition evaluation: %d bars, entry+exit groups evaluated at every bar\n\n", bars);
-    std::printf("%-26s %12s %12s %9s %10s %10s %12s %7s\n", "strategy", "old eval ms", "new eval ms", "speedup",
-                "floor ms", "diff bars", "run() ms", "trades");
+    std::printf("BacktestEngine condition evaluation: %d bars, entry+exit groups evaluated at every bar\n", bars);
+    std::printf("  old      = JSON parsed per bar, operands recomputed on a 500-bar window copy\n"
+                "  series   = JSON parsed per bar, operands from SeriesOperandSource\n"
+                "  compiled = CompiledConditions + SeriesOperandSource (what BacktestEngine runs)\n"
+                "  floor    = CompiledConditions + operands that cost nothing\n\n");
+    std::printf("%-26s %10s %10s %11s %9s %9s %10s %10s %7s   %s\n", "strategy", "old ms", "series ms",
+                "compiled ms", "speedup", "floor ms", "diff bars", "run() ms", "trades", "verdicts#");
 
     for (const Strategy& s : strategies()) {
         std::vector<char> old_entry(bars), old_exit(bars), new_entry(bars), new_exit(bars);
@@ -162,12 +171,29 @@ int main(int argc, char** argv) {
         }
         const auto old_time = clock::now() - o0;
 
+        int series_sink = 0;
+        const auto s0 = clock::now();
+        {
+            SeriesOperandSource operands(candles, kEvalWindow);
+            for (int i = kWarmupBars; i < bars; ++i) {
+                operands.set_bar(i);
+                series_sink += ConditionEvaluator::evaluate_group(s.entry, s.entry_logic, operands).triggered;
+                series_sink += ConditionEvaluator::evaluate_group(s.exit, s.exit_logic, operands).triggered;
+            }
+        }
+        const auto series_time = clock::now() - s0;
+        (void)series_sink;
+
         const auto n0 = clock::now();
-        SeriesOperandSource operands(candles, kEvalWindow);
-        for (int i = kWarmupBars; i < bars; ++i) {
-            operands.set_bar(i);
-            new_entry[i] = ConditionEvaluator::evaluate_group(s.entry, s.entry_logic, operands).triggered;
-            new_exit[i] = ConditionEvaluator::evaluate_group(s.exit, s.exit_logic, operands).triggered;
+        {
+            SeriesOperandSource operands(candles, kEvalWindow);
+            const fincept::algo::CompiledConditions entry(s.entry, s.entry_logic);
+            const fincept::algo::CompiledConditions exit_rules(s.exit, s.exit_logic);
+            for (int i = kWarmupBars; i < bars; ++i) {
+                operands.set_bar(i);
+                new_entry[i] = entry.evaluate(operands).triggered;
+                new_exit[i] = exit_rules.evaluate(operands).triggered;
+            }
         }
         const auto new_time = clock::now() - n0;
 
@@ -175,13 +201,25 @@ int main(int argc, char** argv) {
         for (int i = kWarmupBars; i < bars; ++i)
             diff += (old_entry[i] != new_entry[i] || old_exit[i] != new_exit[i]) ? 1 : 0;
 
+        // FNV-1a over the old path's per-bar verdicts: a fingerprint of the
+        // evaluator's behaviour, to compare across changes to it.
+        std::uint32_t verdicts = 2166136261u;
+        for (int i = kWarmupBars; i < bars; ++i) {
+            verdicts ^= static_cast<std::uint32_t>(old_entry[i] | (old_exit[i] << 1));
+            verdicts *= 16777619u;
+        }
+
         // Approximate: constant operands short-circuit AND/OR groups differently.
         ConstantOperands constant;
         int sink = 0;
         const auto f0 = clock::now();
-        for (int i = kWarmupBars; i < bars; ++i) {
-            sink += ConditionEvaluator::evaluate_group(s.entry, s.entry_logic, constant).triggered;
-            sink += ConditionEvaluator::evaluate_group(s.exit, s.exit_logic, constant).triggered;
+        {
+            const fincept::algo::CompiledConditions entry(s.entry, s.entry_logic);
+            const fincept::algo::CompiledConditions exit_rules(s.exit, s.exit_logic);
+            for (int i = kWarmupBars; i < bars; ++i) {
+                sink += entry.evaluate(constant).triggered;
+                sink += exit_rules.evaluate(constant).triggered;
+            }
         }
         const auto floor_time = clock::now() - f0;
         (void)sink; // keeps the loop observable without printing it
@@ -191,9 +229,9 @@ int main(int argc, char** argv) {
                                                        100'000.0, QStringLiteral("1d"));
         const auto run_time = clock::now() - r0;
 
-        std::printf("%-26s %12.1f %12.1f %8.0fx %10.1f %10d %12.1f %7d\n", s.name, ms(old_time), ms(new_time),
-                    ms(old_time) / ms(new_time), ms(floor_time), diff, ms(run_time),
-                    result.value("total_trades").toInt());
+        std::printf("%-26s %10.1f %10.1f %11.1f %8.0fx %9.1f %10d %10.1f %7d   %08x\n", s.name, ms(old_time),
+                    ms(series_time), ms(new_time), ms(old_time) / ms(new_time), ms(floor_time), diff, ms(run_time),
+                    result.value("total_trades").toInt(), verdicts);
     }
     return 0;
 }

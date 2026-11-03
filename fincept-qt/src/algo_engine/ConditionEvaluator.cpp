@@ -4,7 +4,9 @@
 #include <QJsonObject>
 
 #include <cmath>
+#include <cstddef>
 #include <limits>
+#include <utility>
 
 namespace fincept::algo {
 
@@ -166,35 +168,62 @@ GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, c
 
 GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, const QString& logic,
                                                    OperandSource& operands) {
+    return CompiledConditions(children, logic).evaluate(operands);
+}
 
-    GroupEvalResult group;
+// ── CompiledConditions ──────────────────────────────────────────────────────
+
+CompiledConditions::CompiledConditions(const QJsonArray& children, const QString& logic)
+    : root_(compile(children, logic)) {}
+
+CompiledConditions::Group CompiledConditions::compile(const QJsonArray& children, const QString& logic) {
+    Group group;
     group.logic = logic;
+    group.is_and = (logic.toUpper() != "OR"); // default AND
+    group.nodes.reserve(static_cast<std::size_t>(children.size()));
+    for (const auto& val : children) {
+        const QJsonObject obj = val.toObject();
+        Node node;
+        if (ConditionEvaluator::is_group_node(obj)) {
+            node.is_group = true;
+            node.negate = obj.value("negate").toBool(false);
+            node.group = compile(obj.value("children").toArray(),
+                                 obj.value("logic").toString(obj.value("op").toString("AND")));
+        } else {
+            node.condition = ConditionEvaluator::parse_condition(obj);
+        }
+        group.nodes.push_back(std::move(node));
+    }
+    return group;
+}
 
-    if (children.isEmpty()) {
-        group.triggered = false;
-        return group;
+GroupEvalResult CompiledConditions::evaluate(OperandSource& operands) const {
+    return run_group(root_, operands);
+}
+
+GroupEvalResult CompiledConditions::run_group(const Group& group, OperandSource& operands) {
+    GroupEvalResult result;
+    result.logic = group.logic;
+
+    if (group.nodes.empty()) {
+        result.triggered = false;
+        return result;
     }
 
-    const bool is_and = (logic.toUpper() != "OR"); // default AND
-    bool overall = is_and;
-
-    for (const auto& val : children) {
-        const QJsonObject node = val.toObject();
-
+    bool overall = group.is_and;
+    for (const Node& node : group.nodes) {
         bool met;
-        if (is_group_node(node)) {
-            auto sub = evaluate_group(node.value("children").toArray(),
-                                      node.value("logic").toString(node.value("op").toString("AND")), operands);
-            met = node.value("negate").toBool(false) ? !sub.triggered : sub.triggered;
-            group.details.append(sub.details); // flatten nested detail for reporting
+        if (node.is_group) {
+            auto sub = run_group(node.group, operands);
+            met = node.negate ? !sub.triggered : sub.triggered;
+            result.details.append(sub.details); // flatten nested detail for reporting
         } else {
-            auto cond = parse_condition(node);
-            auto r = evaluate_single(cond, operands);
-            group.details.append(r);
+            auto r = ConditionEvaluator::evaluate_single(node.condition, operands);
+            result.details.append(r);
             met = r.met;
         }
 
-        if (is_and) {
+        if (group.is_and) {
             overall = overall && met;
             if (!overall)
                 break; // short-circuit
@@ -205,8 +234,8 @@ GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, c
         }
     }
 
-    group.triggered = overall;
-    return group;
+    result.triggered = overall;
+    return result;
 }
 
 } // namespace fincept::algo

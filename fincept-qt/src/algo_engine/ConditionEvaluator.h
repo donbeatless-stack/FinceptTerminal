@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QJsonObject>
 
+#include <vector>
+
 namespace fincept::algo {
 
 /// Evaluates a strategy's entry/exit logic against a window of candles whose
@@ -39,13 +41,50 @@ class ConditionEvaluator {
     static ConditionResult evaluate_single(const fincept::services::algo::ConditionDef& condition,
                                            OperandSource& operands);
 
+    /// Parses `children` and evaluates them once: CompiledConditions(children,
+    /// logic).evaluate(operands). Callers evaluating the same tree on many bars
+    /// should hold a CompiledConditions instead.
     static GroupEvalResult evaluate_group(const QJsonArray& children, const QString& logic, OperandSource& operands);
 
   private:
+    friend class CompiledConditions;
+
     static fincept::services::algo::ConditionDef parse_condition(const QJsonObject& obj);
     static bool is_group_node(const QJsonObject& node);
     static bool apply_comparison(double lhs, const QString& op, double rhs);
     static bool apply_crossing(double curr, double prev, double target_curr, double target_prev, const QString& op);
+};
+
+/// A condition tree (the JSON ConditionEvaluator::evaluate_group takes) parsed
+/// once. evaluate() does no JSON work — no key lookups, no re-parsing of every
+/// leaf — which made up nearly all of BacktestEngine's per-bar evaluation cost
+/// once its operands were streamed. evaluate_group() is implemented as
+/// compile-then-evaluate, so the two paths share one set of semantics.
+class CompiledConditions {
+  public:
+    CompiledConditions(const QJsonArray& children, const QString& logic);
+
+    bool empty() const { return root_.nodes.empty(); }
+    GroupEvalResult evaluate(OperandSource& operands) const;
+
+  private:
+    struct Node;
+    struct Group {
+        QString logic; ///< as given — reported back in GroupEvalResult::logic
+        bool is_and = true;
+        std::vector<Node> nodes;
+    };
+    struct Node {
+        bool is_group = false;
+        bool negate = false;                             ///< groups only
+        fincept::services::algo::ConditionDef condition; ///< leaves only
+        Group group;                                     ///< groups only
+    };
+
+    static Group compile(const QJsonArray& children, const QString& logic);
+    static GroupEvalResult run_group(const Group& group, OperandSource& operands);
+
+    Group root_;
 };
 
 } // namespace fincept::algo

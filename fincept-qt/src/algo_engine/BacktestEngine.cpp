@@ -126,6 +126,9 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
     // Condition operands: streaming-capable indicators are computed once over the
     // whole history; the rest are recomputed on the trailing kEvalWindow candles.
     SeriesOperandSource operands(candles, kEvalWindow);
+    // Parsed once, so the per-bar evaluation below does no JSON work.
+    const CompiledConditions entry_rules(entry_conditions, entry_logic);
+    const CompiledConditions exit_rules(exit_conditions, exit_logic);
 
     for (int i = kWarmupBars; i < n; ++i) {
         const OhlcvCandle& bar = candles[i];
@@ -178,7 +181,7 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
         // ── 3. Evaluate conditions on close of bar i → latch for next bar ───
         operands.set_bar(i);
         if (!in_pos && !entry_signal && !entry_conditions.isEmpty()) {
-            const auto g = ConditionEvaluator::evaluate_group(entry_conditions, entry_logic, operands);
+            const auto g = entry_rules.evaluate(operands);
             ++entry_eval_count;
             if (g.triggered) {
                 entry_signal = true;
@@ -204,7 +207,7 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
                                              .arg(d.error));
             }
         } else if (in_pos && !exit_signal && !exit_conditions.isEmpty()) {
-            if (ConditionEvaluator::evaluate_group(exit_conditions, exit_logic, operands).triggered) {
+            if (exit_rules.evaluate(operands).triggered) {
                 exit_signal = true;
                 ++exit_true_count;
             }

@@ -23,7 +23,7 @@
 # signal about the unit, not about this file: extract the pure logic into a small
 # header (or a leaf .cpp) and test that. Do not grow the link line.
 #
-# Current cost of the whole suite: 6 test executables + 2 benchmarks, 26 translation units.
+# Current cost of the whole suite: 7 test executables + 2 benchmarks, 30 translation units.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Qt Test ships with every Qt installation, so this adds no new dependency.
@@ -158,6 +158,17 @@ fincept_add_test(tst_series_operand_source
     "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
 
+# src/algo_engine/ConditionEvaluator.{h,cpp}: operator semantics, offsets, error
+# propagation, AND/OR short-circuiting and nested groups, against a scripted
+# OperandSource. The one test linking Qt6::Gui, and only for headers:
+# ConditionEvaluator.h -> services/algo_trading/AlgoTradingTypes.h -> <QColor>.
+fincept_add_test(tst_condition_evaluator
+    tst_condition_evaluator.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/ConditionEvaluator.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+target_link_libraries(tst_condition_evaluator PRIVATE Qt6::Gui)
+
 # Old-vs-new condition evaluation over whole strategies, plus BacktestEngine::run
 # end to end. A benchmark, not a test, so it may link the evaluator (Qt Gui
 # headers) and the logger; NOT registered with ctest.
@@ -175,5 +186,5 @@ target_include_directories(bench_backtest_eval PRIVATE "${PROJECT_SOURCE_DIR}/sr
 set_target_properties(bench_backtest_eval PROPERTIES UNITY_BUILD OFF FOLDER "tests")
 
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
-               "tst_streaming_indicators, tst_series_operand_source "
+               "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator "
                "(+ bench_streaming_indicators, bench_backtest_eval)")
