@@ -23,7 +23,7 @@
 # signal about the unit, not about this file: extract the pure logic into a small
 # header (or a leaf .cpp) and test that. Do not grow the link line.
 #
-# Current cost of the whole suite: 7 test executables + 2 benchmarks, 30 translation units.
+# Current cost of the whole suite: 8 test executables + 3 benchmarks, 43 translation units.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Qt Test ships with every Qt installation, so this adds no new dependency.
@@ -155,7 +155,18 @@ fincept_add_test(tst_series_operand_source
     tst_series_operand_source.cpp
     "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/SeriesOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingOperand.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+
+# src/algo_engine/LiveOperandSource.{h,cpp}: RealtimeScanRunner's per-symbol
+# operand state (warm-up, live closes, tick bars), against WindowOperandSource.
+fincept_add_test(tst_live_operand_source
+    tst_live_operand_source.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/LiveOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingOperand.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
 
 # src/algo_engine/ConditionEvaluator.{h,cpp}: operator semantics, offsets, error
@@ -178,6 +189,7 @@ add_executable(bench_backtest_eval
     "${PROJECT_SOURCE_DIR}/src/algo_engine/ConditionEvaluator.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/SeriesOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingOperand.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp"
     "${PROJECT_SOURCE_DIR}/src/core/logging/Logger.cpp")
@@ -185,6 +197,21 @@ target_link_libraries(bench_backtest_eval PRIVATE Qt6::Core Qt6::Gui)
 target_include_directories(bench_backtest_eval PRIVATE "${PROJECT_SOURCE_DIR}/src")
 set_target_properties(bench_backtest_eval PROPERTIES UNITY_BUILD OFF FOLDER "tests")
 
+# RealtimeScanRunner's per-sweep cost across a symbol universe and its drift from
+# full-history indicator values, old path vs LiveOperandSource. NOT in ctest.
+add_executable(bench_realtime_scan
+    bench_realtime_scan.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/ConditionEvaluator.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/LiveOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingOperand.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+target_link_libraries(bench_realtime_scan PRIVATE Qt6::Core Qt6::Gui)
+target_include_directories(bench_realtime_scan PRIVATE "${PROJECT_SOURCE_DIR}/src")
+set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tests")
+
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
-               "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator "
-               "(+ bench_streaming_indicators, bench_backtest_eval)")
+               "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
+               "tst_live_operand_source "
+               "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan)")

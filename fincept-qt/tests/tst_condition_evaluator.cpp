@@ -95,6 +95,7 @@ class TstConditionEvaluator : public QObject {
     void nested_groups_negate_and_flatten_details();
     void empty_groups_never_trigger();
     void result_records_carry_the_operands();
+    void compiled_operands_list_every_read_and_its_depth();
 };
 
 void TstConditionEvaluator::comparison_operators() {
@@ -355,6 +356,44 @@ void TstConditionEvaluator::result_records_carry_the_operands() {
     QCOMPARE(g.details.first().target_value, 101.25);
     QVERIFY(!g.details.first().met);
     QVERIFY(ops.params_seen.last() == (QJsonObject{{"period", 9}}));
+}
+
+void TstConditionEvaluator::compiled_operands_list_every_read_and_its_depth() {
+    // (FAST crosses_above SLOW) OR (RSI < 30 AND CLOSE[offset 2] > SLOW) — nested,
+    // compared, a crossing (reads one bar further back), a duplicate, an offset.
+    QJsonObject cross = leaf_vs("FAST", "crosses_above", "SLOW");
+    cross["params"] = QJsonObject{{"period", 12}};
+    cross["compare_params"] = QJsonObject{{"period", 26}};
+    QJsonObject close_vs_slow = leaf_vs("CLOSE", ">", "SLOW");
+    close_vs_slow["offset"] = 2;
+    close_vs_slow["compare_params"] = QJsonObject{{"period", 26}};
+    QJsonObject negative = leaf("NEG", ">", 0);
+    negative["offset"] = -4;
+    const QJsonArray tree{cross,
+                          QJsonObject{{"children", QJsonArray{leaf("RSI", "<", 30), close_vs_slow}}, {"logic", "AND"}},
+                          negative};
+
+    const fincept::algo::CompiledConditions compiled(tree, "OR");
+    const auto refs = compiled.operands();
+    QHash<QString, int> depth;
+    for (const auto& r : refs)
+        depth.insert(QStringLiteral("%1.%2/%3").arg(r.indicator, r.field).arg(r.params.value("period").toInt()),
+                     r.max_offset);
+    QCOMPARE(refs.size(), std::size_t(5)); // SLOW(26) listed once
+    QCOMPARE(depth.value("FAST.value/12"), 1); // crossing: one bar back
+    QCOMPARE(depth.value("SLOW.value/26"), 1); // max of the crossing (1) and the plain read (0)
+    QCOMPARE(depth.value("RSI.value/0"), 0);
+    QCOMPARE(depth.value("CLOSE.value/0"), 2);
+    QCOMPARE(depth.value("NEG.value/0"), 0); // negative offsets read as 0
+
+    // Every read evaluate() makes is covered by the list, at no deeper offset.
+    ScriptedOperands ops;
+    for (const auto& r : refs)
+        for (int k = 0; k <= r.max_offset; ++k)
+            ops.set(QStringLiteral("%1.%2@%3").arg(r.indicator, r.field).arg(k), 1);
+    compiled.evaluate(ops);
+    for (const QString& read : ops.reads)
+        QVERIFY2(ops.values.contains(read) || read == QStringLiteral("NEG.value@-4"), qPrintable(read));
 }
 
 QTEST_GUILESS_MAIN(TstConditionEvaluator)

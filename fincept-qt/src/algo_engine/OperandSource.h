@@ -8,6 +8,15 @@
 
 namespace fincept::algo {
 
+/// One operand a condition tree reads, and the deepest bar it reads it at
+/// (CompiledConditions::operands()).
+struct OperandRef {
+    QString indicator;
+    QJsonObject params;
+    QString field;
+    int max_offset = 0; ///< bars back, including the extra bar crossings read
+};
+
 /// Supplies the indicator values strategy conditions compare. ConditionEvaluator
 /// asks for "`field` of `indicator(params)`, `offset` bars before the current
 /// bar"; how the value is produced is up to the source.

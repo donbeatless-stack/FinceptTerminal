@@ -40,7 +40,9 @@ DeploymentRunner::DeploymentRunner(const services::algo::AlgoDeployment& deploym
     : QObject(parent),
       deployment_(deployment),
       strategy_(strategy),
-      timeframe_(timeframe_from_string(deployment.timeframe.isEmpty() ? strategy.timeframe : deployment.timeframe)) {
+      timeframe_(timeframe_from_string(deployment.timeframe.isEmpty() ? strategy.timeframe : deployment.timeframe)),
+      entry_rules_(std::make_unique<const CompiledConditions>(strategy_.entry_conditions, strategy_.entry_logic)),
+      exit_rules_(std::make_unique<const CompiledConditions>(strategy_.exit_conditions, strategy_.exit_logic)) {
 
     // "live" timeframe → evaluate entry/exit on every quote (tick), not on candle
     // close. (timeframe_ itself falls back to M5 for aggregation/warm-up history.)
@@ -354,10 +356,11 @@ void DeploymentRunner::emit_live_snapshot(double price, const QString& note) {
     snap.metrics = m;
     snap.note = note;
 
-    auto add_rows = [&](const QJsonArray& conds, const QString& logic, const QString& section) {
+    auto add_rows = [&](const QJsonArray& conds, const CompiledConditions& rules, const QString& section) {
         if (conds.isEmpty())
             return;
-        const auto res = ConditionEvaluator::evaluate_group(conds, logic, candles);
+        WindowOperandSource operands(candles);
+        const auto res = rules.evaluate(operands);
         for (const auto& d : res.details) {
             AlgoConditionStatus cs;
             cs.section = section;
@@ -371,8 +374,8 @@ void DeploymentRunner::emit_live_snapshot(double price, const QString& note) {
             snap.conditions.append(cs);
         }
     };
-    add_rows(strategy_.entry_conditions, strategy_.entry_logic, QStringLiteral("entry"));
-    add_rows(strategy_.exit_conditions, strategy_.exit_logic, QStringLiteral("exit"));
+    add_rows(strategy_.entry_conditions, *entry_rules_, QStringLiteral("entry"));
+    add_rows(strategy_.exit_conditions, *exit_rules_, QStringLiteral("exit"));
 
     emit live_update(deployment_.id, snap);
 }
@@ -401,7 +404,8 @@ void DeploymentRunner::on_candle_closed(const OhlcvCandle& /*candle*/) {
 }
 
 void DeploymentRunner::evaluate_entry(const QVector<OhlcvCandle>& candles) {
-    auto result = ConditionEvaluator::evaluate_group(strategy_.entry_conditions, strategy_.entry_logic, candles);
+    WindowOperandSource operands(candles);
+    auto result = entry_rules_->evaluate(operands);
 
     if (!result.triggered)
         return;
@@ -491,7 +495,8 @@ void DeploymentRunner::evaluate_entry(const QVector<OhlcvCandle>& candles) {
 }
 
 void DeploymentRunner::evaluate_exit(const QVector<OhlcvCandle>& candles) {
-    auto result = ConditionEvaluator::evaluate_group(strategy_.exit_conditions, strategy_.exit_logic, candles);
+    WindowOperandSource operands(candles);
+    auto result = exit_rules_->evaluate(operands);
 
     if (!result.triggered)
         return;

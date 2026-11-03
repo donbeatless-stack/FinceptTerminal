@@ -2,6 +2,7 @@
 #pragma once
 #include "algo_engine/AlgoEngineTypes.h"
 #include "algo_engine/CandleAggregator.h"
+#include "algo_engine/LiveOperandSource.h"
 
 #include <QHash>
 #include <QJsonArray>
@@ -11,6 +12,7 @@
 #include <QVector>
 
 #include <memory>
+#include <vector>
 
 class QTimer;
 
@@ -20,12 +22,20 @@ struct BrokerQuote;
 
 namespace fincept::algo {
 
+class CompiledConditions;
+
 /// Runs ONE realtime universe scan on ScanMonitor's dedicated scan thread.
 /// Subscribes the whole universe to the live quote feed, keeps a per-symbol candle
 /// window, and on a coalesced sweep (default 500 ms) evaluates the strategy
 /// conditions on every symbol that priced since the last sweep. Emits match_found
 /// on a fresh false→true edge, gated by a per-symbol cooldown. Alert-only — there is
 /// NO position/order machinery here.
+///
+/// The conditions are parsed once (CompiledConditions). Streamable operands are
+/// kept per symbol as incremental state over the whole warm-up history plus every
+/// live close (LiveOperandSource), so a sweep applies only the tick bars instead
+/// of recomputing each indicator on the candle buffer — and long recursive
+/// indicators are full-history values rather than re-seeded at the buffer start.
 class RealtimeScanRunner : public QObject {
     Q_OBJECT
   public:
@@ -52,6 +62,7 @@ class RealtimeScanRunner : public QObject {
   private:
     struct SymbolState {
         std::unique_ptr<CandleAggregator> agg;
+        std::unique_ptr<LiveOperandSource> operands; // incremental state over closed candles
         double last_price = 0;
         double prev_price = 0;
         bool armed = true;   // edge gate: fire only on false→true
@@ -64,6 +75,7 @@ class RealtimeScanRunner : public QObject {
     void on_sweep();
     QString consumer_id(const QString& symbol) const;
     QVector<OhlcvCandle> eval_window(const SymbolState& st) const;
+    QVector<OhlcvCandle> tick_bars(const SymbolState& st) const;
 
     const QString watch_id_;
     const QStringList universe_;
@@ -77,6 +89,8 @@ class RealtimeScanRunner : public QObject {
     const int sweep_ms_;
     const int cooldown_min_;
     const int required_bars_;
+    std::unique_ptr<const CompiledConditions> compiled_; // parsed once from conditions_/logic_
+    std::vector<OperandRef> operand_refs_;
 
     QHash<QString, SymbolState*> states_; // owned; built in start(), freed in dtor (scan thread)
     QTimer* sweep_timer_ = nullptr;

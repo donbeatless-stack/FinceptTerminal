@@ -34,6 +34,7 @@ void AlgoScanner::scan(const QJsonArray& conditions, const QStringList& symbols,
             QVector<ScanMatch> matches;
             QStringList all_errors = fetch_errors;
             int scanned = 0;
+            const CompiledConditions rules(conditions, logic); // parsed once for every symbol
 
             for (auto it = data.begin(); it != data.end(); ++it) {
                 scanned++;
@@ -43,7 +44,8 @@ void AlgoScanner::scan(const QJsonArray& conditions, const QStringList& symbols,
                     continue;
                 }
 
-                auto eval = ConditionEvaluator::evaluate_group(conditions, logic, candles);
+                WindowOperandSource operands(candles);
+                auto eval = rules.evaluate(operands);
                 if (eval.triggered) {
                     ScanMatch m;
                     m.symbol = it.key();

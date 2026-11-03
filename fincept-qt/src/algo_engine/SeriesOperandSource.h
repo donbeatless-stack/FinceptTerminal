@@ -13,7 +13,7 @@ namespace fincept::algo {
 /// Operand source for replaying a fixed candle history bar by bar (BacktestEngine).
 ///
 /// The first time an operand is requested, an indicator with a streaming
-/// implementation (StreamingIndicators.h) is run ONCE over the whole history and
+/// implementation (StreamingOperand) is run ONCE over the whole history and
 /// its per-bar values are cached; every later request — any bar, any offset — is
 /// an array read. That is O(N) per distinct operand for the whole replay, where
 /// recomputing on a trailing window costs O(window) per bar per operand read,

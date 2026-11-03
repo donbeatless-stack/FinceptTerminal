@@ -30,7 +30,9 @@ RealtimeScanRunner::RealtimeScanRunner(QString watch_id, QStringList universe, Q
       data_source_(std::move(data_source)),
       sweep_ms_(sweep_ms),
       cooldown_min_(cooldown_min),
-      required_bars_(required_bars(conditions_)) {}
+      required_bars_(required_bars(conditions_)),
+      compiled_(std::make_unique<const CompiledConditions>(conditions_, logic_)),
+      operand_refs_(compiled_->operands()) {}
 
 RealtimeScanRunner::~RealtimeScanRunner() {
     qDeleteAll(states_);
@@ -69,6 +71,10 @@ void RealtimeScanRunner::start() {
     for (const QString& sym : universe_) {
         auto* st = new SymbolState();
         st->agg = std::make_unique<CandleAggregator>(sym, tf_enum_, buf);
+        st->operands = std::make_unique<LiveOperandSource>(operand_refs_);
+        // candle_closed is emitted synchronously from on_tick, on this thread.
+        connect(st->agg.get(), &CandleAggregator::candle_closed, this,
+                [st](const OhlcvCandle& c) { st->operands->on_closed(c); });
         states_.insert(sym, st);
     }
 
@@ -111,6 +117,9 @@ void RealtimeScanRunner::warm(const QString& symbol, const QVector<OhlcvCandle>&
     if (it == states_.end() || candles.isEmpty())
         return;
     SymbolState* st = it.value();
+    // The operand state takes the WHOLE history; the aggregator keeps only its
+    // buffer, which now serves just the operands without a streaming path.
+    st->operands->reset(candles);
     st->agg->warm_from(candles);
     st->warmed = true;
     st->dirty = true; // evaluate on the next sweep
@@ -136,10 +145,10 @@ void RealtimeScanRunner::on_quote(const QString& symbol, const fincept::trading:
     st->dirty = true;
 }
 
-QVector<OhlcvCandle> RealtimeScanRunner::eval_window(const SymbolState& st) const {
-    // Mirror DeploymentRunner::live_eval_window — append the previous and current
-    // ticks as the last two closed bars so tick-to-tick crossovers are detected.
-    QVector<OhlcvCandle> candles = st.agg->closed_candles();
+QVector<OhlcvCandle> RealtimeScanRunner::tick_bars(const SymbolState& st) const {
+    // Mirror DeploymentRunner::live_eval_window — the previous and current ticks as
+    // the last two closed bars, so tick-to-tick crossovers are detected.
+    QVector<OhlcvCandle> bars;
     const int64_t now = QDateTime::currentMSecsSinceEpoch();
     if (st.prev_price > 0) {
         OhlcvCandle prev;
@@ -147,14 +156,20 @@ QVector<OhlcvCandle> RealtimeScanRunner::eval_window(const SymbolState& st) cons
         prev.open_time = prev.close_time = now - 1;
         prev.volume = 0;
         prev.is_closed = true;
-        candles.append(prev);
+        bars.append(prev);
     }
     OhlcvCandle cur;
     cur.open = cur.high = cur.low = cur.close = st.last_price;
     cur.open_time = cur.close_time = now;
     cur.volume = 0;
     cur.is_closed = true;
-    candles.append(cur);
+    bars.append(cur);
+    return bars;
+}
+
+QVector<OhlcvCandle> RealtimeScanRunner::eval_window(const SymbolState& st) const {
+    QVector<OhlcvCandle> candles = st.agg->closed_candles();
+    candles.append(tick_bars(st));
     return candles;
 }
 
@@ -168,11 +183,19 @@ void RealtimeScanRunner::on_sweep() {
             continue;
         st->dirty = false;
 
-        const QVector<OhlcvCandle> window = eval_window(*st);
-        if (window.size() < 2)
+        // Streamed operands apply the tick bars to their incremental state; only
+        // operands without a streaming path need the candle window rebuilt.
+        LiveOperandSource& ops = *st->operands;
+        ops.set_ticks(tick_bars(*st));
+        if (ops.bar_count() < 2)
             continue;
+        QVector<OhlcvCandle> window;
+        if (ops.needs_window())
+            window = eval_window(*st);
+        ops.set_window(ops.needs_window() ? &window : nullptr);
 
-        const auto eval = ConditionEvaluator::evaluate_group(conditions_, logic_, window);
+        const auto eval = compiled_->evaluate(ops);
+        ops.set_window(nullptr); // `window` dies with this iteration
         if (eval.triggered) {
             if (st->armed && now - st->last_fired_ms >= cooldown_ms) {
                 QStringList parts;

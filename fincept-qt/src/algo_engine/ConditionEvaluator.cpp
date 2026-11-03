@@ -3,6 +3,7 @@
 
 #include <QJsonObject>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -199,6 +200,38 @@ CompiledConditions::Group CompiledConditions::compile(const QJsonArray& children
 
 GroupEvalResult CompiledConditions::evaluate(OperandSource& operands) const {
     return run_group(root_, operands);
+}
+
+std::vector<OperandRef> CompiledConditions::operands() const {
+    std::vector<OperandRef> out;
+    collect_operands(root_, out);
+    return out;
+}
+
+void CompiledConditions::collect_operands(const Group& group, std::vector<OperandRef>& out) {
+    // Mirrors the reads evaluate_single makes: the operand at its offset (a
+    // negative offset reads as 0), plus one bar further back when the operator
+    // needs the previous sample.
+    const auto add = [&out](const QString& indicator, const QJsonObject& params, const QString& field, int depth) {
+        for (OperandRef& r : out) {
+            if (r.indicator == indicator && r.field == field && r.params == params) {
+                r.max_offset = std::max(r.max_offset, depth);
+                return;
+            }
+        }
+        out.push_back(OperandRef{indicator, params, field, depth});
+    };
+    for (const Node& node : group.nodes) {
+        if (node.is_group) {
+            collect_operands(node.group, out);
+            continue;
+        }
+        const ConditionDef& c = node.condition;
+        const int extra = op_needs_prev(c.op) ? 1 : 0;
+        add(c.indicator, c.params, c.field, std::max(0, c.offset) + extra);
+        if (c.compare_mode == "indicator")
+            add(c.compare_indicator, c.compare_params, c.compare_field, std::max(0, c.compare_offset) + extra);
+    }
 }
 
 GroupEvalResult CompiledConditions::run_group(const Group& group, OperandSource& operands) {

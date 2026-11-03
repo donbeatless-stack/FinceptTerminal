@@ -14,6 +14,8 @@
 
 namespace fincept::algo {
 
+class CompiledConditions;
+
 class DeploymentRunner : public QObject {
     Q_OBJECT
   public:
@@ -117,6 +119,9 @@ class DeploymentRunner : public QObject {
     fincept::services::algo::AlgoDeployment deployment_;
     fincept::services::algo::AlgoStrategy strategy_;
     Timeframe timeframe_;
+    // Entry / exit trees parsed once from strategy_; evaluated per tick (live) or close.
+    std::unique_ptr<const CompiledConditions> entry_rules_;
+    std::unique_ptr<const CompiledConditions> exit_rules_;
     fincept::algo::fno::FnoDataBridge* fno_bridge_ = nullptr; // not owned; lives on main thread
     QString resolved_expiry_; // F&O: expiry chosen at entry; used to key the chain snapshot for leg marks
 

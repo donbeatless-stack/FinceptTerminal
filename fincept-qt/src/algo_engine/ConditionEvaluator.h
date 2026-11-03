@@ -67,6 +67,11 @@ class CompiledConditions {
     bool empty() const { return root_.nodes.empty(); }
     GroupEvalResult evaluate(OperandSource& operands) const;
 
+    /// Every distinct operand the tree can read — left-hand and compared
+    /// indicators, nested groups included — with the deepest offset it is read
+    /// at. Lets a source prepare state before the first evaluation.
+    std::vector<OperandRef> operands() const;
+
   private:
     struct Node;
     struct Group {
@@ -83,6 +88,7 @@ class CompiledConditions {
 
     static Group compile(const QJsonArray& children, const QString& logic);
     static GroupEvalResult run_group(const Group& group, OperandSource& operands);
+    static void collect_operands(const Group& group, std::vector<OperandRef>& out);
 
     Group root_;
 };

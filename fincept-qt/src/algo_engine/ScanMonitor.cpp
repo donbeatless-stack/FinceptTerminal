@@ -149,6 +149,7 @@ void ScanMonitor::on_candles(const QString& id, const QHash<QString, QVector<Ohl
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
     const qint64 cooldown_ms = static_cast<qint64>(qMax(0, w.cooldown_min)) * 60000;
     bool any_warming = false, any_fired = false;
+    const CompiledConditions rules(w.conditions, w.logic); // parsed once for the whole batch
 
     for (auto sit = data.begin(); sit != data.end(); ++sit) {
         const QString& sym = sit.key();
@@ -159,7 +160,8 @@ void ScanMonitor::on_candles(const QString& id, const QHash<QString, QVector<Ohl
             any_warming = true;
             continue;
         }
-        auto eval = ConditionEvaluator::evaluate_group(w.conditions, w.logic, candles);
+        WindowOperandSource operands(candles);
+        auto eval = rules.evaluate(operands);
 
         if (eval.triggered) {
             if (st.armed && now - st.last_fired_ms >= cooldown_ms) {
