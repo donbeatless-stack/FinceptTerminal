@@ -2,9 +2,11 @@
 #include "algo_engine/BacktestEngine.h"
 
 #include "algo_engine/ConditionEvaluator.h"
+#include "algo_engine/SeriesOperandSource.h"
 #include "core/logging/Logger.h"
 
 #include <QDateTime>
+#include <QTimeZone>
 
 #include <algorithm>
 #include <cmath>
@@ -17,9 +19,10 @@ namespace {
 // Python engine's WARMUP_BARS so results are comparable in shape.
 constexpr int kWarmupBars = 50;
 
-// Trailing window passed to the indicator/condition evaluator each bar. Bounds
-// per-bar cost to O(window) instead of O(i) — 500 bars is ample warm-up for any
-// indicator in the catalog (largest typical period ~200).
+// Trailing window for operands WITHOUT a streaming implementation (see
+// SeriesOperandSource), recomputed each bar. Bounds their per-bar cost to
+// O(window) instead of O(i) — 500 bars is ample warm-up for any indicator in the
+// catalog (largest typical period ~200). Streamed operands use the full history.
 constexpr int kEvalWindow = 500;
 
 double round_to(double v, int decimals) {
@@ -120,6 +123,10 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
         shares = 0;
     };
 
+    // Condition operands: streaming-capable indicators are computed once over the
+    // whole history; the rest are recomputed on the trailing kEvalWindow candles.
+    SeriesOperandSource operands(candles, kEvalWindow);
+
     for (int i = kWarmupBars; i < n; ++i) {
         const OhlcvCandle& bar = candles[i];
 
@@ -169,10 +176,9 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
         }
 
         // ── 3. Evaluate conditions on close of bar i → latch for next bar ───
-        const int start = std::max(0, i - kEvalWindow + 1);
-        const QVector<OhlcvCandle> window = candles.mid(start, i - start + 1);
+        operands.set_bar(i);
         if (!in_pos && !entry_signal && !entry_conditions.isEmpty()) {
-            const auto g = ConditionEvaluator::evaluate_group(entry_conditions, entry_logic, window);
+            const auto g = ConditionEvaluator::evaluate_group(entry_conditions, entry_logic, operands);
             ++entry_eval_count;
             if (g.triggered) {
                 entry_signal = true;
@@ -198,7 +204,7 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
                                              .arg(d.error));
             }
         } else if (in_pos && !exit_signal && !exit_conditions.isEmpty()) {
-            if (ConditionEvaluator::evaluate_group(exit_conditions, exit_logic, window).triggered) {
+            if (ConditionEvaluator::evaluate_group(exit_conditions, exit_logic, operands).triggered) {
                 exit_signal = true;
                 ++exit_true_count;
             }
@@ -219,13 +225,16 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
     if (in_pos)
         close_trade(candles[n - 1].close, "end_of_data", n - 1);
 
-    LOG_INFO("Backtest", QString("done: evalBars=%1 entryTrue=%2 exitTrue=%3 entryErr=%4 trades=%5 lastErr='%6'")
+    LOG_INFO("Backtest", QString("done: evalBars=%1 entryTrue=%2 exitTrue=%3 entryErr=%4 trades=%5 lastErr='%6' "
+                                 "operands: %7 streamed, %8 windowed")
                              .arg(entry_eval_count)
                              .arg(entry_true_count)
                              .arg(exit_true_count)
                              .arg(entry_err_count)
                              .arg(trades.size())
-                             .arg(last_entry_err));
+                             .arg(last_entry_err)
+                             .arg(operands.streamed_operands())
+                             .arg(operands.windowed_operands()));
 
     // ── Metrics ─────────────────────────────────────────────────────────────
     const int total_trades = trades.size();

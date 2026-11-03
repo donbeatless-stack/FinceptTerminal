@@ -23,7 +23,7 @@
 # signal about the unit, not about this file: extract the pure logic into a small
 # header (or a leaf .cpp) and test that. Do not grow the link line.
 #
-# Current cost of the whole suite: 5 test executables + 1 benchmark, 13 translation units.
+# Current cost of the whole suite: 6 test executables + 2 benchmarks, 26 translation units.
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Qt Test ships with every Qt installation, so this adds no new dependency.
@@ -147,5 +147,33 @@ target_link_libraries(bench_streaming_indicators PRIVATE Qt6::Core)
 target_include_directories(bench_streaming_indicators PRIVATE "${PROJECT_SOURCE_DIR}/src")
 set_target_properties(bench_streaming_indicators PROPERTIES UNITY_BUILD OFF FOLDER "tests")
 
+# src/algo_engine/{OperandSource,SeriesOperandSource}: the operand layer
+# BacktestEngine evaluates conditions through. Tested below ConditionEvaluator on
+# purpose: the evaluator's header pulls services/algo_trading/AlgoTradingTypes.h
+# (QColor, i.e. Qt Gui), and its verdicts are a pure function of these operands.
+fincept_add_test(tst_series_operand_source
+    tst_series_operand_source.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/SeriesOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+
+# Old-vs-new condition evaluation over whole strategies, plus BacktestEngine::run
+# end to end. A benchmark, not a test, so it may link the evaluator (Qt Gui
+# headers) and the logger; NOT registered with ctest.
+add_executable(bench_backtest_eval
+    bench_backtest_eval.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/BacktestEngine.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/ConditionEvaluator.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/SeriesOperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/StreamingIndicators.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp"
+    "${PROJECT_SOURCE_DIR}/src/core/logging/Logger.cpp")
+target_link_libraries(bench_backtest_eval PRIVATE Qt6::Core Qt6::Gui)
+target_include_directories(bench_backtest_eval PRIVATE "${PROJECT_SOURCE_DIR}/src")
+set_target_properties(bench_backtest_eval PROPERTIES UNITY_BUILD OFF FOLDER "tests")
+
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
-               "tst_streaming_indicators (+ bench_streaming_indicators)")
+               "tst_streaming_indicators, tst_series_operand_source "
+               "(+ bench_streaming_indicators, bench_backtest_eval)")

@@ -78,39 +78,13 @@ bool ConditionEvaluator::apply_crossing(double curr, double prev, double target_
     return false;
 }
 
-double ConditionEvaluator::operand_value(const QString& indicator, const QJsonObject& params, const QString& field,
-                                         int offset, const QVector<OhlcvCandle>& candles, QString* error) {
-    if (offset < 0)
-        offset = 0;
-    QVector<OhlcvCandle> window = candles;
-    if (offset > 0) {
-        if (offset >= candles.size()) {
-            if (error)
-                *error = QStringLiteral("insufficient data for offset %1").arg(offset);
-            return kNaN;
-        }
-        window = candles.mid(0, candles.size() - offset);
-    }
-    auto r = IndicatorEngine::compute(indicator, window, params, field);
-    if (!r.valid) {
-        if (error)
-            *error = r.error;
-        return kNaN;
-    }
-    // Single choke point for every operand: a non-finite indicator value is a data
-    // defect, not a tradeable level. Normalise it to NaN + an error so no operator
-    // downstream can compare against ±inf.
-    const double v = r.current.value(field, kNaN);
-    if (cond_non_finite(v)) {
-        if (error)
-            *error = QStringLiteral("%1 produced a non-finite value").arg(indicator);
-        return kNaN;
-    }
-    return v;
-}
-
 ConditionResult ConditionEvaluator::evaluate_single(const ConditionDef& condition,
                                                     const QVector<OhlcvCandle>& candles) {
+    WindowOperandSource operands(candles);
+    return evaluate_single(condition, operands);
+}
+
+ConditionResult ConditionEvaluator::evaluate_single(const ConditionDef& condition, OperandSource& operands) {
 
     ConditionResult result;
     result.indicator = condition.indicator;
@@ -120,29 +94,28 @@ ConditionResult ConditionEvaluator::evaluate_single(const ConditionDef& conditio
     const bool needs_prev = op_needs_prev(condition.op);
 
     QString err;
-    double lhs_curr =
-        operand_value(condition.indicator, condition.params, condition.field, condition.offset, candles, &err);
+    double lhs_curr = operands.value(condition.indicator, condition.params, condition.field, condition.offset, &err);
     if (!err.isEmpty()) {
         result.error = err;
         return result;
     }
     result.computed_value = lhs_curr;
 
-    double lhs_prev = needs_prev ? operand_value(condition.indicator, condition.params, condition.field,
-                                                 condition.offset + 1, candles, nullptr)
-                                 : kNaN;
+    double lhs_prev =
+        needs_prev ? operands.value(condition.indicator, condition.params, condition.field, condition.offset + 1, nullptr)
+                   : kNaN;
 
     double rhs_curr, rhs_prev;
     if (condition.compare_mode == "indicator") {
         QString cerr;
-        rhs_curr = operand_value(condition.compare_indicator, condition.compare_params, condition.compare_field,
-                                 condition.compare_offset, candles, &cerr);
+        rhs_curr = operands.value(condition.compare_indicator, condition.compare_params, condition.compare_field,
+                                  condition.compare_offset, &cerr);
         if (!cerr.isEmpty()) {
             result.error = cerr;
             return result;
         }
-        rhs_prev = needs_prev ? operand_value(condition.compare_indicator, condition.compare_params,
-                                              condition.compare_field, condition.compare_offset + 1, candles, nullptr)
+        rhs_prev = needs_prev ? operands.value(condition.compare_indicator, condition.compare_params,
+                                               condition.compare_field, condition.compare_offset + 1, nullptr)
                               : kNaN;
     } else {
         rhs_curr = condition.value;
@@ -187,6 +160,12 @@ ConditionResult ConditionEvaluator::evaluate_single(const ConditionDef& conditio
 
 GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, const QString& logic,
                                                    const QVector<OhlcvCandle>& candles) {
+    WindowOperandSource operands(candles);
+    return evaluate_group(children, logic, operands);
+}
+
+GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, const QString& logic,
+                                                   OperandSource& operands) {
 
     GroupEvalResult group;
     group.logic = logic;
@@ -205,12 +184,12 @@ GroupEvalResult ConditionEvaluator::evaluate_group(const QJsonArray& children, c
         bool met;
         if (is_group_node(node)) {
             auto sub = evaluate_group(node.value("children").toArray(),
-                                      node.value("logic").toString(node.value("op").toString("AND")), candles);
+                                      node.value("logic").toString(node.value("op").toString("AND")), operands);
             met = node.value("negate").toBool(false) ? !sub.triggered : sub.triggered;
             group.details.append(sub.details); // flatten nested detail for reporting
         } else {
             auto cond = parse_condition(node);
-            auto r = evaluate_single(cond, candles);
+            auto r = evaluate_single(cond, operands);
             group.details.append(r);
             met = r.met;
         }
