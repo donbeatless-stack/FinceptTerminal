@@ -3,7 +3,10 @@
 // OrderValidator.cpp includes only its own header, which includes only
 // trading/TradingTypes.h (Qt Core types + plain aggregate structs, no .cpp of
 // its own). That is why this suite costs exactly one extra translation unit and
-// links nothing from the broker registry, the HTTP stack or any service.
+// links nothing from the broker registry, the HTTP stack or any service. The
+// stateful half of the risk gate (settings I/O, account snapshot,
+// pre_trade_risk) lives in OrderValidatorRiskGate.cpp and is not linked here;
+// check_risk() is pure and is covered below.
 //
 // The headline case is validate_smart()'s FLATTEN order: position_size == 0 is a
 // legitimate target ("close me out"), and the engine derives the quantity from
@@ -91,6 +94,17 @@ class TstOrderValidator : public QObject {
     void basket_rejects_empty();
     void basket_accepts_all_valid_legs();
     void basket_reports_the_failing_leg_by_index_and_symbol();
+
+    // check_risk() — pre-trade risk gate
+    void risk_defaults_pass_a_normal_order();
+    void risk_sanity_quantity_ceiling_applies_to_everything();
+    void risk_sanity_buying_power_multiple_is_cash_only();
+    void risk_configured_limits_skip_reducing_and_paper_orders();
+    void risk_blocked_symbols_match_plain_and_exchange_qualified();
+    void risk_max_order_quantity_is_inclusive();
+    void risk_max_order_value_fails_closed_without_a_price();
+    void risk_daily_loss_limit_fails_closed_and_triggers_at_the_limit();
+    void derivative_exchange_classification();
 };
 
 // ── validate() ───────────────────────────────────────────────────────────────
@@ -185,12 +199,12 @@ void TstOrderValidator::rejects_non_positive_quantity() {
     o.quantity = 0;
     auto r = OrderValidator::validate(o);
     QVERIFY(!r.valid);
-    QVERIFY(has_error(r, QStringLiteral("Quantity must be positive")));
+    QVERIFY(has_error(r, QStringLiteral("Quantity must be a positive number")));
 
     o.quantity = -5;
     r = OrderValidator::validate(o);
     QVERIFY(!r.valid);
-    QVERIFY(has_error(r, QStringLiteral("Quantity must be positive")));
+    QVERIFY(has_error(r, QStringLiteral("Quantity must be a positive number")));
 
     // Fractional quantities are permitted (crypto / fractional shares).
     o.quantity = 0.5;
@@ -287,7 +301,7 @@ void TstOrderValidator::errors_accumulate() {
     QCOMPARE(r.errors.size(), qsizetype(4));
     QVERIFY(has_error(r, QStringLiteral("Symbol is required")));
     QVERIFY(has_error(r, QStringLiteral("Invalid exchange: NOPE")));
-    QVERIFY(has_error(r, QStringLiteral("Quantity must be positive")));
+    QVERIFY(has_error(r, QStringLiteral("Quantity must be a positive number")));
     QVERIFY(has_error(r, QStringLiteral("Price is required")));
 }
 
@@ -336,7 +350,7 @@ void TstOrderValidator::smart_rejects_negative_quantity() {
     QVERIFY(!r.valid);
     QVERIFY(has_error(r, QStringLiteral("Quantity cannot be negative")));
     // And specifically NOT the stricter validate() wording.
-    QVERIFY(!has_error(r, QStringLiteral("Quantity must be positive")));
+    QVERIFY(!has_error(r, QStringLiteral("Quantity must be a positive number")));
 }
 
 void TstOrderValidator::smart_validates_symbol_and_exchange() {
@@ -431,9 +445,179 @@ void TstOrderValidator::basket_reports_the_failing_leg_by_index_and_symbol() {
     QVERIFY(!r.valid);
     QCOMPARE(r.errors.size(), qsizetype(1));
     // 1-based index, then the leg's symbol, then the underlying message.
-    QVERIFY2(has_error(r, QStringLiteral("Order 2 (TCS): Quantity must be positive")),
+    QVERIFY2(has_error(r, QStringLiteral("Order 2 (TCS): Quantity must be a positive number")),
              qPrintable(joined(r)));
     QVERIFY(!has_error(r, QStringLiteral("Order 1")));
+}
+
+// ── check_risk() ─────────────────────────────────────────────────────────────
+
+using RiskSettings = OrderValidator::RiskSettings;
+using RiskContext = OrderValidator::RiskContext;
+
+void TstOrderValidator::risk_defaults_pass_a_normal_order() {
+    // Out of the box only the sanity guard is on, and an ordinary order with no
+    // known price or funds must sail through it.
+    const auto r = OrderValidator::check_risk(good_order(), RiskSettings{}, RiskContext{});
+    QVERIFY2(r.valid, qPrintable(joined(r)));
+}
+
+void TstOrderValidator::risk_sanity_quantity_ceiling_applies_to_everything() {
+    UnifiedOrder o = good_order();
+    o.quantity = OrderValidator::kSanityMaxQuantity + 1;
+
+    auto r = OrderValidator::check_risk(o, RiskSettings{}, RiskContext{});
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("beyond any sane single order")));
+
+    // Unlike the configured limits, the ceiling still applies to a reducing order.
+    RiskContext reducing;
+    reducing.reduces_position = true;
+    QVERIFY(!OrderValidator::check_risk(o, RiskSettings{}, reducing).valid);
+
+    // ...and is lifted only when the user turns sanity checks off.
+    RiskSettings off;
+    off.sanity_checks = false;
+    QVERIFY(OrderValidator::check_risk(o, off, RiskContext{}).valid);
+
+    o.quantity = OrderValidator::kSanityMaxQuantity; // boundary is exclusive
+    QVERIFY(OrderValidator::check_risk(o, RiskSettings{}, RiskContext{}).valid);
+}
+
+void TstOrderValidator::risk_sanity_buying_power_multiple_is_cash_only() {
+    UnifiedOrder o = good_order();
+    RiskContext ctx;
+    ctx.ref_price = 100.0;
+    ctx.buying_power = 10'000.0; // 10x multiple -> 100,000 notional cap
+
+    o.quantity = 1'000; // exactly 10x: allowed
+    QVERIFY(OrderValidator::check_risk(o, RiskSettings{}, ctx).valid);
+
+    o.quantity = 1'001; // just over: probable fat-finger
+    auto r = OrderValidator::check_risk(o, RiskSettings{}, ctx);
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("more than 10x the available buying power")));
+
+    // Derivative segments legitimately run 10-50x notional/margin.
+    o.exchange = QStringLiteral("NFO");
+    QVERIFY(OrderValidator::check_risk(o, RiskSettings{}, ctx).valid);
+
+    // Unknown buying power is not evidence of a typo.
+    o.exchange = QStringLiteral("NSE");
+    ctx.buying_power = 0.0;
+    QVERIFY(OrderValidator::check_risk(o, RiskSettings{}, ctx).valid);
+
+    // Closing out never trips the buying-power test.
+    ctx.buying_power = 10'000.0;
+    ctx.reduces_position = true;
+    QVERIFY(OrderValidator::check_risk(o, RiskSettings{}, ctx).valid);
+}
+
+void TstOrderValidator::risk_configured_limits_skip_reducing_and_paper_orders() {
+    RiskSettings s;
+    s.max_order_quantity = 5;
+    s.blocked_symbols << QStringLiteral("RELIANCE");
+    s.daily_loss_limit = 100;
+
+    UnifiedOrder o = good_order(); // RELIANCE x10: breaks two limits, P&L unknown
+
+    RiskContext routed;
+    QVERIFY(!OrderValidator::check_risk(o, s, routed).valid);
+
+    // A limit must never trap the user in the position it exists to cap.
+    RiskContext reducing;
+    reducing.reduces_position = true;
+    const auto r = OrderValidator::check_risk(o, s, reducing);
+    QVERIFY2(r.valid, qPrintable(joined(r)));
+
+    // The local paper simulator is not subject to the user's broker limits.
+    RiskContext paper;
+    paper.broker_routed = false;
+    QVERIFY(OrderValidator::check_risk(o, s, paper).valid);
+}
+
+void TstOrderValidator::risk_blocked_symbols_match_plain_and_exchange_qualified() {
+    RiskSettings s;
+    s.blocked_symbols << QStringLiteral("RELIANCE") << QStringLiteral("NSE:TCS");
+
+    // Order fields are trimmed and upper-cased before matching.
+    UnifiedOrder o = good_order();
+    o.symbol = QStringLiteral(" reliance ");
+    o.exchange = QStringLiteral("nse");
+    auto r = OrderValidator::check_risk(o, s, RiskContext{});
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("blocked-symbols list")));
+
+    // An exchange-qualified entry blocks only that venue.
+    o.symbol = QStringLiteral("TCS");
+    QVERIFY(!OrderValidator::check_risk(o, s, RiskContext{}).valid);
+    o.exchange = QStringLiteral("BSE");
+    QVERIFY(OrderValidator::check_risk(o, s, RiskContext{}).valid);
+}
+
+void TstOrderValidator::risk_max_order_quantity_is_inclusive() {
+    RiskSettings s;
+    s.max_order_quantity = 100;
+    UnifiedOrder o = good_order();
+
+    o.quantity = 100;
+    QVERIFY(OrderValidator::check_risk(o, s, RiskContext{}).valid);
+
+    o.quantity = 101;
+    const auto r = OrderValidator::check_risk(o, s, RiskContext{});
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("exceeds your max order quantity")));
+}
+
+void TstOrderValidator::risk_max_order_value_fails_closed_without_a_price() {
+    RiskSettings s;
+    s.max_order_value = 50'000;
+    UnifiedOrder o = good_order();
+
+    // No reference price: a cap that cannot be evaluated is not a pass.
+    auto r = OrderValidator::check_risk(o, s, RiskContext{});
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("no reference price is known")));
+
+    RiskContext ctx;
+    ctx.ref_price = 100.0;
+    o.quantity = 500; // 50,000: at the cap
+    QVERIFY(OrderValidator::check_risk(o, s, ctx).valid);
+
+    o.quantity = 501; // 50,100: over
+    r = OrderValidator::check_risk(o, s, ctx);
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("exceeds your max order value")));
+}
+
+void TstOrderValidator::risk_daily_loss_limit_fails_closed_and_triggers_at_the_limit() {
+    RiskSettings s;
+    s.daily_loss_limit = 1'000;
+    const UnifiedOrder o = good_order();
+
+    // P&L not loaded yet: refuse rather than guess.
+    auto r = OrderValidator::check_risk(o, s, RiskContext{});
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("not loaded")));
+
+    RiskContext ctx;
+    ctx.day_pnl_known = true;
+    ctx.day_pnl = -999.99;
+    QVERIFY(OrderValidator::check_risk(o, s, ctx).valid);
+
+    ctx.day_pnl = -1'000.0; // reaching the limit is enough (<=)
+    r = OrderValidator::check_risk(o, s, ctx);
+    QVERIFY(!r.valid);
+    QVERIFY(has_error(r, QStringLiteral("Daily loss limit reached")));
+}
+
+void TstOrderValidator::derivative_exchange_classification() {
+    QVERIFY(OrderValidator::is_derivative_exchange(QStringLiteral("NFO")));
+    QVERIFY(OrderValidator::is_derivative_exchange(QStringLiteral("MCX")));
+    QVERIFY(OrderValidator::is_derivative_exchange(QStringLiteral(" cds "))); // trimmed + case-insensitive
+    QVERIFY(!OrderValidator::is_derivative_exchange(QStringLiteral("NSE")));
+    QVERIFY(!OrderValidator::is_derivative_exchange(QStringLiteral("NASDAQ")));
+    QVERIFY(!OrderValidator::is_derivative_exchange(QString()));
 }
 
 QTEST_GUILESS_MAIN(TstOrderValidator)

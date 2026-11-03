@@ -9,6 +9,10 @@
 // F&O screen) and from the paths that bypass place_order (basket legs, split orders,
 // smart orders, GTT approvals). Configured limits are OFF by default; only the
 // absurd-order sanity check is on by default.
+//
+// Implementation is split: OrderValidator.cpp holds the pure logic (validate*,
+// check_risk) and must stay storage-free; OrderValidatorRiskGate.cpp holds settings
+// I/O, the account snapshot and pre_trade_risk().
 
 #include "trading/TradingTypes.h"
 

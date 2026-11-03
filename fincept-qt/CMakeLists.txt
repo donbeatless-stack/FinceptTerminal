@@ -1171,6 +1171,7 @@ set(TRADING_SOURCES
     src/trading/OptionsStrategyBuilder.cpp
     src/trading/StrategyPortfolio.cpp
     src/trading/OrderValidator.cpp
+    src/trading/OrderValidatorRiskGate.cpp
     src/trading/LatencyTracker.cpp
     src/trading/TradingNotificationBridge.cpp
     src/trading/AccountManager.cpp
