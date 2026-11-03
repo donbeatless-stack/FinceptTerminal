@@ -721,11 +721,13 @@ endforeach()
 # PATCH_COMMAND removes -framework AGL which was deleted in macOS 14 (Sonoma).
 # Uses a portable CMake script instead of sed (sed is unavailable in MSVC
 # Developer Command Prompt on Windows and is fragile across platforms).
+# No GIT_SHALLOW: the pin is a bare master commit, and a depth-1 clone only
+# carries branch/tag tips — once upstream master advances the checkout fails
+# with "unable to read tree".
 FetchContent_Declare(
     QGeoView
     GIT_REPOSITORY https://github.com/AmonRaNet/QGeoView.git
     GIT_TAG        4b2c52c80940e1073c259ded1a57df83036ba1c9  # master @ 2026-04-11
-    GIT_SHALLOW    TRUE
     PATCH_COMMAND  ${CMAKE_COMMAND}
         -DFILE=<SOURCE_DIR>/lib/CMakeLists.txt
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/qgeoview_remove_agl.cmake"
@@ -809,7 +811,7 @@ FetchContent_Declare(
     ed25519
     GIT_REPOSITORY https://github.com/orlp/ed25519.git
     GIT_TAG        b1f19fab4aebe607805620d25a5e42566ce46a0e  # master @ 2026-04-27
-    GIT_SHALLOW    TRUE
+    # No GIT_SHALLOW — bare master commit, same failure mode as QGeoView above.
     UPDATE_DISCONNECTED TRUE
 )
 FetchContent_MakeAvailable(ed25519)
