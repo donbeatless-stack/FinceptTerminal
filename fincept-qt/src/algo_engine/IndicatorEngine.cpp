@@ -201,7 +201,52 @@ IndicatorResult IndicatorEngine::compute(const QString& name, const QVector<Ohlc
         return compute_vol_win_chg(vol, window);
     }
 
+    // Statistics
+    if (name == "ZSCORE")
+        return compute_zscore(close, period);
+    if (name == "REALIZED_VOL")
+        return compute_realized_vol(close, period, params.value("periods_per_year").toDouble(252.0));
+
     return make_error(QStringLiteral("Unknown indicator: ") + name);
+}
+
+// ── Warm-up length ──────────────────────────────────────────────────────────
+// Mirrors the dispatch above: same parameter names, same defaults, same clamp.
+// Each count is the shortest series for which that compute_* returns valid.
+// tst_indicator_warmup checks every catalog indicator against compute() itself.
+
+int IndicatorEngine::warmup_bars(const QString& name, const QJsonObject& params) {
+    auto at_least_one = [](int v) { return v >= 1 ? v : 1; };
+    auto p = [&](const char* key, int def) { return at_least_one(params.value(QLatin1String(key)).toInt(def)); };
+    const int period = p("period", 14);
+
+    if (name == "CLOSE" || name == "OPEN" || name == "HIGH" || name == "LOW" || name == "VOLUME" || name == "VWAP")
+        return 1;
+
+    if (name == "SMA" || name == "EMA" || name == "WMA" || name == "CCI" || name == "WILLIAMS_R" ||
+        name == "BOLLINGER" || name == "KELTNER" || name == "DONCHIAN" || name == "CMF" || name == "ZSCORE")
+        return period;
+    if (name == "RSI" || name == "MFI" || name == "ROC" || name == "SUPERTREND" || name == "AROON" || name == "ATR")
+        return period + 1;
+    if (name == "DEMA")
+        return 2 * period - 1; // EMA of an EMA: the second seeds period - 1 bars after the first
+    if (name == "TEMA")
+        return 3 * period - 2;
+    if (name == "MACD")
+        return std::max(p("fast", 12), p("slow", 26)) + p("signal", 9) - 1;
+    if (name == "STOCHASTIC")
+        return p("k_period", 14) + p("d_period", 3) - 1;
+    if (name == "ADX")
+        return 2 * period + 1;
+    if (name == "ICHIMOKU")
+        return std::max({p("tenkan", 9), p("kijun", 26), p("senkou", 52)});
+    if (name == "OBV")
+        return 2;
+    if (name == "VOL_WIN_CHG")
+        return 2 * p("window", 10);
+    if (name == "REALIZED_VOL")
+        return std::max(period, 2) + 1; // `period` log returns need period + 1 closes
+    return 0;
 }
 
 // ── Stock attributes ────────────────────────────────────────────────────────
@@ -674,7 +719,11 @@ IndicatorResult IndicatorEngine::compute_aroon(const QVector<double>& high, cons
 IndicatorResult IndicatorEngine::compute_ichimoku(const QVector<double>& high, const QVector<double>& low, int tenkan,
                                                   int kijun, int senkou) {
     int n = high.size();
-    if (n < senkou)
+    // Every line reads its own lookback, so the longest of the three sets the minimum.
+    // Checking only `senkou` let a kijun/tenkan longer than senkou (the builder allows
+    // kijun 100 with senkou 52) index before the start of the series.
+    const int longest = std::max({tenkan, kijun, senkou});
+    if (n < longest)
         return make_error(QStringLiteral("Insufficient data for Ichimoku"));
 
     auto midpoint = [&](int end, int period) -> double {
@@ -699,7 +748,7 @@ IndicatorResult IndicatorEngine::compute_ichimoku(const QVector<double>& high, c
     r.current[QStringLiteral("senkou_a")] = sa;
     r.current[QStringLiteral("senkou_b")] = sb;
 
-    if (n > senkou) {
+    if (n > longest) {
         int p = n - 2;
         r.previous[QStringLiteral("tenkan_sen")] = midpoint(p, tenkan);
         r.previous[QStringLiteral("kijun_sen")] = midpoint(p, kijun);
@@ -849,6 +898,80 @@ IndicatorResult IndicatorEngine::compute_obv(const QVector<double>& close, const
             obv -= volume[i];
     }
     return make_result(obv, prev_obv);
+}
+
+// ── Statistics ──────────────────────────────────────────────────────────────
+// Window references for streaming::ZScore / streaming::RealizedVolatility: plain
+// two-pass sums over the trailing window, recomputed for the current and the
+// previous bar. The streaming versions keep rolling moments instead, so the two
+// agree to rounding (tst_streaming_indicators), not bit for bit.
+
+IndicatorResult IndicatorEngine::compute_zscore(const QVector<double>& close, int period) {
+    const int n = close.size();
+    if (n < period)
+        return make_error(QStringLiteral("Insufficient data for ZSCORE"));
+    // (x_last - mean) / population sd over the last `period` closes ending at `end`.
+    auto calc = [&](int end) -> double {
+        double sum = 0;
+        for (int i = end - period + 1; i <= end; ++i)
+            sum += close[i];
+        const double mean = sum / period;
+        double m2 = 0;
+        for (int i = end - period + 1; i <= end; ++i)
+            m2 += (close[i] - mean) * (close[i] - mean);
+        const double sd = std::sqrt(m2 / period);
+        if (sd <= 1e-9 * std::max(1.0, std::abs(mean)))
+            return 0.0; // flat window: no dispersion to scale by
+        return (close[end] - mean) / sd;
+    };
+    const double curr = calc(n - 1);
+    const double prev = n >= period + 1 ? calc(n - 2) : std::numeric_limits<double>::quiet_NaN();
+    return make_result(curr, prev);
+}
+
+IndicatorResult IndicatorEngine::compute_realized_vol(const QVector<double>& close, int period,
+                                                      double periods_per_year) {
+    period = std::max(period, 2); // a sample sd needs two returns
+    const double annualizer =
+        std::sqrt(std::isfinite(periods_per_year) && periods_per_year > 0 ? periods_per_year : 252.0);
+    // Log returns between consecutive positive closes, each tagged with the bar it
+    // ends on. A non-positive close is skipped (no return into or out of it), as in
+    // the streaming version.
+    QVector<double> rets;
+    QVector<int> ret_bar;
+    double prev_close = 0;
+    for (int i = 0; i < close.size(); ++i) {
+        const double c = close[i];
+        if (!std::isfinite(c) || c <= 0.0)
+            continue;
+        if (prev_close > 0.0) {
+            rets.append(std::log(c / prev_close));
+            ret_bar.append(i);
+        }
+        prev_close = c;
+    }
+    // Annualised sample sd of the last `period` returns ending at or before bar `end`.
+    auto calc = [&](int end) -> double {
+        int last = static_cast<int>(rets.size()) - 1;
+        while (last >= 0 && ret_bar[last] > end)
+            --last;
+        if (last + 1 < period)
+            return std::numeric_limits<double>::quiet_NaN();
+        const int first = last - period + 1;
+        double sum = 0;
+        for (int i = first; i <= last; ++i)
+            sum += rets[i];
+        const double mean = sum / period;
+        double m2 = 0;
+        for (int i = first; i <= last; ++i)
+            m2 += (rets[i] - mean) * (rets[i] - mean);
+        return std::sqrt(m2 / (period - 1)) * annualizer;
+    };
+    const int n = close.size();
+    const double curr = calc(n - 1);
+    if (std::isnan(curr))
+        return make_error(QStringLiteral("Insufficient data for REALIZED_VOL"));
+    return make_result(curr, n >= 2 ? calc(n - 2) : std::numeric_limits<double>::quiet_NaN());
 }
 
 IndicatorResult IndicatorEngine::compute_vol_win_chg(const QVector<double>& volume, int window) {

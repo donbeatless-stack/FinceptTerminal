@@ -53,6 +53,30 @@ bool ConditionEvaluator::is_group_node(const QJsonObject& node) {
     return node.contains("children") || node.value("type").toString() == "group";
 }
 
+int ConditionEvaluator::required_bars(const QJsonArray& conditions) {
+    int need = 2;
+    for (const auto& v : conditions) {
+        const QJsonObject node = v.toObject();
+        if (is_group_node(node)) {
+            need = std::max(need, required_bars(node.value("children").toArray()));
+            continue;
+        }
+        const auto c = parse_condition(node);
+        // evaluate_single reads each side `offset` bars back and, for operators
+        // that compare against the previous sample, one bar further. A window
+        // operand is compute() on the truncated series, which needs >= 2 candles.
+        const int back = op_needs_prev(c.op) ? 1 : 0;
+        auto side = [back](const QString& ind, const QJsonObject& params, int offset) {
+            return std::max(IndicatorEngine::warmup_bars(ind, params), 2) + std::max(0, offset) + back;
+        };
+        int leaf = side(c.indicator, c.params, c.offset);
+        if (c.compare_mode == "indicator")
+            leaf = std::max(leaf, side(c.compare_indicator, c.compare_params, c.compare_offset));
+        need = std::max(need, leaf);
+    }
+    return need;
+}
+
 bool ConditionEvaluator::apply_comparison(double lhs, const QString& op, double rhs) {
     if (cond_non_finite(lhs) || cond_non_finite(rhs))
         return false;

@@ -21,8 +21,8 @@ constexpr int kWarmupBars = 50;
 
 // Trailing window for operands WITHOUT a streaming implementation (see
 // SeriesOperandSource), recomputed each bar. Bounds their per-bar cost to
-// O(window) instead of O(i) — 500 bars is ample warm-up for any indicator in the
-// catalog (largest typical period ~200). Streamed operands use the full history.
+// O(window) instead of O(i) — 500 bars covers typical periods (~200); run() widens
+// it to fit the conditions' required_bars. Streamed operands use the full history.
 constexpr int kEvalWindow = 500;
 
 double round_to(double v, int decimals) {
@@ -124,8 +124,11 @@ QJsonObject BacktestEngine::run(const QVector<OhlcvCandle>& candles, const QJson
     };
 
     // Condition operands: streaming-capable indicators are computed once over the
-    // whole history; the rest are recomputed on the trailing kEvalWindow candles.
-    SeriesOperandSource operands(candles, kEvalWindow);
+    // whole history; the rest are recomputed on a trailing window — kEvalWindow, or
+    // longer when the conditions need it (the builder allows TEMA(500): 1498 bars).
+    const int need = std::max(ConditionEvaluator::required_bars(entry_conditions),
+                              ConditionEvaluator::required_bars(exit_conditions));
+    SeriesOperandSource operands(candles, std::max(kEvalWindow, need + 50));
     // Parsed once, so the per-bar evaluation below does no JSON work.
     const CompiledConditions entry_rules(entry_conditions, entry_logic);
     const CompiledConditions exit_rules(exit_conditions, exit_logic);

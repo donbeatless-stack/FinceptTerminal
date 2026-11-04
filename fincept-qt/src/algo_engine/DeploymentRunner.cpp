@@ -49,8 +49,11 @@ DeploymentRunner::DeploymentRunner(const services::algo::AlgoDeployment& deploym
     const QString tf_str = deployment.timeframe.isEmpty() ? strategy.timeframe : deployment.timeframe;
     live_mode_ = (tf_str.compare(QStringLiteral("live"), Qt::CaseInsensitive) == 0);
 
-    // Capacity 500 so long indicators (SMA200) + a crossover lookback fit.
-    aggregator_ = std::make_unique<CandleAggregator>(deployment.symbol, timeframe_, 500, this);
+    // Capacity 500 so long indicators (SMA200) + a crossover lookback fit — more when
+    // the conditions need it (TEMA(200) alone needs 598 bars).
+    const int need = std::max(ConditionEvaluator::required_bars(strategy_.entry_conditions),
+                              ConditionEvaluator::required_bars(strategy_.exit_conditions));
+    aggregator_ = std::make_unique<CandleAggregator>(deployment.symbol, timeframe_, std::max(500, need + 50), this);
     connect(aggregator_.get(), &CandleAggregator::candle_closed, this, &DeploymentRunner::on_candle_closed);
 
     position_mgr_ = std::make_unique<PositionManager>(deployment.id, strategy.stop_loss, strategy.take_profit,

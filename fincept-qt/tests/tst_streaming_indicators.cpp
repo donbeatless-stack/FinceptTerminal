@@ -8,8 +8,9 @@
 // The walk includes a flat no-trade stretch and a gap, so the zero-range and
 // zero-variance branches and the extrema deques' eviction are all exercised.
 //
-// The indicators with no batch counterpart (ZScore, RealizedVolatility) are
-// checked against a two-pass reference and against hand-computed closed forms.
+// ZScore and RealizedVolatility are also checked against a two-pass reference and
+// hand-computed closed forms; their batch versions keep plain sums instead of
+// rolling moments, so those two agree with the batch engine to rounding only.
 //
 // Links StreamingIndicators.cpp and IndicatorEngine.cpp only — Qt Core + Test.
 
@@ -162,8 +163,10 @@ class TstStreamingIndicators : public QObject {
     void stochastic_matches_batch();
     void williams_r_matches_batch();
     void obv_matches_batch();
+    void zscore_matches_batch();
+    void realized_volatility_matches_batch();
 
-    // indicators with no batch counterpart
+    // the same two against an independent reference
     void zscore_matches_two_pass_reference();
     void zscore_closed_form();
     void realized_volatility_matches_two_pass_reference();
@@ -328,7 +331,25 @@ void TstStreamingIndicators::obv_matches_batch() {
         [&] { return s.ready(); }, [&](const QString&) { return s.value(); });
 }
 
-// ── Indicators with no batch counterpart ─────────────────────────────────────
+void TstStreamingIndicators::zscore_matches_batch() {
+    // Rolling moments (stream) vs two-pass sums (batch): rounding-level agreement.
+    // The flat stretch at bars 150-184 exercises the zero-dispersion branch on both.
+    st::ZScore s(20);
+    compare_with_batch(
+        "ZSCORE", period_param(20), {"value"}, kWelfordTol, [&](const OhlcvCandle& c) { s.update(c.close); },
+        [&] { return s.ready(); }, [&](const QString&) { return s.value(); });
+}
+
+void TstStreamingIndicators::realized_volatility_matches_batch() {
+    // US 15-minute bars: 26 a session.
+    st::RealizedVolatility s(20, 252.0 * 26);
+    compare_with_batch(
+        "REALIZED_VOL", QJsonObject{{"period", 20}, {"periods_per_year", 252 * 26}}, {"value"}, kWelfordTol,
+        [&](const OhlcvCandle& c) { s.update(c.close); }, [&] { return s.ready(); },
+        [&](const QString&) { return s.value(); });
+}
+
+// ── Against an independent reference ─────────────────────────────────────────
 
 void TstStreamingIndicators::zscore_matches_two_pass_reference() {
     constexpr int kPeriod = 20;

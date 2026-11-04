@@ -34,6 +34,9 @@ class ScanMonitor : public QObject {
     // Realtime-only: carries the live price for the Universe matches table. The
     // generic watch_fired (above) still drives toasts + alert history for both modes.
     void realtime_match(const QString& watch_id, const QString& symbol, double price, const QString& detail);
+    // Realtime-only: every warm-up history fetch has come back. Ends the "warming"
+    // phase (status becomes "watching", or "no_history" when nothing warmed).
+    void realtime_warmed(const QString& watch_id, const fincept::algo::ScanWarmupSummary& summary);
 
   private:
     ScanMonitor() = default;

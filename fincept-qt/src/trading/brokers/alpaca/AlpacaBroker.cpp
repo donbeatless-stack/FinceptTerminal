@@ -5,13 +5,12 @@
 #include "trading/brokers/BrokerClientOrderId.h"
 #include "trading/brokers/BrokerHttp.h"
 #include "trading/brokers/BrokerLogRedact.h"
+#include "trading/brokers/alpaca/AlpacaBarsPaging.h"
 
 #include <QDateTime>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QStringList>
-#include <QTimeZone>
-#include <QUrl>
 
 namespace fincept::trading {
 
@@ -62,35 +61,6 @@ QString alpaca_qty(double quantity) {
             s.chop(1);
     }
     return s;
-}
-
-// The bars endpoint wants RFC-3339 times; a bare date is read as midnight UTC.
-// Callers pass "yyyy-MM-dd", local "yyyy-MM-dd HH:mm" (Historify — not RFC-3339,
-// so Alpaca rejected it) or ISO. Normalise all of them to RFC-3339 UTC. A bare END
-// date means "through that day": read literally it cut off the whole day — today's
-// bars included — so it becomes the next midnight, capped at now. Empty → empty
-// for a start, now for an end.
-QString alpaca_time_param(const QString& value, bool is_end) {
-    const QDateTime now = QDateTime::currentDateTimeUtc();
-    const QString v = value.trimmed();
-    QDateTime t;
-    if (v.isEmpty()) {
-        if (!is_end)
-            return {};
-        t = now;
-    } else if (const QDate d = QDate::fromString(v, "yyyy-MM-dd"); d.isValid()) {
-        t = QDateTime(is_end ? d.addDays(1) : d, QTime(0, 0), QTimeZone::UTC);
-    } else {
-        t = QDateTime::fromString(v, "yyyy-MM-dd HH:mm"); // local time
-        if (!t.isValid())
-            t = QDateTime::fromString(v, Qt::ISODateWithMs);
-        if (!t.isValid())
-            return v; // unknown format: let Alpaca report it
-        t = t.toUTC();
-    }
-    if (is_end && t > now)
-        t = now;
-    return t.toString(Qt::ISODate); // e.g. 2026-11-04T19:15:02Z
 }
 
 } // namespace
@@ -474,75 +444,49 @@ ApiResponse<QVector<BrokerCandle>> AlpacaBroker::get_history(const BrokerCredent
     QString alpaca_tf = tf_map.value(resolution, "1Day");
 
     // Default date range: last 200 bars worth of time
-    QString start = alpaca_time_param(from_date, false);
-    QString end = alpaca_time_param(to_date, true);
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+    QString start = alpaca::bars_time_param(from_date, false, now);
+    QString end = alpaca::bars_time_param(to_date, true, now);
     if (start.isEmpty()) {
         // Go back far enough to get ~200 candles
         int days_back = (alpaca_tf == "1Min" || alpaca_tf == "5Min")     ? 3
                         : (alpaca_tf == "15Min" || alpaca_tf == "30Min") ? 7
                         : (alpaca_tf == "1Hour")                         ? 30
                                                                          : 400; // 1Day and above
-        start = alpaca_time_param(QDateTime::currentDateTimeUtc().addDays(-days_back).toString("yyyy-MM-dd"), false);
+        start = alpaca::bars_time_param(now.addDays(-days_back).toString("yyyy-MM-dd"), false, now);
     }
-    if (end.isEmpty())
-        end = alpaca_time_param({}, true);
 
     // The endpoint pages: each response holds at most `limit` bars plus a
-    // next_page_token. A single request with limit=500 & sort=asc returned only the
-    // OLDEST 500 bars of the range — 55 days of 15m bars stopped weeks short of now,
-    // and realtime scans warmed their indicators on that stale history. Follow the
-    // token until the range is exhausted.
+    // next_page_token; fetch_all_bar_pages follows it (AlpacaBarsPaging.h).
     const QString base = data_url() + "/v2/stocks/" + symbol.toUpper() + "/bars" + "?timeframe=" + alpaca_tf +
                          "&start=" + start + "&end=" + end + "&limit=10000" + "&adjustment=split" + "&feed=iex" +
                          "&sort=asc";
     constexpr int kMaxPages = 50; // 500k bars — far beyond any range callers ask for
-    QVector<BrokerCandle> candles;
-    QString page_token;
-    int64_t ts = now_ts();
-    for (int page = 0; page < kMaxPages; ++page) {
-        QString url = base;
-        if (!page_token.isEmpty())
-            url += "&page_token=" + QString::fromLatin1(QUrl::toPercentEncoding(page_token));
-
-        auto resp = BrokerHttp::instance().get(url, data_headers);
-        ts = now_ts();
-        if (!resp.success) {
+    int page = 0;
+    const alpaca::BarsResult r = alpaca::fetch_all_bar_pages(
+        base,
+        [&](const QString& url) {
+            ++page;
+            auto resp = BrokerHttp::instance().get(url, data_headers);
+            if (resp.success)
+                return alpaca::BarsPage{true, resp.raw_body, {}};
             LOG_ERROR("AlpacaBroker", QString("get_history failed (page %1): %2 | body: %3")
-                                          .arg(page + 1)
+                                          .arg(page)
                                           .arg(resp.error, redact_body(resp.raw_body)));
-            // No partial result: the pages we have are the OLDEST part of the range.
-            return {false, std::nullopt, alpaca_checked_error(resp, "request failed"), ts};
-        }
-
-        QJsonParseError err;
-        auto doc = QJsonDocument::fromJson(resp.raw_body.toUtf8(), &err);
-        if (err.error != QJsonParseError::NoError)
-            return {false, std::nullopt, "JSON parse error: " + err.errorString(), ts};
-
-        const auto obj = doc.object();
-        for (const auto& v : obj.value("bars").toArray()) {
-            auto b = v.toObject();
-            BrokerCandle c;
-            // Parse RFC3339 timestamp → epoch MILLISECONDS (BrokerCandle.timestamp contract;
-            // seconds here render candles in Jan 1970 on the chart).
-            c.timestamp = QDateTime::fromString(b.value("t").toString(), Qt::ISODateWithMs).toMSecsSinceEpoch();
-            c.open = b.value("o").toDouble();
-            c.high = b.value("h").toDouble();
-            c.low = b.value("l").toDouble();
-            c.close = b.value("c").toDouble();
-            c.volume = b.value("v").toDouble();
-            candles.append(c);
-        }
-        page_token = obj.value("next_page_token").toString(); // null on the last page
-        if (page_token.isEmpty())
-            return {true, candles, "", ts};
+            return alpaca::BarsPage{false, {}, alpaca_checked_error(resp, "request failed")};
+        },
+        kMaxPages);
+    const int64_t ts = now_ts();
+    if (!r.ok) {
+        LOG_ERROR("AlpacaBroker", QString("get_history %1 %2: %3").arg(symbol, alpaca_tf, r.error));
+        return {false, std::nullopt, r.error, ts};
     }
-    // Same reasoning as a failed page: what we hold is the oldest part of the range.
-    LOG_ERROR("AlpacaBroker", QString("get_history %1 %2: still paging after %3 pages (%4 bars) — giving up")
-                                  .arg(symbol, alpaca_tf)
-                                  .arg(kMaxPages)
-                                  .arg(candles.size()));
-    return {false, std::nullopt, "history range too large", ts};
+    if (r.pages > 1)
+        LOG_INFO("AlpacaBroker", QString("get_history %1 %2: %3 bars over %4 pages")
+                                     .arg(symbol, alpaca_tf)
+                                     .arg(r.candles.size())
+                                     .arg(r.pages));
+    return {true, r.candles, "", ts};
 }
 
 // /v2/calendar — available on both trading URLs; use trading_url so auth matches the active env

@@ -65,6 +65,10 @@ UniverseScannerPanel::UniverseScannerPanel(QWidget* parent) : QWidget(parent) {
                               "list (connect the broker in Equity Trading) or pick another universe."),
                            fincept::ui::colors::NEGATIVE());
             });
+    // The status line used to stay on "warming history" for the whole scan: nothing
+    // reported when the warm-up finished, or how much of the universe it covered.
+    connect(&fincept::algo::ScanMonitor::instance(), &fincept::algo::ScanMonitor::realtime_warmed, this,
+            &UniverseScannerPanel::on_warmed);
 
     // Purge orphaned realtime watches left over from a prior session. ScanMonitor
     // intentionally skips mode=='realtime' watches at launch (they are started on
@@ -269,16 +273,56 @@ bool UniverseScannerPanel::current_strategy(AlgoStrategy* out) const {
     return false;
 }
 
+void UniverseScannerPanel::stop_scan() {
+    fincept::algo::ScanMonitor::instance().stop_watch(watch_id_);
+    if (!watch_id_.isEmpty())
+        fincept::ScanWatchRepository::instance().remove(watch_id_);
+    watch_id_.clear();
+    running_ = false;
+    start_btn_->setText(tr("START SCAN"));
+}
+
+namespace {
+// "AAPL, MSFT, NVDA and 12 more" — keeps the status line one line for big universes.
+QString usp_symbol_list(const QStringList& syms, int shown = 5) {
+    if (syms.size() <= shown)
+        return syms.join(QStringLiteral(", "));
+    return QObject::tr("%1 and %2 more").arg(syms.mid(0, shown).join(QStringLiteral(", "))).arg(syms.size() - shown);
+}
+} // namespace
+
+void UniverseScannerPanel::on_warmed(const QString& watch_id, const fincept::algo::ScanWarmupSummary& s) {
+    if (!running_ || watch_id_.isEmpty() || watch_id != watch_id_)
+        return;
+    if (s.warmed == 0) {
+        // Without history no symbol is ever evaluated, so a running scan would only
+        // look like it is working.
+        stop_scan();
+        set_status(tr("Scan stopped: no price history came back for any of the %1 symbols, so nothing can be "
+                      "evaluated. Check the broker connection or the data source.")
+                       .arg(s.total),
+                   fincept::ui::colors::NEGATIVE());
+        return;
+    }
+    const QString bars = s.min_bars == s.max_bars ? QString::number(s.min_bars)
+                                                  : QStringLiteral("%1–%2").arg(s.min_bars).arg(s.max_bars);
+    QString text = tr("Scanning live — %1 of %2 symbols warmed (%3 bars of history). Matches will appear below.")
+                       .arg(s.warmed)
+                       .arg(s.total)
+                       .arg(bars);
+    if (!s.cold.isEmpty())
+        text += tr(" No history for %1: not scanned.").arg(usp_symbol_list(s.cold));
+    if (!s.short_history.isEmpty())
+        text += tr(" Fewer than the %1 bars this strategy needs for %2: no match until enough bars build up.")
+                    .arg(s.required_bars)
+                    .arg(usp_symbol_list(s.short_history));
+    const bool partial = !s.cold.isEmpty() || !s.short_history.isEmpty();
+    set_status(text, partial ? QString(fincept::ui::colors::WARNING()) : QStringLiteral("#A78BFA"));
+}
+
 void UniverseScannerPanel::on_start_stop() {
     if (running_) {
-        // Stop: tear down the runner and remove the persisted config (alert history
-        // in scan_watch_events is kept).
-        fincept::algo::ScanMonitor::instance().stop_watch(watch_id_);
-        if (!watch_id_.isEmpty())
-            fincept::ScanWatchRepository::instance().remove(watch_id_);
-        watch_id_.clear();
-        running_ = false;
-        start_btn_->setText(tr("START SCAN"));
+        stop_scan();
         set_status(tr("Stopped."), fincept::ui::colors::TEXT_TERTIARY());
         return;
     }

@@ -17,6 +17,8 @@
 #include <QThread>
 #include <QTimer>
 
+#include <memory>
+
 namespace fincept::algo {
 
 using fincept::notifications::NotificationRequest;
@@ -225,6 +227,8 @@ void ScanMonitor::start_realtime(const ScanWatch& w) {
     }
 
     if (!scan_thread_) {
+        // warmup_finished crosses from the scan thread to this one (queued).
+        qRegisterMetaType<fincept::algo::ScanWarmupSummary>("fincept::algo::ScanWarmupSummary");
         scan_thread_ = new QThread(this);
         scan_thread_->setObjectName(QStringLiteral("scan-rt"));
         scan_thread_->start();
@@ -239,6 +243,17 @@ void ScanMonitor::start_realtime(const ScanWatch& w) {
         ScanWatchRepository::instance().touch_status(id, s, QDateTime::currentMSecsSinceEpoch());
         emit watch_status_changed(id, s);
     });
+    // The warm-up summary ends the "warming" phase. With no history at all the scan
+    // can never evaluate anything: report that instead of "watching".
+    connect(rt, &RealtimeScanRunner::warmup_finished, this,
+            [this](const QString& id, const fincept::algo::ScanWarmupSummary& s) {
+                if (!runners_.contains(id))
+                    return; // stopped while the summary was in flight
+                const QString status = s.warmed > 0 ? QStringLiteral("watching") : QStringLiteral("no_history");
+                ScanWatchRepository::instance().touch_status(id, status, QDateTime::currentMSecsSinceEpoch());
+                emit realtime_warmed(id, s);
+                emit watch_status_changed(id, status);
+            });
 
     auto* run = new Runner();
     run->watch = w;
@@ -258,11 +273,15 @@ void ScanMonitor::start_realtime(const ScanWatch& w) {
     const DataSource src = data_source_from_string(w.data_source);
     const QString id = w.id, broker = w.broker_id, acct = w.account_id;
     constexpr int kChunk = 50; // throttle: batch the fetch to respect broker rate limits
+    // Batches still to come back. Only touched in the fetch callbacks, which run on
+    // this (main) thread. When the last one lands, finish_warmup() is queued behind
+    // every warm() already queued, so the runner summarises a complete warm-up.
+    auto batches_left = std::make_shared<int>((syms.size() + kChunk - 1) / kChunk);
     for (int s = 0; s < syms.size(); s += kChunk) {
         const QStringList batch = syms.mid(s, kChunk);
         CandleDataFetcher::instance().fetch_multi(
             batch, tf, lookback, src, broker, acct,
-            [this, id](const QHash<QString, QVector<OhlcvCandle>>& data, const QStringList&) {
+            [this, id, batches_left](const QHash<QString, QVector<OhlcvCandle>>& data, const QStringList&) {
                 auto it = runners_.find(id);
                 if (it == runners_.end() || !it.value()->rt)
                     return; // watch stopped while fetching
@@ -273,6 +292,8 @@ void ScanMonitor::start_realtime(const ScanWatch& w) {
                     QMetaObject::invokeMethod(
                         rt, [rt, sym, candles]() { rt->warm(sym, candles); }, Qt::QueuedConnection);
                 }
+                if (--*batches_left == 0)
+                    QMetaObject::invokeMethod(rt, [rt]() { rt->finish_warmup(); }, Qt::QueuedConnection);
             });
     }
 

@@ -13,6 +13,13 @@ class IndicatorEngine {
     static IndicatorResult compute(const QString& indicator_name, const QVector<OhlcvCandle>& candles,
                                    const QJsonObject& params, const QString& field);
 
+    /// Bars compute() needs before it returns a valid current value, read from the
+    /// same params (and the same defaults) compute() uses — every lookback, not just
+    /// "period": MACD needs max(fast, slow) + signal - 1, TEMA 3 * period - 2, and
+    /// so on. 1 for price attributes, 0 for an unknown name. A previous value (for
+    /// crossings) needs one bar more.
+    static int warmup_bars(const QString& indicator_name, const QJsonObject& params);
+
   private:
     static void extract_arrays(const QVector<OhlcvCandle>& candles, QVector<double>& open, QVector<double>& high,
                                QVector<double>& low, QVector<double>& close, QVector<double>& volume);
@@ -53,6 +60,10 @@ class IndicatorEngine {
     static IndicatorResult compute_keltner(const QVector<double>& high, const QVector<double>& low,
                                            const QVector<double>& close, int period, double multiplier);
     static IndicatorResult compute_donchian(const QVector<double>& high, const QVector<double>& low, int period);
+
+    // Statistics
+    static IndicatorResult compute_zscore(const QVector<double>& close, int period);
+    static IndicatorResult compute_realized_vol(const QVector<double>& close, int period, double periods_per_year);
 
     // Volume
     static IndicatorResult compute_obv(const QVector<double>& close, const QVector<double>& volume);

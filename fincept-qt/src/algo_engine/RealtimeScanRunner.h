@@ -54,10 +54,14 @@ class RealtimeScanRunner : public QObject {
     void start();                                                          // scan thread
     void stop();                                                           // scan thread
     void warm(const QString& symbol, const QVector<OhlcvCandle>& candles); // scan thread
+    /// Called once every history fetch for this scan has been delivered (queued
+    /// after the last warm()). Emits warmup_finished with what was actually warmed.
+    void finish_warmup(); // scan thread
 
   signals:
     void match_found(const QString& watch_id, const QString& symbol, double price, const QString& detail);
     void status_changed(const QString& watch_id, const QString& status);
+    void warmup_finished(const QString& watch_id, const fincept::algo::ScanWarmupSummary& summary);
 
   private:
     struct SymbolState {
@@ -65,9 +69,10 @@ class RealtimeScanRunner : public QObject {
         std::unique_ptr<LiveOperandSource> operands; // incremental state over closed candles
         double last_price = 0;
         double prev_price = 0;
-        bool armed = true;   // edge gate: fire only on false→true
-        bool dirty = false;  // priced since last sweep
-        bool warmed = false; // has history → eligible to evaluate
+        bool armed = true;    // edge gate: fire only on false→true
+        bool dirty = false;   // priced since last sweep
+        bool warmed = false;  // has history → eligible to evaluate
+        int history_bars = 0; // completed bars the warm-up history provided
         qint64 last_fired_ms = 0;
     };
 

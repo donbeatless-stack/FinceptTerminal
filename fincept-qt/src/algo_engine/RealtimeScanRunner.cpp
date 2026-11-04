@@ -11,8 +11,6 @@
 #include <QStringList>
 #include <QTimer>
 
-#include <functional>
-
 namespace fincept::algo {
 
 RealtimeScanRunner::RealtimeScanRunner(QString watch_id, QStringList universe, QJsonArray conditions, QString logic,
@@ -40,26 +38,10 @@ RealtimeScanRunner::~RealtimeScanRunner() {
 }
 
 int RealtimeScanRunner::required_bars(const QJsonArray& conditions) {
-    int max_need = 2;
-    std::function<void(const QJsonArray&)> walk = [&](const QJsonArray& arr) {
-        for (const auto& v : arr) {
-            const QJsonObject o = v.toObject();
-            if (o.contains(QStringLiteral("children"))) {
-                walk(o.value(QStringLiteral("children")).toArray());
-                continue;
-            }
-            const int period = o.value(QStringLiteral("params")).toObject().value(QStringLiteral("period")).toInt(0);
-            const int cperiod =
-                o.value(QStringLiteral("compare_params")).toObject().value(QStringLiteral("period")).toInt(0);
-            const int offset = o.value(QStringLiteral("offset")).toInt(0);
-            const int coffset = o.value(QStringLiteral("compare_offset")).toInt(0);
-            const int need = qMax(period, cperiod) + qMax(offset, coffset) + 2;
-            if (need > max_need)
-                max_need = need;
-        }
-    };
-    walk(conditions);
-    return max_need;
+    // Used to read only params.period: MACD (fast/slow/signal), Ichimoku, Stochastic
+    // and VOL_WIN_CHG counted as 2 bars, and TEMA(30) as 32 although it needs 88 —
+    // more than the buffer sized from it, so such a condition never got a value.
+    return ConditionEvaluator::required_bars(conditions);
 }
 
 QString RealtimeScanRunner::consumer_id(const QString& symbol) const {
@@ -127,6 +109,7 @@ void RealtimeScanRunner::warm(const QString& symbol, const QVector<OhlcvCandle>&
     st->operands->reset(history);
     st->agg->warm_from(history);
     st->warmed = true;
+    st->history_bars = history.size();
     st->dirty = true; // evaluate on the next sweep
 
     // How far back the history reaches and how fresh its last bar is — a warm-up
@@ -144,6 +127,43 @@ void RealtimeScanRunner::warm(const QString& symbol, const QVector<OhlcvCandle>&
         LOG_INFO("RealtimeScanRunner", msg);
     else
         LOG_DEBUG("RealtimeScanRunner", msg);
+}
+
+void RealtimeScanRunner::finish_warmup() {
+    ScanWarmupSummary s;
+    s.total = states_.size();
+    s.required_bars = required_bars_;
+    for (auto it = states_.cbegin(); it != states_.cend(); ++it) {
+        const SymbolState* st = it.value();
+        if (!st->warmed) {
+            s.cold << it.key();
+            continue;
+        }
+        s.min_bars = s.warmed == 0 ? st->history_bars : qMin(s.min_bars, st->history_bars);
+        s.max_bars = qMax(s.max_bars, st->history_bars);
+        ++s.warmed;
+        if (st->history_bars < required_bars_)
+            s.short_history << it.key();
+    }
+    s.cold.sort();
+    s.short_history.sort();
+    // A symbol with no history is never evaluated, so its quote feed only costs a
+    // subscription — and for an unknown ticker a DataHub refresh-timeout warning
+    // every 30 s for the life of the scan. Drop it. (stop() closing it again is a no-op.)
+    auto& dsm = fincept::trading::DataStreamManager::instance();
+    for (const QString& sym : s.cold)
+        dsm.close_quote_feed(consumer_id(sym), account_id_);
+    LOG_INFO("RealtimeScanRunner", QString("watch=%1 warm-up done: %2/%3 symbols warmed (%4-%5 bars, need %6); "
+                                           "no history: %7; short history: %8")
+                                       .arg(watch_id_)
+                                       .arg(s.warmed)
+                                       .arg(s.total)
+                                       .arg(s.min_bars)
+                                       .arg(s.max_bars)
+                                       .arg(s.required_bars)
+                                       .arg(s.cold.size())
+                                       .arg(s.short_history.size()));
+    emit warmup_finished(watch_id_, s);
 }
 
 void RealtimeScanRunner::on_quote(const QString& symbol, const fincept::trading::BrokerQuote& q) {

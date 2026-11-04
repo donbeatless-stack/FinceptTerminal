@@ -169,9 +169,14 @@ fincept_add_test(tst_live_operand_source
     "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
 
+# src/trading/brokers/alpaca/AlpacaBarsPaging.h: AlpacaBroker::get_history's
+# next_page_token loop and time parameters, with scripted responses (no network).
+fincept_add_test(tst_alpaca_bars_paging
+    tst_alpaca_bars_paging.cpp)
+
 # src/algo_engine/ConditionEvaluator.{h,cpp}: operator semantics, offsets, error
 # propagation, AND/OR short-circuiting and nested groups, against a scripted
-# OperandSource. The one test linking Qt6::Gui, and only for headers:
+# OperandSource. Links Qt6::Gui only for headers:
 # ConditionEvaluator.h -> services/algo_trading/AlgoTradingTypes.h -> <QColor>.
 fincept_add_test(tst_condition_evaluator
     tst_condition_evaluator.cpp
@@ -179,6 +184,17 @@ fincept_add_test(tst_condition_evaluator
     "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
     "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
 target_link_libraries(tst_condition_evaluator PRIVATE Qt6::Gui)
+
+# IndicatorEngine::warmup_bars against compute() for every indicator in the
+# strategy builder's catalog (defaults, range ends, random points: exact minimum),
+# and ConditionEvaluator::required_bars against the window operand source. Qt6::Gui
+# for the same header reason as above.
+fincept_add_test(tst_indicator_warmup
+    tst_indicator_warmup.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/ConditionEvaluator.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/OperandSource.cpp"
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/IndicatorEngine.cpp")
+target_link_libraries(tst_indicator_warmup PRIVATE Qt6::Gui)
 
 # Old-vs-new condition evaluation over whole strategies, plus BacktestEngine::run
 # end to end. A benchmark, not a test, so it may link the evaluator (Qt Gui
@@ -213,5 +229,5 @@ set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tes
 
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
                "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
-               "tst_live_operand_source "
+               "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging "
                "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan)")

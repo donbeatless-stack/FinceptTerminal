@@ -46,6 +46,13 @@ class ConditionEvaluator {
     /// should hold a CompiledConditions instead.
     static GroupEvalResult evaluate_group(const QJsonArray& children, const QString& logic, OperandSource& operands);
 
+    /// Bars of history `conditions` need before every leaf can be evaluated: per
+    /// side max(IndicatorEngine::warmup_bars, 2) + offset, plus one for operators
+    /// that read the previous sample (crossings, rising/falling, ==); the larger
+    /// side per leaf, the largest leaf overall, floored at 2. Recurses into groups;
+    /// the compare side counts only in "indicator" mode.
+    static int required_bars(const QJsonArray& conditions);
+
   private:
     friend class CompiledConditions;
 

@@ -3,6 +3,7 @@
 #include <QHash>
 #include <QMetaType>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 #include <cstdint>
@@ -281,8 +282,23 @@ struct AlgoLiveSnapshot {
     QString note;                            // short activity line, e.g. "entry not met"
 };
 
+// ── Realtime scan warm-up summary ────────────────────────────────────────────
+// Sent once by a realtime universe scan when every history fetch it started has
+// come back, so the UI can say how many symbols are actually being scanned.
+
+struct ScanWarmupSummary {
+    int total = 0;             // symbols in the universe
+    int warmed = 0;            // symbols with history, i.e. being evaluated
+    int min_bars = 0;          // shortest warm-up history among `warmed`
+    int max_bars = 0;          // longest warm-up history among `warmed`
+    int required_bars = 0;     // bars the conditions need for a first value
+    QStringList cold;          // no history at all: never evaluated
+    QStringList short_history; // warmed, but fewer than required_bars bars so far
+};
+
 } // namespace fincept::algo
 
+Q_DECLARE_METATYPE(fincept::algo::ScanWarmupSummary)
 Q_DECLARE_METATYPE(fincept::algo::AlgoMetrics)
 Q_DECLARE_METATYPE(fincept::algo::AlgoTradeRecord)
 Q_DECLARE_METATYPE(fincept::algo::OhlcvCandle)

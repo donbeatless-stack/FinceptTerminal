@@ -92,6 +92,13 @@ std::unique_ptr<StreamingOperand> StreamingOperand::create(const QString& ind, c
             return so_make("Insufficient data for ATR", streaming::Atr(period), feed_hlc, read_value);
         if (ind == "WILLIAMS_R")
             return so_make("Insufficient data for Williams %R", streaming::WilliamsR(period), feed_hlc, read_value);
+        if (ind == "ZSCORE")
+            return so_make("Insufficient data for ZSCORE", streaming::ZScore(period), feed_close, read_value);
+        if (ind == "REALIZED_VOL")
+            return so_make(
+                "Insufficient data for REALIZED_VOL",
+                streaming::RealizedVolatility(period, p.value(QLatin1String("periods_per_year")).toDouble(252.0)),
+                feed_close, read_value);
         return nullptr;
     }
 

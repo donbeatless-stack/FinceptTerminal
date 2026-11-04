@@ -203,6 +203,8 @@ inline QVector<IndicatorDef> algo_indicators() {
         {"WILLIAMS_R", "Williams %R", "momentum", {{"period", 1, 100, 14, 1, 0}}, {"value"}},
         {"MFI", "MFI", "momentum", {{"period", 1, 100, 14, 1, 0}}, {"value"}},
         {"ROC", "Rate of Change", "momentum", {{"period", 1, 100, 12, 1, 0}}, {"value"}},
+        // (close - mean) / population sd over `period` closes: mean-reversion signal.
+        {"ZSCORE", "Z-Score", "momentum", {{"period", 2, 500, 20, 1, 0}}, {"value"}},
         // Trend
         {"ADX", "ADX", "trend", {{"period", 1, 100, 14, 1, 0}}, {"value", "plus_di", "minus_di"}},
         {"SUPERTREND",
@@ -229,6 +231,13 @@ inline QVector<IndicatorDef> algo_indicators() {
          {{"period", 1, 100, 20, 1, 0}, {"multiplier", 0.5, 10, 2, 0.5, 1}},
          {"upper", "middle", "lower"}},
         {"DONCHIAN", "Donchian Channel", "volatility", {{"period", 1, 100, 20, 1, 0}}, {"upper", "lower"}},
+        // Annualised sample sd of `period` log returns. periods_per_year is the bar
+        // count per year: 252 for daily bars, 252 * 26 = 6552 for US 15-minute bars.
+        {"REALIZED_VOL",
+         "Realized Volatility",
+         "volatility",
+         {{"period", 2, 500, 20, 1, 0}, {"periods_per_year", 1, 200000, 252, 1, 0}},
+         {"value"}},
         // Volume
         {"OBV", "On Balance Volume", "volume", {}, {"value"}},
         {"CMF", "Chaikin Money Flow", "volume", {{"period", 1, 100, 20, 1, 0}}, {"value"}},

@@ -12,6 +12,10 @@
 #include <QVector>
 #include <QWidget>
 
+namespace fincept::algo {
+struct ScanWarmupSummary;
+}
+
 namespace fincept::screens {
 
 /// Universe tab — run a saved strategy live across all NSE/BSE equities (or NIFTY 50
@@ -27,9 +31,13 @@ class UniverseScannerPanel : public QWidget {
     void on_start_stop();
     void on_match(const QString& watch_id, const QString& symbol, double price, const QString& detail);
     void on_universe_changed(int index);
+    void on_warmed(const QString& watch_id, const fincept::algo::ScanWarmupSummary& summary);
 
   private:
     void build_ui();
+    /// Tears down the running scan and removes its persisted config (alert history
+    /// in scan_watch_events is kept). Leaves the status line to the caller.
+    void stop_scan();
     void set_status(const QString& text, const QString& color);
     void deploy_symbol(const QString& symbol);
     bool current_strategy(fincept::services::algo::AlgoStrategy* out) const;
