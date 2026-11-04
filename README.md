@@ -52,13 +52,15 @@ many TCP clients:
 - **Ingest:** a lock-free SPSC ring feeds a distributor thread, which sleeps when idle without losing wake-ups.
 - **Slow consumers:** per-client conflating queues mean a slow consumer costs bounded memory and never delays anyone else.
 - **Stats:** an HdrHistogram-style latency histogram.
+- **Feed:** Alpaca's real-time stream, through a WebSocket client written for the gateway (RFC 6455 framing, TLS with certificate checks, ping-based liveness, reconnect with backoff, error handling by code), or a synthetic feed for benchmarks. Alpaca allows one stream connection per account, so the gateway holds it and fans it out.
 
 | | |
 | --- | --- |
 | Pipeline latency, ingest → socket, 1 client | 7.4 µs p50 (4.2 µs with busy-poll) |
 | Distributor throughput | 12.9 M deliveries/s on one thread |
 | 5 slow clients among 50 | Fast clients unaffected (p99 336 µs vs 360 µs without); slow ones conflated to 11 % of ticks |
-| Tests | 58: unit, end-to-end over sockets, concurrency, fuzzing; clean under AddressSanitizer; 5 deliberately planted bugs all caught |
+| Tests | 90: unit, end-to-end over sockets, concurrency, fuzzing, and the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links); clean under AddressSanitizer; 5 deliberately planted bugs all caught |
+| Live check | Alpaca's test stream over TLS 1.3: authenticated and subscribed within a second, trades reached the request port |
 
 Architecture, design trade-offs, the full benchmark matrix and its limits:
 **[gateway/README.md](gateway/README.md)**.

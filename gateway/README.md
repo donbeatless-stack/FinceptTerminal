@@ -2,8 +2,10 @@
 
 A standalone C++20 service that takes in one market-data feed and fans it out to
 many TCP clients, built around the cases that break naive fan-out servers: slow
-consumers, bursty feeds, idle periods, and hostile input. It keeps the dual-port
-layout of the original TMS server, rebuilt on Asio (IOCP on Windows, epoll on Linux):
+consumers, bursty feeds, idle periods, and hostile input. The feed is
+[Alpaca's real-time stock stream](#alpaca-feed) over a WebSocket client written for it,
+or a synthetic feed for benchmarks. It keeps the dual-port layout of the original TMS
+server, rebuilt on Asio (IOCP on Windows, epoll on Linux):
 
 | Port | Connection | Purpose |
 | --- | --- | --- |
@@ -54,6 +56,10 @@ flowchart LR
 | `include/fmdg/gateway.h` | Public API: `start`/`stop`/`ingest`/`stats`; config |
 | `src/push_session.*`, `src/request_session.*` | The two connection types |
 | `src/synthetic_feed.cpp` | Deterministic random-walk feed for demos, tests and benchmarks |
+| `include/fmdg/ws_codec.h` | RFC 6455 client side: handshake helpers and frame codec, pure functions over bytes |
+| `include/fmdg/alpaca_protocol.h` | Alpaca stream messages: outgoing JSON, simdjson parsing, what each error code means |
+| `include/fmdg/alpaca_feed.h` | The Alpaca feed: TLS WebSocket session, heartbeat, reconnect supervisor |
+| `src/tls_roots.cpp` | Loads the Windows root store into OpenSSL (which does not read it) |
 | `tools/loadgen.cpp` | Load generator and latency benchmark |
 
 ### Wire protocol (port 8589)
@@ -128,16 +134,78 @@ thread fed by the ring, so a burst of ticks never competes with socket completio
 the same queue, and per-tick work on the distributor is a hash lookup and a mutex-guarded
 queue push.
 
+## Alpaca feed
+
+`AlpacaFeed` connects to Alpaca's stock stream (`wss://stream.data.alpaca.markets/v2/iex`),
+subscribes to trades and one-minute bars, and turns each trade into a `Tick` for
+`Gateway::ingest()`. It runs on its own thread and `io_context`, as the gateway's single
+producer.
+
+**Why the gateway owns the upstream connection.** Alpaca allows one stream connection
+per account on most plans; a second one is refused with error 406. The terminal and a
+gateway cannot both connect, so the gateway holds the one connection and fans it out.
+That is the reason gateways like this exist. The free plan also caps the stream at 30
+symbols and offers only the IEX feed.
+
+**Its own WebSocket client, on the same Asio.** Boost.Beast would bring Boost.Asio,
+a second copy of the event loop next to the standalone Asio the gateway already uses.
+`ws_codec` is RFC 6455 client framing as pure functions: a handshake builder and checker
+(the server's `Sec-WebSocket-Accept` must match our key), a masking encoder, and a
+decoder that takes bytes split anywhere. The decoder enforces what a client must: server
+frames unmasked, no RSV bits, control frames unfragmented and ≤ 125 bytes, continuation
+frames only inside a message. It also caps message size from the header alone, so a
+hostile length fails before any payload is buffered. No extensions are offered, so
+there is no compression to decode.
+
+**One session.** resolve → TCP → TLS → upgrade, under one deadline; then the server's
+`connected` → `auth` → `authenticated` → `subscribe`. Then a reader and a writer coroutine
+run side by side, joined with Asio's `&&`, so whichever fails first ends the session and
+cancels the other. Only the writer writes: auth, subscribe, pongs, pings and the
+close reply all go through its queue, so the TLS stream never has two writes in flight.
+
+**Liveness by ping, not by silence.** Outside market hours an IEX symbol can go quiet for
+minutes, so "no message for 15 s means dead" (the terminal's watchdog) reconnects a
+healthy link over and over. The feed sends a WebSocket ping every 15 s and treats two
+intervals without any byte, pong included, as a dead link.
+
+**Errors by code.** Retrying a wrong key only hammers the server, so 402 (auth failed),
+409 and 410 stop the feed for good. 406 waits a minute. 405 (symbol limit) is logged
+and the session goes on, since earlier subscriptions remain. Anything else, including
+dropped connections and timeouts, reconnects. The wait doubles per failure up to 30 s,
+with 50–100 % jitter, and goes back to 1 s once a session has authenticated.
+
+**TLS.**
+- Certificate and hostname verification are on.
+- OpenSSL on Windows does not read the system store, so `tls_roots.cpp` copies the Windows root certificates into it.
+- Checked by trusting only an unrelated root (`--ca-file`): the handshake fails with "certificate verify failed".
+- Credentials come from `APCA_API_KEY_ID` / `APCA_API_SECRET_KEY` or a file. Never from the command line, which other processes can read. Never logged; a test checks the log for the secret.
+
+**Checked live** (2026-11-04, Alpaca's test stream, which publishes the made-up symbol
+`FAKEPACA` around the clock):
+- TLS 1.3; connected, authenticated and subscribed within the same second.
+- First trade 3 s later; over 45 s, 8 trades and 1 minute bar, with no disconnects or errors.
+- `SNAPSHOT FAKEPACA` on the request port returned the latest trade with its exchange timestamp.
+
 ## Testing
 
-58 GoogleTest cases (`tests/`):
+90 GoogleTest cases (`tests/`):
 - Unit tests for every component.
 - End-to-end tests over real loopback sockets: subscribe/snapshot/live ordering, unsubscribe, heartbeats, every error path, the symbol and client limits, shutdown, port conflicts, fan-out, the request port.
 - Concurrency tests: two-thread ring and queue stress, concurrent interning, sleep/wake transitions, re-subscribe racing publish, and slow-client isolation with a conservation check (`deliveries == ticks_out + conflated`).
 - Fuzzed parser input.
+- WebSocket codec: the RFC's own examples (handshake key, masked and unmasked "Hello", fragments); the same stream split at random points, down to one byte at a time; every protocol violation a client must reject.
+- Alpaca messages: the samples from Alpaca's docs; timestamps checked against `std::chrono`'s calendar; malformed items skipped without dropping their neighbours.
+- `AlpacaFeed` against a fake Alpaca server on loopback, one scripted failure per test:
+  - a dropped link (reconnect and resubscribe)
+  - a wrong key (stops, no retries)
+  - 406 (waits the long backoff)
+  - a server that never answers the handshake
+  - a dead link only pings reveal
+  - a quiet link that answered pings keep up
+  - a server-initiated close (echoed)
 
-They run clean under Release, Debug (MSVC checked iterators) and AddressSanitizer, and
-over 30 back-to-back repetitions.
+They run clean under Release, Debug (MSVC checked iterators) and AddressSanitizer. The
+original 58 survived 30 back-to-back repetitions; the 32 feed tests, 20.
 
 **Mutation testing.** To check that the concurrency tests can actually fail, each
 mechanism was broken on purpose and the suite re-run:
@@ -231,21 +299,27 @@ cmake --build --preset win
 ctest --preset win
 ```
 
-Asio and GoogleTest come from vcpkg through `vcpkg.json`.
+Asio, GoogleTest, OpenSSL and simdjson come from vcpkg through `vcpkg.json`.
 
 ```bat
+build\win\fmdg.exe --feed alpaca --alpaca-symbols AAPL,MSFT,SPY  :: gateway + Alpaca's IEX stream
+build\win\fmdg.exe --feed alpaca --alpaca-stream test            :: FAKEPACA, around the clock
 build\win\fmdg.exe --feed-symbols 100 --feed-rate 10000        :: gateway + synthetic feed
 build\win\fmdg_loadgen.exe --port 8589 --clients 50            :: measure it from another terminal
 build\win\fmdg_loadgen.exe --embedded --clients 50 --slow 5    :: or both in one process
 bash bench/run_bench.sh                                         :: the matrix above
 ```
 
+The Alpaca feed reads `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` from the environment,
+or from a file given with `--alpaca-credentials FILE` containing those two `NAME=value`
+lines. Keep that file outside the repository.
+
 On the request port, any line-based client works, for example `PING`, `SNAPSHOT SYM0000 SYM0001` or `STATS`.
 
 ## Limitations and next steps
 
 - **Linux:** a `linux` preset is included, but only the Windows build has been compiled and tested so far. CI on both is the next step.
-- **Real feed:** only the synthetic feed exists. The next step is an adapter from a broker WebSocket (the terminal already connects to Alpaca) into `Gateway::ingest()`, plus a Qt client in the terminal.
+- **Real feed:** Alpaca trades flow in; quotes are not ingested (a `Tick` carries one price), and minute bars are counted but not stored yet. Next: bars into PostgreSQL through a connection pool, history queries on the request port, and the terminal as a client.
 - **Per-client queue:** it uses a mutex and `std::unordered_map`. Dense symbol ids would allow a flat array, but that costs memory per client in proportion to the largest id subscribed.
 - **Fan-out at scale:** over TCP, every client costs a `send` syscall per write, which is why exchanges distribute over UDP multicast and latency-critical consumers use kernel bypass. That is a different architecture, not a tuning change.
-- **Not built:** authentication, TLS, and per-symbol sequence numbers (today's are gateway-wide, so a client can't detect conflation gaps per symbol).
+- **Not built:** authentication and TLS on the gateway's own ports (the upstream Alpaca link is TLS), and per-symbol sequence numbers (today's are gateway-wide, so a client can't detect conflation gaps per symbol).

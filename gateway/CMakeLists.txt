@@ -30,6 +30,8 @@ if(FMDG_ASAN)
 endif()
 
 find_package(asio CONFIG REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(simdjson CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 # Strict warnings on our own code only; dependency headers come in as SYSTEM
@@ -51,9 +53,16 @@ add_library(fmdg_core STATIC
     src/push_session.cpp
     src/request_session.cpp
     src/gateway.cpp
-    src/synthetic_feed.cpp)
+    src/synthetic_feed.cpp
+    src/ws_codec.cpp
+    src/alpaca_protocol.cpp
+    src/alpaca_feed.cpp
+    src/tls_roots.cpp)
 target_include_directories(fmdg_core PUBLIC include PRIVATE src)
-target_link_libraries(fmdg_core PUBLIC asio::asio)
+target_link_libraries(fmdg_core PUBLIC asio::asio OpenSSL::SSL OpenSSL::Crypto simdjson::simdjson)
+if(WIN32)
+    target_link_libraries(fmdg_core PUBLIC crypt32) # Windows root store for TLS verification
+endif()
 target_compile_definitions(fmdg_core PUBLIC ASIO_STANDALONE ASIO_NO_DEPRECATED)
 if(WIN32)
     target_compile_definitions(fmdg_core PUBLIC _WIN32_WINNT=0x0A00 WIN32_LEAN_AND_MEAN NOMINMAX)
@@ -76,7 +85,10 @@ add_executable(fmdg_tests
     tests/test_conflating_queue.cpp
     tests/test_symbol_table.cpp
     tests/test_distributor.cpp
-    tests/test_gateway.cpp)
+    tests/test_gateway.cpp
+    tests/test_ws_codec.cpp
+    tests/test_alpaca_protocol.cpp
+    tests/test_alpaca_feed.cpp)
 target_link_libraries(fmdg_tests PRIVATE fmdg_core GTest::gtest_main)
 fmdg_warnings(fmdg_tests)
 include(GoogleTest)
