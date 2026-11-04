@@ -1,7 +1,12 @@
-# About this fork: streaming strategy evaluation
+# About this fork
 
 This fork of [Fincept-Corporation/FinceptTerminal](https://github.com/Fincept-Corporation/FinceptTerminal)
-reworks how strategy conditions are evaluated in the C++ algo engine: indicators are
+adds two pieces of work: streaming strategy evaluation in the terminal's algo engine,
+and a standalone market-data gateway.
+
+## Streaming strategy evaluation
+
+This part reworks how strategy conditions are evaluated in the C++ algo engine: indicators are
 kept as incremental state instead of being recomputed from scratch on every bar.
 
 | | Before | After |
@@ -15,6 +20,25 @@ Every step is checked bar by bar against the original engine (bit-identical wher
 arithmetic allows), with mutation tests, characterisation tests written before the
 refactor, and per-bar verdict checksums. Design, numbers and how to reproduce them:
 **[docs/STREAMING_EVALUATION.md](docs/STREAMING_EVALUATION.md)**.
+
+## Market-data gateway (`gateway/`)
+
+A standalone C++20 service (Asio; IOCP on Windows) that fans one market-data feed out to
+many TCP clients:
+- **Ports:** a push port (8589) for long connections and a request port (8588) for one-shot queries.
+- **Ingest:** a lock-free SPSC ring feeds a distributor thread, which sleeps when idle without losing wake-ups.
+- **Slow consumers:** per-client conflating queues mean a slow consumer costs bounded memory and never delays anyone else.
+- **Stats:** an HdrHistogram-style latency histogram.
+
+| | |
+| --- | --- |
+| Pipeline latency, ingest → socket, 1 client | 7.4 µs p50 (4.2 µs with busy-poll) |
+| Distributor throughput | 12.9 M deliveries/s on one thread |
+| 5 slow clients among 50 | Fast clients unaffected (p99 336 µs vs 360 µs without); slow ones conflated to 11 % of ticks |
+| Tests | 58: unit, end-to-end over sockets, concurrency, fuzzing; clean under AddressSanitizer; 5 deliberately planted bugs all caught |
+
+Architecture, design trade-offs, the full benchmark matrix and its limits:
+**[gateway/README.md](gateway/README.md)**.
 
 The upstream README follows unchanged.
 
