@@ -21,13 +21,16 @@ build. The benchmark programs are in `fincept-qt/tests/` — see [Reproduce](#re
 ## The problem
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Before["Before: every bar"]
+        direction LR
         A1[Copy last 500 candles] --> A2[Parse condition JSON] --> A3["Recompute each indicator on the window<br/>(twice for crossings)"] --> A4[Verdict]
     end
     subgraph After["After"]
+        direction LR
         B1["Once: parse conditions,<br/>run each indicator over the full history"] --> B2[Per bar: read by index] --> B3[Verdict]
     end
+    Before ~~~ After
 ```
 
 - **Cost.** `BacktestEngine` copied the trailing 500 candles on every bar and
