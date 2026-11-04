@@ -1,3 +1,25 @@
+# About this fork: streaming strategy evaluation
+
+This fork of [Fincept-Corporation/FinceptTerminal](https://github.com/Fincept-Corporation/FinceptTerminal)
+reworks how strategy conditions are evaluated in the C++ algo engine: indicators are
+kept as incremental state instead of being recomputed from scratch on every bar.
+
+| | Before | After |
+| --- | --- | --- |
+| Backtest condition evaluation, EMA 12/26 cross, 20,000 bars | 1087 ms | 11.2 ms (97×) |
+| Realtime scan sweep, 500 symbols | 3.6–5.6 ms | 0.28–0.50 ms (10–19×) |
+| Live EMA(200) error in realtime scans, worst case | 4.38 % of price | 0 |
+| Test executables | 4 | 8 |
+
+Every step is checked bar by bar against the original engine (bit-identical where the
+arithmetic allows), with mutation tests, characterisation tests written before the
+refactor, and per-bar verdict checksums. Design, numbers and how to reproduce them:
+**[docs/STREAMING_EVALUATION.md](docs/STREAMING_EVALUATION.md)**.
+
+The upstream README follows unchanged.
+
+---
+
 > [!IMPORTANT]
 > ## 🔒 Fincept Terminal **Enterprise** — the private edition is now available.
 > RealTime data · Multi-agent AI research · Live broker, Backtest & Algo execution · Priority support ·
