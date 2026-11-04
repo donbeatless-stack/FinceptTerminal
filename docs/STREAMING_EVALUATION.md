@@ -5,7 +5,9 @@ evaluated by recomputing every indicator from scratch on every bar. This fork
 replaces that with incremental (streaming) state: backtest condition evaluation is
 **39–97× faster**, a realtime 500-symbol scan sweep is **10–19× faster**, and a
 windowing defect that put a live EMA(200) up to **4.4 % of price** off is gone.
-Every step is checked bar by bar against the original engine.
+Every step is checked bar by bar against the original engine. A final check against a
+live broker feed found one more input bug, in the Alpaca history fetch, and fixed it
+([Live check](#live-check-against-a-broker-feed)).
 
 | Change | Measure | Before | After |
 | --- | --- | --- | --- |
@@ -13,6 +15,7 @@ Every step is checked bar by bar against the original engine.
 | Backtest + parse-once conditions | EMA 12/26 cross, 20,000 bars | 1087 ms | 11.2 ms |
 | Realtime scan | one sweep, 500 symbols | 3.6–5.6 ms | 0.28–0.50 ms |
 | Realtime scan accuracy | EMA(200) worst error, % of price | 4.38 % | 0 |
+| Live check, Alpaca IEX feed | EMA(20) vs an independent value | 3.2–3.8 % low | within 0.23 % |
 | Tests | test executables | 4 | 8 |
 
 Measured on an AMD Ryzen 9 8945HX (16 cores), Windows 11, MSVC 19.44, optimised
@@ -115,7 +118,7 @@ values are unchanged.
 | --- | --- |
 | `tst_streaming_indicators` (19 cases) | Every bar of a 400-bar walk with a flat stretch and a gap equals `IndicatorEngine::compute` over the same history |
 | `tst_series_operand_source` (6 cases) | Streamed operands equal the full-history batch result: value, error text, warm-up bar, at offsets 0, 1 and 5; finite-memory operands equal the old 500-bar window; unstreamable operands take the old path verbatim |
-| `tst_live_operand_source` (4 cases) | Warm-up, intrabar ticks and closes replayed; streamed operands equal the full live window at offsets 0–3 with one or two tick bars |
+| `tst_live_operand_source` (5 cases) | Warm-up, intrabar ticks and closes replayed; streamed operands equal the full live window at offsets 0–3 with one or two tick bars; warm-up drops only a still-unfinished last bar |
 | `tst_condition_evaluator` (15 cases) | Characterisation tests written and passing **before** the parse-once refactor: operators, offsets, errors, AND/OR short-circuiting, nested groups |
 | Mutation testing | Planted bugs (ATR smoothing, extrema off-by-one, offset off-by-one, MACD default, ring-buffer read, tick index) each fail the expected tests |
 | Verdict checksums | `bench_backtest_eval` hashes every per-bar verdict of six strategies; identical before and after the refactors |
@@ -125,6 +128,56 @@ Three upstream defects were fixed on the way: SHA-pinned FetchContent dependenci
 with `GIT_SHALLOW` (fresh clones failed to configure), `tst_order_validator` not
 compiling after `OrderValidator` gained settings I/O, and a missing `<QTimeZone>`
 include hidden by the precompiled header.
+
+## Live check against a broker feed
+
+Every check above feeds the operands directly, so none of them can see a bad input.
+The scanner was therefore also run in the app against a real feed: the Alpaca paper
+account's IEX data on 2026-11-04 at 14:09 ET, strategy "Price Above EMA 20" (15-minute
+bars) on AAPL, MSFT, NVDA, TSLA, AMD and SPY. Each match reports the EMA it compared
+against (`CLOSE > 551.39`), and [`tools/live_check/ema_check.py`](../tools/live_check/ema_check.py)
+recomputes that value from Yahoo 15-minute bars with the app's own seeding.
+
+- **The feed was healthy.** The WebSocket connected and authenticated in 0.3 s, all six
+  symbols subscribed, and there were no 15-second silence timeouts.
+- **The indicator values were not.** Every match's EMA(20) was 12–19 below the
+  independent value, and SPY, whose price was above its EMA, did not match at all.
+
+**Root cause.** `AlpacaBroker::get_history` made one request with `limit=500&sort=asc`
+and ignored `next_page_token`. A 55-day request for 15-minute bars (about 28 IEX bars a
+day) therefore returned its *oldest* 500 bars, and the scan warmed on history that
+stopped in early October. The full-history operand state from the previous step was
+carrying a stale input faithfully.
+
+**Fix** (`ac3a2306`):
+- `get_history` follows `next_page_token` (10,000 bars per page). If any page fails,
+  the whole call fails: the pages already held are the oldest part of the range, which
+  is exactly the trap being fixed.
+- Start and end times are normalised to RFC-3339 UTC. A bare end date was read as
+  midnight UTC and dropped the whole day, today included; it now means "through that
+  day", capped at now. A caller's local `yyyy-MM-dd HH:mm`, which Alpaca rejects, is
+  converted as well.
+- Warm-up drops a trailing bar that is still in progress. The live aggregator rebuilds
+  that bucket from ticks, so keeping it would count the bucket twice
+  (`drop_unfinished_candles`, unit-tested; a `>` → `>=` mutant is caught).
+- Warm-up logs each symbol's bar count, range and the age of its last bar, so a stale
+  warm-up shows in the log.
+
+**Re-run** at 14:27 ET, same strategy and symbols:
+
+| EMA(20) minus the independent value | Before | After |
+| --- | --- | --- |
+| MSFT | −19.02 | +0.68 |
+| TSLA | −12.54 | −0.90 |
+| AAPL | −13.36 | +0.35 |
+| SPY | no match (price above EMA) | +0.42, matches |
+| NVDA | no match | −0.21, matches by one cent |
+| Warm-up history | oldest 500 bars, ending early October | 1,094–1,193 bars, ending with the last finished bar |
+
+The remaining 0.05–0.23 % is the data source: Alpaca's free feed has IEX trades only,
+Yahoo has consolidated prints. NVDA matched by one cent against an EMA 0.21 away from
+the independent value, so that match is within data-source noise rather than a sign of
+error.
 
 ## Reproduce
 
@@ -142,8 +195,8 @@ build/dev/tests/bench_realtime_scan
 
 ## Known limitations
 
-- The realtime scanner has been exercised with simulated feeds and benchmarks, not
-  yet against a live broker feed in the app.
+- The live check covered one strategy, six symbols and one session. Alpaca paging past
+  the first 10,000-bar page has not run live: every range requested fit in one page.
 - `DeploymentRunner` still evaluates on its 500-candle window.
 - `RealtimeScanRunner::required_bars` only reads `period` keys, so MACD with a long
   `slow` period can be under-buffered for operands that still use the window path.
@@ -161,3 +214,4 @@ build/dev/tests/bench_realtime_scan
 | `e388d227` | perf(backtest): read condition operands from streamed series |
 | `93d29a6c` | perf(algo): parse strategy conditions once with `CompiledConditions` |
 | `b488dbf6` | perf(scan): evaluate realtime scans on full-history live operand state |
+| `ac3a2306` | fix(alpaca): page historical bars so live scans warm on current data |

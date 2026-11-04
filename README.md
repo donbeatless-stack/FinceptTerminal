@@ -21,6 +21,29 @@ arithmetic allows), with mutation tests, characterisation tests written before t
 refactor, and per-bar verdict checksums. Design, numbers and how to reproduce them:
 **[docs/STREAMING_EVALUATION.md](docs/STREAMING_EVALUATION.md)**.
 
+### Checked against a live broker feed
+
+The realtime scanner was then run in the app against the Alpaca paper account's IEX feed
+("Price Above EMA 20", 15-minute bars, six symbols), with each match's EMA(20) recomputed
+independently from Yahoo data. The live run caught what simulated feeds could not:
+Alpaca history requests returned only the **oldest** 500 bars of the range
+(`limit=500&sort=asc`, `next_page_token` ignored), so indicators warmed on history that
+ended a month earlier. Fixed in
+[`ac3a2306`](https://github.com/donbeatless-stack/FinceptTerminal/commit/ac3a2306), then re-run:
+
+| EMA(20) minus the independent value | Before the fix | After |
+| --- | --- | --- |
+| MSFT | −19.02 | +0.68 |
+| TSLA | −12.54 | −0.90 |
+| AAPL | −13.36 | +0.35 |
+| SPY | match missed (price was above its EMA) | +0.42, matches |
+| Warm-up history | oldest 500 bars, ending early October | 1,094–1,193 bars, up to the last finished bar |
+
+![Realtime scan on the Alpaca paper feed after the fix](docs/images/realtime-scan-live.png)
+
+The remaining 0.05–0.23 % is the data source: Alpaca's free feed carries IEX trades only.
+Details: [Live check against a broker feed](docs/STREAMING_EVALUATION.md#live-check-against-a-broker-feed).
+
 ## Market-data gateway (`gateway/`)
 
 A standalone C++20 service (Asio; IOCP on Windows) that fans one market-data feed out to
