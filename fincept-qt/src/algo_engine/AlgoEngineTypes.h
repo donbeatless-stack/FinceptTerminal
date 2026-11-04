@@ -51,6 +51,20 @@ inline int timeframe_seconds(Timeframe tf) {
     return 60;
 }
 
+/// Drops trailing candles whose period has not ended by `now_ms`. Broker history
+/// ends with the bar still in progress (OHLC of the ticks so far); a live
+/// aggregator rebuilds that same bucket from ticks and closes it at the boundary,
+/// so warming from it would count the bucket twice. Returns how many were dropped.
+inline int drop_unfinished_candles(QVector<OhlcvCandle>& candles, Timeframe tf, int64_t now_ms) {
+    const int64_t period_ms = static_cast<int64_t>(timeframe_seconds(tf)) * 1000;
+    int dropped = 0;
+    while (!candles.isEmpty() && candles.constLast().open_time + period_ms > now_ms) {
+        candles.removeLast();
+        ++dropped;
+    }
+    return dropped;
+}
+
 inline Timeframe timeframe_from_string(const QString& s) {
     if (s == "1m")
         return Timeframe::M1;

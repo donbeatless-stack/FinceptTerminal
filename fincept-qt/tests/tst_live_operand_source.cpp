@@ -33,7 +33,9 @@
 using fincept::algo::LiveOperandSource;
 using fincept::algo::OhlcvCandle;
 using fincept::algo::OperandRef;
+using fincept::algo::Timeframe;
 using fincept::algo::WindowOperandSource;
+using fincept::algo::drop_unfinished_candles;
 
 namespace {
 
@@ -147,6 +149,7 @@ class TstLiveOperandSource : public QObject {
     void finite_memory_operands_match_the_old_buffer_window();
     void unstreamable_operands_and_deep_reads_use_the_window();
     void reset_replaces_all_state();
+    void warm_up_history_drops_only_the_unfinished_bar();
 };
 
 void TstLiveOperandSource::streamed_operands_match_the_full_live_window() {
@@ -265,6 +268,38 @@ void TstLiveOperandSource::reset_replaces_all_state() {
         for (int offset = 0; offset <= 2; ++offset)
             QCOMPARE(reused.value(r.indicator, r.params, r.field, offset, nullptr),
                      fresh.value(r.indicator, r.params, r.field, offset, nullptr));
+}
+
+void TstLiveOperandSource::warm_up_history_drops_only_the_unfinished_bar() {
+    // Broker history ends with the bar in progress. RealtimeScanRunner::warm drops
+    // it — the live aggregator rebuilds that bucket from ticks — and nothing else.
+    constexpr int64_t k15m = 15 * 60 * 1000;
+    const int64_t bucket = 2'000'000LL * k15m; // start of the current 15m bucket
+    QVector<OhlcvCandle> bars;
+    for (int i = 3; i >= 0; --i) { // three finished bars, then the current one
+        OhlcvCandle c;
+        c.open_time = bucket - i * k15m;
+        c.close_time = c.open_time + k15m;
+        c.is_closed = true;
+        bars.append(c);
+    }
+
+    QVector<OhlcvCandle> h = bars; // 7 minutes into the current bucket
+    QCOMPARE(drop_unfinished_candles(h, Timeframe::M15, bucket + 7 * 60 * 1000), 1);
+    QCOMPARE(h.size(), 3);
+    QCOMPARE(h.constLast().open_time, bucket - k15m);
+
+    h = bars; // at the boundary the current bar has just finished
+    QCOMPARE(drop_unfinished_candles(h, Timeframe::M15, bucket + k15m), 0);
+    QCOMPARE(h.size(), 4);
+
+    h = bars; // the timeframe's period decides: as 1h bars only the first has ended
+    QCOMPARE(drop_unfinished_candles(h, Timeframe::H1, bucket + 20 * 60 * 1000), 3);
+    QCOMPARE(h.size(), 1);
+    QCOMPARE(h.constLast().open_time, bucket - 3 * k15m);
+
+    QVector<OhlcvCandle> empty;
+    QCOMPARE(drop_unfinished_candles(empty, Timeframe::M15, bucket), 0);
 }
 
 QTEST_GUILESS_MAIN(TstLiveOperandSource)

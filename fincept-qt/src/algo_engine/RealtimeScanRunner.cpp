@@ -116,13 +116,34 @@ void RealtimeScanRunner::warm(const QString& symbol, const QVector<OhlcvCandle>&
     auto it = states_.find(symbol);
     if (it == states_.end() || candles.isEmpty())
         return;
+    const int64_t now = QDateTime::currentMSecsSinceEpoch();
+    QVector<OhlcvCandle> history = candles;
+    const int dropped = drop_unfinished_candles(history, tf_enum_, now);
+    if (history.isEmpty())
+        return;
     SymbolState* st = it.value();
     // The operand state takes the WHOLE history; the aggregator keeps only its
     // buffer, which now serves just the operands without a streaming path.
-    st->operands->reset(candles);
-    st->agg->warm_from(candles);
+    st->operands->reset(history);
+    st->agg->warm_from(history);
     st->warmed = true;
     st->dirty = true; // evaluate on the next sweep
+
+    // How far back the history reaches and how fresh its last bar is — a warm-up
+    // that silently ended weeks ago (a truncated broker fetch) shows up here.
+    const OhlcvCandle& last = history.constLast();
+    const int64_t period_ms = static_cast<int64_t>(timeframe_seconds(tf_enum_)) * 1000;
+    const auto stamp = [](int64_t ms) { return QDateTime::fromMSecsSinceEpoch(ms).toString("yyyy-MM-dd HH:mm"); };
+    const QString msg = QString("watch=%1 warm %2: %3 bars %4 .. %5, last bar ended %6 min ago, %7 unfinished dropped")
+                            .arg(watch_id_, symbol)
+                            .arg(history.size())
+                            .arg(stamp(history.constFirst().open_time), stamp(last.open_time))
+                            .arg((now - (last.open_time + period_ms)) / 60000)
+                            .arg(dropped);
+    if (universe_.size() <= 50)
+        LOG_INFO("RealtimeScanRunner", msg);
+    else
+        LOG_DEBUG("RealtimeScanRunner", msg);
 }
 
 void RealtimeScanRunner::on_quote(const QString& symbol, const fincept::trading::BrokerQuote& q) {
