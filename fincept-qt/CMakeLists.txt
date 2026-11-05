@@ -1045,6 +1045,7 @@ set(STORAGE_SOURCES
 # Python runner
 set(PYTHON_SOURCES
     src/python/PythonRunner.cpp
+    src/python/PythonProcessPool.cpp
     src/python/PythonSetupManager.cpp
     src/python/PythonWorker.cpp
     src/python/OptionGreeksWorker.cpp

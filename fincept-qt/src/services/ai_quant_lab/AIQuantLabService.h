@@ -23,6 +23,10 @@ class AIQuantLabService : public QObject {
     /// Run any quant module by ID with JSON params
     void run_module(const QString& module_id, const QString& command, const QJsonObject& params);
 
+    /// Have a pooled worker import the module's script now, while the user is
+    /// still filling in its panel, so the first run does not wait for imports.
+    void prewarm(const QString& module_id);
+
     // ── Qlib core ───────────────────────────────────────────────────────────
     void list_models();
     void get_factor_library();
@@ -203,8 +207,13 @@ class AIQuantLabService : public QObject {
     explicit AIQuantLabService(QObject* parent = nullptr);
     Q_DISABLE_COPY(AIQuantLabService)
 
+    /// Module scripts print one result and return, so they run in pooled
+    /// workers (RunOptions::reuse_process): their imports cost 1.8-18 s per
+    /// fresh process. Callers that pass their own options (the deep agent) do
+    /// not get the pool unless they ask for it.
+    static python::PythonRunner::RunOptions pooled();
     void run_python(const QString& script, const QStringList& args, const QString& module_id, const QString& command,
-                    const python::PythonRunner::RunOptions& opts = {});
+                    const python::PythonRunner::RunOptions& opts = pooled());
     void run_python_cached(const QString& script, const QStringList& args, const QString& module_id,
                            const QString& command, int ttl_sec);
 

@@ -16,6 +16,7 @@
 #include <QJsonObject>
 #include <QLatin1String>
 #include <QMetaObject>
+#include <QPointer>
 #include <QProcessEnvironment>
 #include <QStandardPaths>
 #include <QStringList>
@@ -445,6 +446,44 @@ QProcessEnvironment PythonRunner::build_python_env() const {
     return env;
 }
 
+// How a script's run is judged: shared by the spawn path and the pooled path,
+// so a call means the same thing whichever ran it.
+static PythonResult script_result(int exit_code, QString stdout_str, QString stderr_str, bool expect_json) {
+    PythonResult result;
+    result.exit_code = exit_code;
+    QString json_out = extract_json(stdout_str);
+    result.output = json_out.isEmpty() ? stdout_str : json_out;
+    result.error = std::move(stderr_str);
+    result.success = (exit_code == 0);
+
+    if (expect_json) {
+        QJsonParseError pe{};
+        const QJsonDocument doc = QJsonDocument::fromJson(json_out.toUtf8(), &pe);
+        const bool parsed = !json_out.isEmpty() && pe.error == QJsonParseError::NoError;
+
+        if (result.success && !parsed) {
+            result.success = false;
+            if (result.error.isEmpty()) {
+                result.error = json_out.isEmpty()
+                                   ? QStringLiteral("script produced no JSON payload")
+                                   : QStringLiteral("script produced malformed JSON: %1")
+                                         .arg(pe.errorString());
+            }
+        }
+
+        // A script-level {"error": ...} envelope is a failure even
+        // on exit 0 — and on a NON-zero exit it is the only useful
+        // diagnostic, because result.error is stderr and these
+        // scripts write their message to stdout. ~412 sites do this.
+        QString envelope;
+        if (parsed && extract_error_envelope(doc, &envelope)) {
+            result.success = false;
+            result.error = envelope;
+        }
+    }
+    return result;
+}
+
 // ── Venv routing ─────────────────────────────────────────────────────────────
 // Routes scripts to the correct venv based on their name.
 
@@ -456,6 +495,96 @@ static QString select_venv_for_script(const QString& script) {
         }
     }
     return "venv-numpy2";
+}
+
+QString PythonRunner::interpreter_for(const QString& script) const {
+    const QString venv_py = PythonSetupManager::instance().python_path(select_venv_for_script(script));
+    return QFileInfo::exists(venv_py) ? venv_py : python_path_;
+}
+
+QString PythonRunner::module_name_for(const QString& script) const {
+    // If the script is inside a sub-package (contains '/'), use -m <module>
+    // so Python can resolve relative imports (from .core import ...). This
+    // only works if every directory along the path has an `__init__.py` —
+    // otherwise the package's `__init__.py` may rely on absolute imports
+    // (e.g. `from finagent_core.x import ...`) that resolve against the
+    // top-level `sys.path` entry the bare-script invocation sets up via
+    // its own `sys.path.insert(...)` bootstrap. When any ancestor dir is
+    // missing `__init__.py`, fall back to direct script invocation so the
+    // script's bootstrap can run before the failing import.
+    if (!script.contains('/'))
+        return {};
+    QString check_path = scripts_dir_;
+    QStringList parts = script.split('/');
+    parts.removeLast(); // drop the file itself
+    for (const QString& p : parts) {
+        check_path += "/" + p;
+        if (!QFileInfo::exists(check_path + "/__init__.py"))
+            return {};
+    }
+    QString module = script;
+    module.remove(".py");
+    module.replace('/', '.');
+    return module;
+}
+
+// ── Worker pool ──────────────────────────────────────────────────────────────
+
+PythonProcessPool* PythonRunner::pool() {
+    if (pool_ || pool_off_)
+        return pool_;
+    const QString worker = scripts_dir_ + "/fincept_worker.py";
+    if (qEnvironmentVariable("FINCEPT_PYTHON_POOL").compare(QLatin1String("off"), Qt::CaseInsensitive) == 0) {
+        pool_off_ = true;
+        LOG_INFO("Python", "Worker pool off (FINCEPT_PYTHON_POOL=off): every call starts its own process");
+        return nullptr;
+    }
+    if (!QFileInfo::exists(worker)) {
+        pool_off_ = true;
+        LOG_WARN("Python", "Worker pool off: " + worker + " not found");
+        return nullptr;
+    }
+    PythonProcessPool::Config cfg;
+    cfg.worker_script = worker;
+    cfg.log = [](const QString& line) { LOG_INFO("PythonPool", line); };
+    pool_ = new PythonProcessPool(cfg, this);
+    // Workers must not outlive the terminal; the static PythonRunner itself is
+    // only destroyed after the event loop and QCoreApplication are gone.
+    if (QCoreApplication::instance()) {
+        connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, pool_,
+                [p = pool_]() { p->shutdown(); });
+    }
+    return pool_;
+}
+
+bool PythonRunner::pooled_job(const QString& script, const QStringList& args, const QByteArray& stdin_data,
+                              int timeout_ms, PythonProcessPool::Job* job) {
+    if (!python_init_done_ || python_path_.isEmpty() || !pool())
+        return false;
+    job->interpreter = interpreter_for(script);
+    job->working_dir = scripts_dir_;
+    job->env = build_python_env();
+    const QString module = module_name_for(script);
+    if (module.isEmpty())
+        job->script = scripts_dir_ + "/" + script;
+    else
+        job->module = module;
+    job->args = args;
+    job->stdin_data = stdin_data;
+    job->timeout_ms = timeout_ms;
+    return true;
+}
+
+void PythonRunner::prewarm(const QString& script) {
+    if (QThread::currentThread() != this->thread()) {
+        QMetaObject::invokeMethod(this, [this, script]() { prewarm(script); }, Qt::QueuedConnection);
+        return;
+    }
+    if (!QFileInfo::exists(scripts_dir_ + "/" + script))
+        return;
+    PythonProcessPool::Job job;
+    if (pooled_job(script, {}, {}, default_timeout_for_script(script), &job))
+        pool_->warm(std::move(job));
 }
 
 // ── Find Python ──────────────────────────────────────────────────────────────
@@ -653,6 +782,51 @@ void PythonRunner::run_with_options(const QString& script, const QStringList& ar
     const int resolved_timeout =
         (opts.timeout_ms == kTimeoutFromScript) ? default_timeout_for_script(script) : opts.timeout_ms;
 
+    // Pooled fast path (opt-in, see RunOptions::reuse_process). The pool has its
+    // own capacity, so these calls do not take one of the max_concurrent_ slots.
+    // Arguments travel inside a pipe frame: no command-line limit, no @file spill.
+    PythonProcessPool::Job job;
+    if (opts.reuse_process && !on_line && pooled_job(script, args, opts.stdin_data, resolved_timeout, &job)) {
+        QPointer<PythonRunner> self = this;
+        pool_->submit(std::move(job), [self, script, args, opts, resolved_timeout,
+                                       cb = std::move(cb)](PythonProcessPool::Outcome o) mutable {
+            if (!self)
+                return;
+            using Status = PythonProcessPool::Status;
+            if (o.status == Status::Unavailable) {
+                // Never reached a worker: run it the old way.
+                LOG_WARN("Python", QString("Worker pool unavailable, running %1 as its own process: %2")
+                                       .arg(script, o.error.left(200)));
+                self->queue_.enqueue({script, args, std::move(cb), {}, opts.stdin_data,
+                                      script_supports_arg_spill(script, args), opts.expect_json, resolved_timeout});
+                self->start_next();
+                return;
+            }
+            PythonResult result;
+            if (o.status == Status::Completed)
+                result = script_result(o.exit_code, std::move(o.stdout_text), std::move(o.stderr_text),
+                                       opts.expect_json);
+            else
+                result = {false, {}, o.error, -1}; // died or timed out mid-call: not retried
+            if (!result.success && PythonSetupManager::instance().is_running() &&
+                (pyrunner_is_import_error(result.error) || pyrunner_is_import_error(result.output)))
+                result.error = pyrunner_setup_pending_message();
+            const QString how = QString("worker %1, %2 imports, %3 ms in the worker")
+                                    .arg(o.worker_pid)
+                                    .arg(o.warm ? "cached" : "fresh")
+                                    .arg(o.run_ms, 0, 'f', 0);
+            if (result.success)
+                LOG_INFO("Python", QString("Script %1 finished (%2)").arg(script, how));
+            else
+                LOG_ERROR("Python", QString("Script %1 failed (%2, exit=%3): %4")
+                                        .arg(script, how)
+                                        .arg(result.exit_code)
+                                        .arg(result.error.left(200)));
+            cb(std::move(result));
+        });
+        return;
+    }
+
     queue_.enqueue({script, args, std::move(cb), std::move(on_line), opts.stdin_data,
                     script_supports_arg_spill(script, args), opts.expect_json, resolved_timeout});
     start_next();
@@ -740,11 +914,7 @@ void PythonRunner::start_next() {
                 python_exe = venv2;
         } else {
             script_path = scripts_dir_ + "/" + req.script;
-            // Route to correct venv based on script name
-            QString venv_name = select_venv_for_script(req.script);
-            QString venv_py = PythonSetupManager::instance().python_path(venv_name);
-            if (QFileInfo::exists(venv_py))
-                python_exe = venv_py;
+            python_exe = interpreter_for(req.script);
         }
 
         auto* proc = new QProcess(this);
@@ -759,24 +929,8 @@ void PythonRunner::start_next() {
         // its own `sys.path.insert(...)` bootstrap. When any ancestor dir is
         // missing `__init__.py`, fall back to direct script invocation so the
         // script's bootstrap can run before the failing import.
-        bool use_module_form = false;
-        if (!is_code && req.script.contains('/')) {
-            use_module_form = true;
-            QString check_path = scripts_dir_;
-            QStringList parts = req.script.split('/');
-            parts.removeLast(); // drop the file itself
-            for (const QString& p : parts) {
-                check_path += "/" + p;
-                if (!QFileInfo::exists(check_path + "/__init__.py")) {
-                    use_module_form = false;
-                    break;
-                }
-            }
-        }
-        if (use_module_form) {
-            QString module = req.script;
-            module.remove(".py");
-            module.replace('/', '.');
+        const QString module = is_code ? QString() : module_name_for(req.script);
+        if (!module.isEmpty()) {
             full_args << "-m" << module;
         } else {
             full_args << script_path;
@@ -982,36 +1136,7 @@ void PythonRunner::start_next() {
                         //     (first bracket → EOF) that never parses
                         // Callers then saw success-with-no-rows and rendered a blank
                         // screen instead of falling back to cached data.
-                        QString json_out = extract_json(stdout_str);
-                        result.output = json_out.isEmpty() ? stdout_str : json_out;
-                        result.error = std::move(stderr_str);
-                        result.success = (exit_code == 0);
-
-                        if (expect_json) {
-                            QJsonParseError pe{};
-                            const QJsonDocument doc = QJsonDocument::fromJson(json_out.toUtf8(), &pe);
-                            const bool parsed = !json_out.isEmpty() && pe.error == QJsonParseError::NoError;
-
-                            if (result.success && !parsed) {
-                                result.success = false;
-                                if (result.error.isEmpty()) {
-                                    result.error = json_out.isEmpty()
-                                                       ? QStringLiteral("script produced no JSON payload")
-                                                       : QStringLiteral("script produced malformed JSON: %1")
-                                                             .arg(pe.errorString());
-                                }
-                            }
-
-                            // A script-level {"error": ...} envelope is a failure even
-                            // on exit 0 — and on a NON-zero exit it is the only useful
-                            // diagnostic, because result.error is stderr and these
-                            // scripts write their message to stdout. ~412 sites do this.
-                            QString envelope;
-                            if (parsed && extract_error_envelope(doc, &envelope)) {
-                                result.success = false;
-                                result.error = envelope;
-                            }
-                        }
+                        result = script_result(exit_code, std::move(stdout_str), std::move(stderr_str), expect_json);
                     }
 
                     if (timed_out->load()) {

@@ -1,4 +1,6 @@
 #pragma once
+#include "python/PythonProcessPool.h"
+
 #include <QHash>
 #include <QObject>
 #include <QProcess>
@@ -60,6 +62,19 @@ class PythonRunner : public QObject {
         /// Written to the child's stdin after spawn; the write channel is then
         /// closed so the script sees EOF. See the note on run() below.
         QByteArray stdin_data;
+
+        /// Run the script in a long-lived worker (PythonProcessPool) instead of a
+        /// fresh process, so its imports are paid once per worker rather than
+        /// once per call (1.8-18 s for the AI Quant Lab scripts, against tens of
+        /// milliseconds warm). Opt in only for request/response scripts: ones
+        /// that print a result and return. The worker gives each call a fresh
+        /// argv, __main__, environment, working directory and copy of the
+        /// scripts tree's own modules, but not a fresh process — a script that
+        /// calls os._exit() or leaves threads running belongs on the default
+        /// path. Ignored for calls with a stream callback. If no worker can
+        /// start, the call runs as its own process. FINCEPT_PYTHON_POOL=off in
+        /// the environment turns the pool off.
+        bool reuse_process = false;
     };
 
     /// Sentinel for RunOptions::timeout_ms — resolve the budget from the script
@@ -115,6 +130,11 @@ class PythonRunner : public QObject {
     /// Set max concurrent Python processes (default: 3)
     void set_max_concurrent(int n) { max_concurrent_ = n; }
 
+    /// Have a pooled worker import `script` now (without running its main), so
+    /// that the first reuse_process call to it does not wait for the imports.
+    /// Cheap to call repeatedly: a no-op when a worker already has it.
+    void prewarm(const QString& script);
+
   signals:
     void python_ready();
 
@@ -129,9 +149,24 @@ class PythonRunner : public QObject {
     QString find_scripts_dir() const;
     void start_next();
 
+    /// The interpreter a script runs under (venv-numpy1 / venv-numpy2 routing).
+    QString interpreter_for(const QString& script) const;
+    /// "pkg.sub.mod" when every directory on the script's path is a package (the
+    /// script then runs as `python -m`, for its relative imports); else empty.
+    QString module_name_for(const QString& script) const;
+    /// Null when the pool is off (FINCEPT_PYTHON_POOL=off, or no worker script).
+    PythonProcessPool* pool();
+    /// The same call as a pool job: interpreter, environment, working directory,
+    /// script path or module name, exactly as the spawn path would use them.
+    bool pooled_job(const QString& script, const QStringList& args, const QByteArray& stdin_data, int timeout_ms,
+                    PythonProcessPool::Job* job);
+
     QString python_path_;
     QString scripts_dir_;
     bool python_init_done_ = false;
+
+    PythonProcessPool* pool_ = nullptr;
+    bool pool_off_ = false;
 
     // Concurrency limiter
     static constexpr int DEFAULT_MAX_CONCURRENT = 3;

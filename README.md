@@ -1,8 +1,8 @@
 # About this fork
 
 This fork of [Fincept-Corporation/FinceptTerminal](https://github.com/Fincept-Corporation/FinceptTerminal)
-adds two pieces of work: streaming strategy evaluation in the terminal's algo engine,
-and a standalone market-data gateway.
+adds three pieces of work: streaming strategy evaluation in the terminal's algo engine,
+a standalone market-data gateway, and a Python worker pool for the AI Quant Lab.
 
 ## Streaming strategy evaluation
 
@@ -70,6 +70,30 @@ many TCP clients:
 
 Architecture, design trade-offs, the full benchmark matrix and its limits:
 **[gateway/README.md](gateway/README.md)**.
+
+## Python worker pool for the AI Quant Lab
+
+The terminal ran every AI Quant Lab call as a new Python process, so each one paid for
+the interpreter and its imports (qlib, PyTorch, statsmodels, scipy) before doing any
+work: 2–18 s per call. The calls now run in warm worker processes:
+- **A fresh process, as far as the script can tell:** the worker sets `argv`,
+  `__main__`, `sys.path`, environment, working directory and stdin per call, then restores
+  them and drops the scripts' own modules, so only third-party libraries stay loaded.
+  No script was changed.
+- **Failures stay contained:** a worker that crashes or overruns its deadline fails
+  only its own call, with no retry (it may already have trained a model). When no worker
+  can start, or a call waits 5 s behind busy ones, the call runs the old way.
+- **Warm-up:** opening a module imports its script in a worker while the panel is
+  being filled in.
+
+| | |
+| --- | --- |
+| Repeat calls, 7 real Quant Lab calls | 9–30 ms in the worker vs 2.8–17 s in a fresh process (198–958×), byte-identical output |
+| In the app, Statsmodels OLS | 33 ms, then 18 ms |
+| Memory | a statsmodels worker commits 5.6 GB for 189 MB resident (three bundled OpenBLAS copies reserving per-thread buffers), so workers are recycled on resident memory |
+| Tests | 18 cases against a real interpreter (Python 3.11, 3.12, 3.14); 9 of 11 deliberately planted bugs caught, the other 2 change nothing a script can observe |
+
+Design, measurements and limits: **[docs/PYTHON_WORKER_POOL.md](docs/PYTHON_WORKER_POOL.md)**.
 
 The upstream README follows unchanged.
 

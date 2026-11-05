@@ -4,6 +4,7 @@
 #include "core/logging/Logger.h"
 #include "core/session/ScreenStateManager.h"
 #include "screens/ai_quant_lab/QuantModulePanel.h"
+#include "services/ai_quant_lab/AIQuantLabService.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -414,6 +415,10 @@ void AIQuantLabScreen::on_module_selected(int index) {
     if (index < 0 || index >= modules_.size())
         return;
     active_index_ = index;
+
+    // Start importing the module's Python stack (up to 18 s cold for qlib) while
+    // the user is still filling in the panel.
+    services::quant::AIQuantLabService::instance().prewarm(modules_[index].id);
 
     QuantModulePanel* panel = get_or_create_panel(index);
     content_stack_->setCurrentWidget(panel);

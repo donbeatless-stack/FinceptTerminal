@@ -56,6 +56,22 @@ AIQuantLabService::AIQuantLabService(QObject* parent) : QObject(parent) {
 }
 
 // ── Python helper ────────────────────────────────────────────────────────────
+python::PythonRunner::RunOptions AIQuantLabService::pooled() {
+    python::PythonRunner::RunOptions opts;
+    opts.reuse_process = true;
+    return opts;
+}
+
+void AIQuantLabService::prewarm(const QString& module_id) {
+    // deep_agent is not a module script: its commands are agent runs and
+    // RD-Agent child processes (see run_deep_agent_command).
+    if (module_id == QLatin1String("deep_agent"))
+        return;
+    auto it = script_map_.find(module_id);
+    if (it != script_map_.end())
+        python::PythonRunner::instance().prewarm(*it);
+}
+
 void AIQuantLabService::run_python(const QString& script, const QStringList& args, const QString& module_id,
                                    const QString& command, const python::PythonRunner::RunOptions& opts) {
     QPointer<AIQuantLabService> self = this;
@@ -99,8 +115,8 @@ void AIQuantLabService::run_python_cached(const QString& script, const QStringLi
     }
 
     QPointer<AIQuantLabService> self = this;
-    python::PythonRunner::instance().run(
-        script, args, [self, module_id, command, cache_key, ttl_sec](python::PythonResult result) {
+    python::PythonRunner::instance().run_with_options(
+        script, args, pooled(), [self, module_id, command, cache_key, ttl_sec](python::PythonResult result) {
             if (!self)
                 return;
             if (!result.success) {

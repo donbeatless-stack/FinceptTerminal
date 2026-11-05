@@ -181,6 +181,26 @@ fincept_add_test(tst_gateway_history
     tst_gateway_history.cpp
     "${PROJECT_SOURCE_DIR}/src/algo_engine/GatewayHistory.cpp")
 
+# src/python/PythonProcessPool.{h,cpp} with scripts/fincept_worker.py, against a real
+# interpreter (FINCEPT_TEST_PYTHON, else python3/python on PATH; skipped if none):
+# fresh-process semantics per call, timeouts, crashes, recycling, Unavailable.
+fincept_add_test(tst_python_process_pool
+    tst_python_process_pool.cpp
+    "${PROJECT_SOURCE_DIR}/src/python/PythonProcessPool.cpp")
+target_compile_definitions(tst_python_process_pool PRIVATE
+    FINCEPT_WORKER_SCRIPT="${PROJECT_SOURCE_DIR}/scripts/fincept_worker.py")
+
+# AI Quant Lab calls as fresh processes vs through the pool, with the app's venvs and
+# scripts (machine-dependent, so NOT registered with ctest):
+#   build/<preset>/tests/bench_python_pool [scripts_dir] [venv_root]
+add_executable(bench_python_pool
+    bench_python_pool.cpp
+    "${PROJECT_SOURCE_DIR}/src/python/PythonProcessPool.cpp")
+target_link_libraries(bench_python_pool PRIVATE Qt6::Core)
+target_include_directories(bench_python_pool PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_compile_definitions(bench_python_pool PRIVATE FINCEPT_SCRIPTS_DIR="${PROJECT_SOURCE_DIR}/scripts")
+set_target_properties(bench_python_pool PROPERTIES UNITY_BUILD OFF AUTOMOC ON FOLDER "tests")
+
 # src/algo_engine/ConditionEvaluator.{h,cpp}: operator semantics, offsets, error
 # propagation, AND/OR short-circuiting and nested groups, against a scripted
 # OperandSource. Links Qt6::Gui only for headers:
@@ -236,5 +256,6 @@ set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tes
 
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
                "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
-               "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging, tst_gateway_history "
-               "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan)")
+               "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging, tst_gateway_history, "
+               "tst_python_process_pool "
+               "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan, bench_python_pool)")
