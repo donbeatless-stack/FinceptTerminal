@@ -77,6 +77,9 @@ std::unique_ptr<Connection> Connection::open(const std::string& conninfo) {
         PQfinish(c);
         throw Error("cannot connect to PostgreSQL: " + why, {}, true);
     }
+    // libpq prints server NOTICEs ("relation ... already exists, skipping") to
+    // stderr by default; they are informational, so drop them.
+    PQsetNoticeProcessor(c, [](void*, const char*) {}, nullptr);
     return std::unique_ptr<Connection>(new Connection(c));
 }
 

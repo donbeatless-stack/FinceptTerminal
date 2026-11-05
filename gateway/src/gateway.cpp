@@ -16,6 +16,8 @@
 #include <future>
 #include <mutex>
 #include <optional>
+#include <stdexcept>
+#include <unordered_map>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -73,6 +75,7 @@ struct Gateway::Impl {
     void rearm(tcp::acceptor& acceptor, asio::steady_timer& retry, const asio::error_code& ec, void (Impl::*accept)());
     GatewayStats stats() const;
     std::string handle_command(std::string_view line);
+    void dispatch(std::string_view line, detail::RequestSession::Reply reply);
 
     const GatewayConfig config;
 
@@ -93,6 +96,11 @@ struct Gateway::Impl {
     detail::Registry<detail::PushSession> push_sessions;
     detail::Registry<detail::RequestSession> request_sessions;
     detail::SessionContext ctx;
+
+    /// add_command() verbs (upper case). Written before start(), only read after.
+    std::unordered_map<std::string, AsyncCommand> commands;
+    /// Runs them, so a slow command never occupies an I/O thread.
+    std::optional<asio::thread_pool> workers;
 
     std::uint64_t sequence = 0; ///< producer thread only
     std::atomic<std::uint64_t> ingest_waits{0};
@@ -139,7 +147,9 @@ void Gateway::Impl::accept_request() {
             return;
         if (!ec && !stopping.load(std::memory_order_acquire)) {
             auto session = std::make_shared<detail::RequestSession>(
-                std::move(socket), [this](std::string_view line) { return handle_command(line); }, request_sessions);
+                std::move(socket),
+                [this](std::string_view line, detail::RequestSession::Reply reply) { dispatch(line, std::move(reply)); },
+                request_sessions, config.command_timeout);
             request_sessions.add(session);
             session->start();
         }
@@ -183,6 +193,8 @@ void Gateway::start() {
     im.distributor.start(im.config.busy_poll);
     im.running.store(true, std::memory_order_release);
     im.accept_push();
+    if (!im.commands.empty())
+        im.workers.emplace(static_cast<std::size_t>(std::max(1, im.config.command_threads)));
     im.accept_request();
     im.work.emplace(asio::make_work_guard(im.io));
     const int n = std::max(1, im.config.io_threads);
@@ -221,6 +233,11 @@ void Gateway::stop() {
         s->close();
     for (const auto& s : im.request_sessions.live())
         s->close();
+    //    Commands already running finish (their replies go nowhere); queued ones are dropped.
+    if (im.workers) {
+        im.workers->stop();
+        im.workers->join();
+    }
     im.work.reset();
     for (auto& t : im.io_threads)
         t.join();
@@ -262,6 +279,32 @@ GatewayStats Gateway::stats() const {
 
 std::string Gateway::handle_command(std::string_view line) {
     return impl_->handle_command(line);
+}
+
+void Gateway::add_command(std::string verb, AsyncCommand command) {
+    std::lock_guard lock(impl_->lifecycle_mu);
+    if (impl_->started)
+        throw std::logic_error("Gateway::add_command after start()");
+    impl_->commands[upper(verb)] = std::move(command);
+}
+
+// Built-in commands answer inline; added ones go to the worker pool with a copy
+// of the line (the session's buffer is not theirs to keep).
+void Gateway::Impl::dispatch(std::string_view line, detail::RequestSession::Reply reply) {
+    const auto words = split_words(line);
+    if (!words.empty()) {
+        if (const auto it = commands.find(upper(words[0])); it != commands.end() && workers) {
+            asio::post(*workers, [command = it->second, text = std::string(line), reply = std::move(reply)] {
+                try {
+                    command(text, reply);
+                } catch (const std::exception& e) {
+                    reply(std::string("ERR ") + e.what()); // ignored if it already replied
+                }
+            });
+            return;
+        }
+    }
+    reply(handle_command(line));
 }
 
 GatewayStats Gateway::Impl::stats() const {

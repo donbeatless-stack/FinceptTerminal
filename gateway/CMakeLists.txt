@@ -60,7 +60,10 @@ add_library(fmdg_core STATIC
     src/alpaca_feed.cpp
     src/tls_roots.cpp
     src/pg.cpp
-    src/bar_store.cpp)
+    src/bar_store.cpp
+    src/history.cpp
+    src/http.cpp
+    src/bar_sync.cpp)
 target_include_directories(fmdg_core PUBLIC include PRIVATE src)
 target_link_libraries(fmdg_core PUBLIC asio::asio OpenSSL::SSL OpenSSL::Crypto simdjson::simdjson PostgreSQL::PostgreSQL)
 if(WIN32)
@@ -97,7 +100,10 @@ add_executable(fmdg_tests
     tests/test_alpaca_protocol.cpp
     tests/test_alpaca_feed.cpp
     tests/test_pool.cpp
-    tests/test_bar_store.cpp)
+    tests/test_bar_store.cpp
+    tests/test_history.cpp
+    tests/test_http.cpp
+    tests/test_bar_sync.cpp)
 target_link_libraries(fmdg_tests PRIVATE fmdg_core GTest::gtest_main)
 fmdg_warnings(fmdg_tests)
 include(GoogleTest)

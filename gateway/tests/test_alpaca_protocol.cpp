@@ -154,3 +154,46 @@ TEST(AlpacaIncoming, ErrorCodesMapToActions) {
     for (int code : {401, 404, 407, 500, 999})
         EXPECT_EQ(classify_error(code), ErrorAction::Reconnect) << code;
 }
+
+// ── REST: GET /v2/stocks/bars ────────────────────────────────────────────────
+
+TEST(AlpacaRest, FormatsTimesAndTheBarsTarget) {
+    EXPECT_EQ(rfc3339(0), "1970-01-01T00:00:00Z");
+    EXPECT_EQ(rfc3339(1'793'819'702), "2026-11-04T19:15:02Z");
+    EXPECT_EQ(rfc3339(1'835'481'599), "2028-02-29T23:59:59Z"); // leap day (checked with date -u)
+    EXPECT_EQ(parse_rfc3339_ns(rfc3339(1'793'819'702)), 1'793'819'702LL * 1'000'000'000LL);
+    EXPECT_EQ(bars_target({"AAPL", "BRK.B"}, 1'793'818'800, 1'793'822'399, "iex", "", 10000),
+              "/v2/stocks/bars?symbols=AAPL%2CBRK.B&timeframe=1Min&start=2026-11-04T19%3A00%3A00Z"
+              "&end=2026-11-04T19%3A59%3A59Z&limit=10000&feed=iex&adjustment=raw&sort=asc");
+    EXPECT_NE(bars_target({"AAPL"}, 0, 60, "iex", "QUFQTHwy+/=").find("&page_token=QUFQTHwy%2B%2F%3D"),
+              std::string::npos);
+}
+
+TEST(AlpacaRest, ParsesAPageOfBars) {
+    MessageParser p;
+    std::vector<Bar> bars;
+    std::string token;
+    std::size_t malformed = 0;
+    ASSERT_TRUE(p.parse_bars_page(
+        R"({"bars":{"AAPL":[{"c":150.25,"h":151,"l":149.5,"n":12,"o":150,"t":"2026-11-04T19:14:00Z","v":1200,"vw":150.1},)"
+        R"({"c":150.5,"h":150.75,"l":150,"n":3,"o":150.25,"t":"2026-11-04T19:15:00Z","v":300,"vw":150.4}],)"
+        R"("MSFT":[{"c":400.5,"h":401,"l":400,"n":5,"o":400,"t":"2026-11-04T19:14:00Z","v":77,"vw":400.3},)"
+        R"({"c":"bad","t":"2026-11-04T19:15:00Z"}]},"next_page_token":"QUFQTHwy"})",
+        bars, token, malformed));
+    ASSERT_EQ(bars.size(), 3u);
+    EXPECT_EQ(bars[0].symbol, "AAPL");
+    EXPECT_DOUBLE_EQ(bars[0].close, 150.25);
+    EXPECT_EQ(bars[0].start_ns, utc_ns(2026y / 11 / 4, 19h, 14min, 0s));
+    EXPECT_EQ(bars[2].symbol, "MSFT");
+    EXPECT_DOUBLE_EQ(bars[2].volume, 77.0);
+    EXPECT_EQ(malformed, 1u);
+    EXPECT_EQ(token, "QUFQTHwy");
+
+    bars.clear();
+    ASSERT_TRUE(p.parse_bars_page(R"({"bars":{},"next_page_token":null})", bars, token, malformed));
+    EXPECT_TRUE(bars.empty());
+    EXPECT_TRUE(token.empty()); // the last page
+    std::string err;
+    EXPECT_FALSE(p.parse_bars_page("[1,2]", bars, token, malformed, &err));
+    EXPECT_EQ(err, "not a JSON object");
+}

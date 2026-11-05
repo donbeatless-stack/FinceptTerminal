@@ -223,7 +223,8 @@ void BarStore::stop() {
         impl_->writer.join();
 }
 
-void BarStore::add(const alpaca::Bar& bar) {
+std::uint64_t BarStore::add(const alpaca::Bar& bar) {
+    std::uint64_t seq = 0;
     {
         std::lock_guard lock(impl_->mu);
         ++impl_->st.received;
@@ -231,9 +232,17 @@ void BarStore::add(const alpaca::Bar& bar) {
             impl_->queue.pop_front(); // the oldest goes: the newest bars matter most live
             ++impl_->st.dropped;
         }
-        impl_->queue.push_back({impl_->next_seq++, Clock::now(), bar});
+        seq = ++impl_->next_seq; // starts at 1, so 0 means "nothing yet"
+        impl_->queue.push_back({seq, Clock::now(), bar});
     }
     impl_->cv.notify_one();
+    return seq;
+}
+
+std::uint64_t BarStore::written_through() const {
+    std::lock_guard lock(impl_->mu);
+    // The queue leaves in order: everything before its head is gone.
+    return impl_->queue.empty() ? impl_->next_seq : impl_->queue.front().seq - 1;
 }
 
 BarStoreStats BarStore::stats() const {

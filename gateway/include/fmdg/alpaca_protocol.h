@@ -69,6 +69,15 @@ enum class ErrorAction {
 };
 ErrorAction classify_error(int code);
 
+/// Unix seconds → "2026-11-04T19:15:00Z".
+std::string rfc3339(std::int64_t unix_seconds);
+
+/// The request target for one page of one-minute bars of `symbols`, with bars
+/// starting in [start, end] (Alpaca's end is inclusive), oldest first, raw
+/// prices (the stream's bars are unadjusted too).
+std::string bars_target(const std::vector<std::string>& symbols, std::int64_t start, std::int64_t end,
+                        std::string_view feed, std::string_view page_token, int limit = 10000);
+
 /// Parses stream messages. Holds one simdjson parser and reuses its buffers.
 class MessageParser {
   public:
@@ -81,6 +90,13 @@ class MessageParser {
     /// array (`error` says why); a bad item inside a good array is only counted
     /// in Batch::malformed, so one odd message cannot drop its neighbours.
     bool parse(std::string_view json, Batch& out, std::string* error = nullptr);
+
+    /// One page of the REST multi-symbol bars endpoint (GET /v2/stocks/bars):
+    /// {"bars":{"AAPL":[{"t":…,"o":…,…},…],…},"next_page_token":… or null}.
+    /// Appends the bars to `out`; `next_page_token` is empty on the last page.
+    /// Malformed bars are skipped and counted in `malformed`.
+    bool parse_bars_page(std::string_view json, std::vector<Bar>& out, std::string& next_page_token,
+                         std::size_t& malformed, std::string* error = nullptr);
 
   private:
     struct Impl;

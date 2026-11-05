@@ -3,7 +3,9 @@
 // until Ctrl-C.
 #include "fmdg/alpaca_feed.h"
 #include "fmdg/bar_store.h"
+#include "fmdg/bar_sync.h"
 #include "fmdg/gateway.h"
+#include "fmdg/history.h"
 #include "fmdg/synthetic_feed.h"
 
 #include <atomic>
@@ -16,6 +18,7 @@
 #include <exception>
 #include <fstream>
 #include <memory>
+#include <set>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -57,7 +60,12 @@ void usage() {
         "minute bars into PostgreSQL (alpaca feed only):\n"
         "  --pg CONNINFO          libpq connection string; keep the password out of it, e.g.\n"
         "                         \"host=localhost dbname=fmdg user=fmdg passfile=C:/path/pgpass.conf\"\n"
-        "  --pg-table NAME        table for the bars          (default bars_1m)");
+        "  --pg-table NAME        table for the bars          (default bars_1m)\n"
+        "                         with --pg, HISTORY <tf> <from> <to> <symbols> answers on the request port\n"
+        "bar sync from Alpaca's REST API (needs --pg and credentials; no --feed needed):\n"
+        "  --sync-symbols LIST    comma-separated, or @FILE (one per line or comma-separated)\n"
+        "  --sync-days N          backfill depth              (default 60)\n"
+        "  --sync-feed NAME       iex | sip                   (default iex)");
 }
 
 double us(std::int64_t ns) {
@@ -108,6 +116,36 @@ bool read_credentials(const std::string& path, std::string& key, std::string& se
     return true;
 }
 
+/// "@path" → the file's contents with newlines as commas; anything else as is.
+std::string read_list(const std::string& arg) {
+    if (arg.empty() || arg[0] != '@')
+        return arg;
+    std::ifstream in(arg.substr(1));
+    if (!in) {
+        std::fprintf(stderr, "fmdg: cannot read %s\n", arg.substr(1).c_str());
+        std::exit(2);
+    }
+    std::string out, line;
+    while (std::getline(in, line))
+        out += line + ",";
+    return out;
+}
+
+/// A PostgreSQL text[] literal: {"AAPL","MSFT"}.
+std::string pg_text_array(const std::vector<std::string>& items) {
+    std::string out = "{";
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        out += i ? ",\"" : "\"";
+        for (char c : items[i]) {
+            if (c == '"' || c == '\\')
+                out += '\\';
+            out += c;
+        }
+        out += '"';
+    }
+    return out + "}";
+}
+
 std::vector<std::string> split_symbols(const std::string& list) {
     std::vector<std::string> out;
     std::size_t start = 0;
@@ -151,6 +189,9 @@ int main(int argc, char** argv) {
     std::string credentials_file;
     std::string pg_conninfo;
     std::string pg_table = "bars_1m";
+    std::string sync_symbols;
+    std::string sync_feed = "iex";
+    int sync_days = 60;
     double stats_interval = 5;
     double duration = 0;
 
@@ -198,6 +239,12 @@ int main(int argc, char** argv) {
                 pg_conninfo = value();
             else if (arg == "--pg-table")
                 pg_table = value();
+            else if (arg == "--sync-symbols")
+                sync_symbols = value();
+            else if (arg == "--sync-days")
+                sync_days = std::stoi(value());
+            else if (arg == "--sync-feed")
+                sync_feed = value();
             else if (arg == "--stats-interval")
                 stats_interval = std::stod(value());
             else if (arg == "--duration")
@@ -221,6 +268,33 @@ int main(int argc, char** argv) {
         return 2;
     }
     const bool use_alpaca = feed_kind == "alpaca";
+    const std::vector<std::string> sync_list = split_symbols(read_list(sync_symbols));
+    if (!sync_symbols.empty() && sync_list.empty()) {
+        std::fprintf(stderr, "fmdg: --sync-symbols names no symbols\n");
+        return 2;
+    }
+    const bool use_sync = !sync_list.empty();
+    if (use_sync && pg_conninfo.empty()) {
+        std::fprintf(stderr, "fmdg: --sync-symbols stores bars: it needs --pg\n");
+        return 2;
+    }
+    std::string api_key, api_secret;
+    if (use_alpaca || use_sync) {
+        if (!credentials_file.empty()) {
+            if (!read_credentials(credentials_file, api_key, api_secret)) {
+                std::fprintf(stderr, "fmdg: cannot read %s\n", credentials_file.c_str());
+                return 2;
+            }
+        } else {
+            api_key = env("APCA_API_KEY_ID");
+            api_secret = env("APCA_API_SECRET_KEY");
+        }
+        if (api_key.empty() || api_secret.empty()) {
+            std::fprintf(stderr, "fmdg: Alpaca credentials missing: set APCA_API_KEY_ID and APCA_API_SECRET_KEY, "
+                                 "or pass --alpaca-credentials FILE with those two lines\n");
+            return 2;
+        }
+    }
     if (use_alpaca) {
         if (alpaca_stream != "iex" && alpaca_stream != "sip" && alpaca_stream != "delayed_sip" &&
             alpaca_stream != "test") {
@@ -234,41 +308,15 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "fmdg: --alpaca-symbols is required (e.g. AAPL,MSFT)\n");
             return 2;
         }
-        if (!credentials_file.empty()) {
-            if (!read_credentials(credentials_file, alpaca_config.key, alpaca_config.secret)) {
-                std::fprintf(stderr, "fmdg: cannot read %s\n", credentials_file.c_str());
-                return 2;
-            }
-        } else {
-            alpaca_config.key = env("APCA_API_KEY_ID");
-            alpaca_config.secret = env("APCA_API_SECRET_KEY");
-        }
-        if (alpaca_config.key.empty() || alpaca_config.secret.empty()) {
-            std::fprintf(stderr, "fmdg: Alpaca credentials missing: set APCA_API_KEY_ID and APCA_API_SECRET_KEY, "
-                                 "or pass --alpaca-credentials FILE with those two lines\n");
-            return 2;
-        }
+        alpaca_config.key = api_key;
+        alpaca_config.secret = api_secret;
         if (alpaca_stream == "iex" && alpaca_config.symbols.size() > 30)
             std::fprintf(stderr, "fmdg: warning: the free plan streams at most 30 symbols; Alpaca answers more "
                                  "with error 405\n");
         alpaca_config.log = [](const std::string& line) { log_line("alpaca", line); };
     }
-    if (!pg_conninfo.empty() && !use_alpaca) {
-        std::fprintf(stderr, "fmdg: --pg stores Alpaca minute bars; it needs --feed alpaca\n");
-        return 2;
-    }
 
-    fmdg::Gateway gateway(config);
-    try {
-        gateway.start();
-    } catch (const std::system_error& e) {
-        std::fprintf(stderr, "fmdg: cannot listen on %s: %s\n", config.bind_address.c_str(), e.what());
-        return 1;
-    }
-    std::printf("fmdg: push port %u, request port %u, %d io threads%s\n", gateway.push_port(),
-                gateway.request_port(), config.io_threads, config.busy_poll ? ", busy-poll" : "");
-
-    // The store first, so the feed can hand it bars from its first message on.
+    // The store before the gateway: HISTORY must be registered before it starts.
     std::unique_ptr<fmdg::BarStore> store;
     if (!pg_conninfo.empty()) {
         fmdg::BarStoreConfig sc;
@@ -279,13 +327,76 @@ int main(int argc, char** argv) {
             store = std::make_unique<fmdg::BarStore>(sc);
         } catch (const std::exception& e) {
             std::fprintf(stderr, "fmdg: %s\n", e.what());
-            gateway.stop();
             return 2;
         }
         store->start();
         alpaca_config.on_bar = [s = store.get()](const fmdg::alpaca::Bar& b) { s->add(b); };
-        std::printf("fmdg: minute bars -> PostgreSQL table %s\n", pg_table.c_str());
     }
+
+    std::unique_ptr<fmdg::BarSync> sync;
+    if (use_sync) {
+        fmdg::BarSyncConfig yc;
+        yc.key = api_key;
+        yc.secret = api_secret;
+        yc.feed = sync_feed;
+        yc.ca_file = alpaca_config.ca_file;
+        yc.symbols = sync_list;
+        yc.days = sync_days;
+        fmdg::BarStore* s = store.get();
+        yc.on_bars = [s](const std::vector<fmdg::alpaca::Bar>& bars) {
+            std::uint64_t seq = 0;
+            for (const auto& b : bars)
+                seq = s->add(b);
+            return seq;
+        };
+        yc.written_through = [s] { return s->written_through(); };
+        yc.backlog = [s] { return s->stats().queued; };
+        yc.resume_from = [s, pg_table](const std::vector<std::string>& syms) -> std::int64_t {
+            try { // where the stored history of every one of `syms` ends; 0 if any has none
+                auto lease = s->pool().acquire();
+                const auto r = lease->exec("SELECT count(*), coalesce(extract(epoch FROM min(m))::bigint, 0) FROM "
+                                           "(SELECT max(start_ts) AS m FROM " +
+                                               pg_table + " WHERE symbol = ANY($1::text[]) GROUP BY symbol) s",
+                                           {pg_text_array(syms)});
+                if (r.integer(0, 0) < static_cast<std::int64_t>(syms.size()))
+                    return 0;
+                return r.integer(0, 1) + 60;
+            } catch (const std::exception&) {
+                return 0; // no table yet, or the database is down: backfill everything
+            }
+        };
+        yc.log = [](const std::string& line) { log_line("sync", line); };
+        try {
+            sync = std::make_unique<fmdg::BarSync>(yc);
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "fmdg: %s\n", e.what());
+            return 2;
+        }
+    }
+
+    fmdg::Gateway gateway(config);
+    if (store) {
+        // With a sync, HISTORY answers for the synced symbols only: those are the
+        // ones complete_to vouches for.
+        std::function<bool(std::string_view)> synced;
+        if (sync)
+            synced = [set = std::set<std::string, std::less<>>(sync_list.begin(), sync_list.end())](
+                         std::string_view s) { return set.contains(s); };
+        gateway.add_command("HISTORY", fmdg::history_command(
+                                           store->pool(), pg_table,
+                                           [&sync] { return sync ? sync->complete_to() : std::int64_t{0}; },
+                                           std::move(synced)));
+    }
+    try {
+        gateway.start();
+    } catch (const std::system_error& e) {
+        std::fprintf(stderr, "fmdg: cannot listen on %s: %s\n", config.bind_address.c_str(), e.what());
+        return 1;
+    }
+    std::printf("fmdg: push port %u, request port %u, %d io threads%s\n", gateway.push_port(),
+                gateway.request_port(), config.io_threads, config.busy_poll ? ", busy-poll" : "");
+    if (store)
+        std::printf("fmdg: PostgreSQL table %s; HISTORY on the request port\n", pg_table.c_str());
 
     // Exactly one producer may call Gateway::ingest().
     std::unique_ptr<fmdg::SyntheticFeed> synthetic;
@@ -305,6 +416,11 @@ int main(int argc, char** argv) {
         synthetic = std::make_unique<fmdg::SyntheticFeed>(gateway, feed_config);
         synthetic->start();
         std::printf("fmdg: synthetic feed, %zu symbols at %.0f ticks/s\n", feed_config.symbols, feed_config.rate);
+    }
+    if (sync) {
+        sync->start();
+        std::printf("fmdg: bar sync, %zu symbol(s), %d days of %s one-minute bars, then a top-up each minute\n",
+                    sync_list.size(), sync_days, sync_feed.c_str());
     }
     std::fflush(stdout);
 
@@ -349,19 +465,31 @@ int main(int argc, char** argv) {
                         static_cast<unsigned long long>(b.failed_batches), static_cast<unsigned long long>(b.dropped),
                         b.pool.open, b.pool.idle, b.last_error.empty() ? "" : "  last error: ", b.last_error.c_str());
         }
+        if (sync) {
+            const fmdg::BarSyncStats y = sync->stats();
+            std::printf("  sync %s: complete_to=%s bars=%llu requests=%llu retries=%llu rate_limited=%llu%s%s\n",
+                        y.state.c_str(), y.complete_to ? fmdg::alpaca::rfc3339(y.complete_to).c_str() : "-",
+                        static_cast<unsigned long long>(y.bars), static_cast<unsigned long long>(y.requests),
+                        static_cast<unsigned long long>(y.retries), static_cast<unsigned long long>(y.rate_limited),
+                        y.last_error.empty() ? "" : "  last error: ", y.last_error.c_str());
+        }
         std::fflush(stdout);
         prev = s;
         last_print = now;
     }
 
-    // The producer goes first: ingest() must not race Gateway::stop().
+    // Producers first: ingest() must not race Gateway::stop(), and no bar may
+    // reach the store after it flushed. Then the gateway, whose HISTORY workers
+    // use the store's pool; the store last, writing what is queued.
+    if (sync)
+        sync->stop();
     if (synthetic)
         synthetic->stop();
     if (alpaca)
         alpaca->stop();
-    if (store)
-        store->stop(); // after the feed: no more bars can arrive; writes what is queued
     gateway.stop();
+    if (store)
+        store->stop();
     std::puts("fmdg: stopped");
     return 0;
 }

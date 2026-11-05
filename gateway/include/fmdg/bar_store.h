@@ -66,8 +66,13 @@ class BarStore {
     /// hold shutdown hostage), then stops the writer. Idempotent.
     void stop();
 
-    /// Any thread. Never blocks on the database.
-    void add(const alpaca::Bar& bar);
+    /// Any thread. Never blocks on the database. Returns the bar's sequence
+    /// number (1, 2, ...), for comparing with written_through().
+    std::uint64_t add(const alpaca::Bar& bar);
+
+    /// Every bar with a sequence number up to this one has left the queue:
+    /// written (or, on overflow, dropped and counted in BarStoreStats::dropped).
+    std::uint64_t written_through() const;
 
     BarStoreStats stats() const;
 

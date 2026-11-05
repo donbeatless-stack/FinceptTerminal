@@ -174,6 +174,13 @@ fincept_add_test(tst_live_operand_source
 fincept_add_test(tst_alpaca_bars_paging
     tst_alpaca_bars_paging.cpp)
 
+# src/algo_engine/GatewayHistory.{h,cpp}: the gateway HISTORY reply parser and the
+# rule for which symbols it may stand in for the broker (fresh sync, whole periods,
+# enough history).
+fincept_add_test(tst_gateway_history
+    tst_gateway_history.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/GatewayHistory.cpp")
+
 # src/algo_engine/ConditionEvaluator.{h,cpp}: operator semantics, offsets, error
 # propagation, AND/OR short-circuiting and nested groups, against a scripted
 # OperandSource. Links Qt6::Gui only for headers:
@@ -229,5 +236,5 @@ set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tes
 
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
                "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
-               "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging "
+               "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging, tst_gateway_history "
                "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan)")

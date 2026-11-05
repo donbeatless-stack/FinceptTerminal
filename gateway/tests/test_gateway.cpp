@@ -502,3 +502,64 @@ TEST(Gateway, PortInUseThrows) {
     Gateway b(config);
     EXPECT_THROW(b.start(), std::system_error);
 }
+
+// ── Added (asynchronous) request-port commands ───────────────────────────────
+
+TEST(Gateway, AddedCommandsRunOffTheIoThreads) {
+    auto config = test_config();
+    config.io_threads = 1; // one I/O thread: a command blocking it would stall PING
+    Gateway gw(config);
+    std::atomic<bool> started{false}, release{false};
+    gw.add_command("slow", [&](std::string_view line, std::function<void(std::string)> reply) {
+        started = true;
+        while (!release)
+            std::this_thread::sleep_for(1ms);
+        reply("done: " + std::string(line));
+    });
+    gw.start();
+    std::string slow_reply;
+    std::thread client([&] { slow_reply = request(gw.request_port(), "SLOW 1\n"); });
+    ASSERT_TRUE(eventually([&] { return started.load(); }));
+    const auto t0 = std::chrono::steady_clock::now();
+    EXPECT_EQ(request(gw.request_port(), "PING\n"), "PONG\n");
+    EXPECT_LT(std::chrono::steady_clock::now() - t0, 500ms);
+    release = true;
+    client.join();
+    EXPECT_EQ(slow_reply, "done: SLOW 1\n");
+    gw.stop();
+}
+
+TEST(Gateway, AnAddedCommandTimesOutAndALateReplyIsIgnored) {
+    auto config = test_config();
+    config.command_timeout = 100ms;
+    Gateway gw(config);
+    std::function<void(std::string)> held;
+    std::atomic<bool> started{false};
+    gw.add_command("NEVER", [&](std::string_view, std::function<void(std::string)> reply) {
+        held = reply; // answers only after the client gave up
+        started = true;
+    });
+    gw.start();
+    EXPECT_EQ(request(gw.request_port(), "NEVER\n"), "ERR timed out\n");
+    ASSERT_TRUE(eventually([&] { return started.load(); }));
+    held("too late"); // must not write to a finished session
+    EXPECT_EQ(request(gw.request_port(), "PING\n"), "PONG\n");
+    gw.stop();
+}
+
+TEST(Gateway, AnAddedCommandThatThrowsAnswersWithTheError) {
+    Gateway gw(test_config());
+    gw.add_command("BOOM", [](std::string_view, std::function<void(std::string)>) {
+        throw std::runtime_error("kaboom");
+    });
+    gw.add_command("TWICE", [](std::string_view, std::function<void(std::string)> reply) {
+        reply("first");
+        reply("second"); // ignored
+    });
+    gw.start();
+    EXPECT_EQ(request(gw.request_port(), "boom\n"), "ERR kaboom\n");
+    EXPECT_EQ(request(gw.request_port(), "twice\n"), "first\n");
+    EXPECT_EQ(request(gw.request_port(), "PING\n"), "PONG\n"); // built-ins unaffected
+    EXPECT_THROW(gw.add_command("LATE", [](std::string_view, std::function<void(std::string)>) {}), std::logic_error);
+    gw.stop();
+}

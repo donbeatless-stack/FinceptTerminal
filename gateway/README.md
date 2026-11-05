@@ -16,6 +16,9 @@ server, rebuilt on Asio (IOCP on Windows, epoll on Linux):
 
 - [Architecture](#architecture)
 - [Design decisions](#design-decisions)
+- [Alpaca feed](#alpaca-feed)
+- [Bar storage and the connection pool](#bar-storage-and-the-connection-pool)
+- [History for the terminal](#history-for-the-terminal)
 - [Testing](#testing)
 - [Performance](#performance)
 - [Build and run](#build-and-run)
@@ -60,6 +63,10 @@ flowchart LR
 | `include/fmdg/alpaca_protocol.h` | Alpaca stream messages: outgoing JSON, simdjson parsing, what each error code means |
 | `include/fmdg/alpaca_feed.h` | The Alpaca feed: TLS WebSocket session, heartbeat, reconnect supervisor |
 | `src/tls_roots.cpp` | Loads the Windows root store into OpenSSL (which does not read it) |
+| `include/fmdg/pool.h`, `pg.h`, `bar_store.h` | Connection pool, libpq wrapper, batched bar writer |
+| `include/fmdg/history.h` | `HISTORY` on the request port: stored bars, aggregated in SQL |
+| `include/fmdg/bar_sync.h`, `http.h` | Keeps the stored bars complete from Alpaca's REST API; HTTP/1.1 response parser |
+| `src/net.h`, `src/http_client.h` | Shared TLS connection; GET over one kept-alive connection |
 | `tools/loadgen.cpp` | Load generator and latency benchmark |
 
 ### Wire protocol (port 8589)
@@ -234,9 +241,75 @@ smaller, but connecting per query would still dominate a sub-millisecond query.
 
 The test stream repeats made-up values, so the two bars carry the same prices.
 
+## History for the terminal
+
+A realtime scan warms its indicators on weeks of history before it watches live ticks.
+Through the broker that is one REST request per symbol. Alpaca's free plan allows 200 a
+minute, so a 500-symbol universe needs at least 2.5 minutes, or meets 429s if the
+requests go out at once. The gateway keeps that history itself and answers in one round
+trip:
+
+```
+Alpaca REST ──BarSync──▶ BarStore ──▶ bars_1m ◀──HISTORY (worker threads, pooled reads)── terminal
+ (backfill, then a        (batched                                      ↑
+  top-up each minute)      upserts)                       falls back to the broker for
+                                                          anything the gateway can't vouch for
+```
+
+**`HISTORY <tf> <from> <to> <symbols>`** on the request port.
+- **Aggregation in SQL:** only one-minute bars are stored. Longer periods are built in SQL: `date_bin` for the bucket, then first/max/min/last/sum.
+- **Alignment:** buckets are aligned to the Unix epoch, so 15m bars fall at :00/:15/:30/:45 UTC, like Alpaca's own bars and the terminal's live aggregator.
+- **Whole periods only:** a range that starts inside a period begins at the next one, so no bar is built from part of its minutes.
+- **Off the I/O threads:** the query runs on a worker pool through the connection pool, so the I/O threads stay free. A test with a single I/O thread checks that `PING` is answered while a slow command runs.
+
+**`BarSync`** keeps the stored minutes complete.
+- **Backfill:** at start, `--sync-days` of one-minute bars for `--sync-symbols`, resuming where the store ends.
+- **Top-up:** five seconds after each minute, the newest bars for all symbols, 100 symbols per request, re-reading the last two minutes for late-trade corrections.
+- **Pacing:** 150 requests a minute. A 429 waits for `Retry-After`; network errors, timeouts and 5xx retry with backoff; 401/403 and other 4xx stop it.
+- **Backpressure:** REST delivers far faster than the database writes rows. A 504-symbol backfill would overflow the store's queue, which drops its oldest bars. So the sync stops fetching while more than 100k bars wait, and resumes at half that.
+
+**Completeness is reported, not assumed.** The reply header carries `complete_to`: every
+synced symbol's minutes before it are stored.
+- **It only advances once the store has written a pass's last bar**, not when the bar is fetched.
+- **Synced symbols only:** a symbol only the live stream writes may have gaps, so `HISTORY` leaves it out.
+- **The terminal** (`fincept-qt/src/algo_engine/GatewayHistory.h`) uses the gateway's bars only when `complete_to` is within 5 minutes of now. It drops periods that end after `complete_to`, and requires a symbol's history to reach back to the requested start. Everything else, and everything when the gateway is down, goes to the broker as before.
+
+**Checked live** (2026-11-04, after hours, S&P 500 + SPY, local PostgreSQL 18.6):
+- **The backfill:** 60 days of one-minute IEX bars for 504 symbols, 5,365,688 bars, took 252 s and 512 requests, with no retries and no 429s. After that, `complete_to` advanced every minute.
+- **Broker vs gateway:** the same 6-symbol scan (`Price Above EMA 20`, 15m), warmed once through the broker (`FINCEPT_GATEWAY=off`) and once through the gateway:
+
+| | broker REST | gateway |
+| --- | --- | --- |
+| Warm-up (scan start → all symbols warmed) | 0.59 s | 0.21 s |
+| Bars per symbol over the broker's window | 1103–1201 | the same, symbol by symbol |
+| Sum of the last 500 closes, last close | — | identical to 4 decimals, all 6 symbols |
+
+So the 15m bars the gateway builds from minutes are the bars the broker returns.
+
+- **`HISTORY`, 55 days of 15m bars, measured from a client.** Requests go 200 symbols each, in parallel, as the terminal sends them; median of 3:
+
+| Symbols | Bars | Reply | Time |
+| --- | --- | --- | --- |
+| 6 | 6,791 | 0.3 MB | 146 ms |
+| 50 | 50,716 | 2.4 MB | 596 ms |
+| 200 | 201,301 | 9.6 MB | 1.6 s |
+| 504 | 507,876 | 24.2 MB | 2.1 s |
+
+The broker path for 504 symbols was not timed. It is 504 requests, so at least 2.5 minutes
+under the free plan's limit, which is what the gateway removes.
+
+Where the time goes, from `EXPLAIN ANALYZE` on one 200-symbol request: 1.49 s of its
+1.6 s is the query itself.
+- The index scan over about 2 million minute rows: 0.67 s.
+- The sort and the aggregation: the rest.
+
+The table holds 5.37 million rows in 648 MB. A 15-minute rollup table maintained on every
+write would turn that into a scan of a fifteenth of the rows; it is the next optimisation
+if warm-up time matters.
+
 ## Testing
 
-109 GoogleTest cases (`tests/`):
+138 GoogleTest cases (`tests/`):
 - Unit tests for every component.
 - End-to-end tests over real loopback sockets: subscribe/snapshot/live ordering, unsubscribe, heartbeats, every error path, the symbol and client limits, shutdown, port conflicts, fan-out, the request port.
 - Concurrency tests: two-thread ring and queue stress, concurrent interning, sleep/wake transitions, re-subscribe racing publish, and slow-client isolation with a conservation check (`deliveries == ticks_out + conflated`).
@@ -265,6 +338,24 @@ The test stream repeats made-up values, so the two bars carry the same prices.
   - batching, and the flush timer
   - a server session killed under a pooled connection (discarded, batch retried)
   - an unreachable database (bars kept, overflow counted, shutdown not held up)
+- Request-port commands on the worker pool:
+  - `PING` answered while a slow command holds the only I/O thread
+  - the command timeout, and a late reply ignored
+  - a throwing command answered with its error
+- `HISTORY`:
+  - parsing and range alignment
+  - aggregation against hand-computed bars, including a spike and a dip
+  - partial periods never returned
+  - concurrent requests through the port, with more workers than pooled connections
+  - only synced symbols answered when a sync runs
+- The HTTP/1.1 parser: Content-Length, chunked and EOF-framed bodies, each fed whole and split anywhere, plus every malformed or oversized response it must refuse.
+- `BarSync` against a fake REST server:
+  - paging over one kept-alive connection
+  - resume, and the top-up overlap
+  - 429 with Retry-After, retried 5xx, a bad key stopping it
+  - `complete_to` waiting for the store
+  - a dropped keep-alive connection
+  - backpressure
 
 They run clean under Release, Debug (MSVC checked iterators) and AddressSanitizer. The
 original 58 survived 30 back-to-back repetitions; the 32 feed tests, 20.
@@ -399,12 +490,24 @@ build\win\fmdg.exe --feed alpaca --alpaca-symbols AAPL,MSFT ^
 build\win\fmdg_pg_bench.exe --conninfo "..." --threads 8   :: pool vs connect-per-query
 ```
 
+To serve history to the terminal, add a sync (it needs `--pg` and the same credentials;
+`--feed` is optional, since the terminal keeps its own stream connection). `@FILE` lists
+one symbol per line:
+
+```bat
+build\win\fmdg.exe --feed none --pg "..." --sync-symbols @sp500.txt --sync-days 60
+```
+
+The terminal asks `127.0.0.1:8588` by default; set `FINCEPT_GATEWAY=host:port` to point it
+elsewhere, or `off` to skip the gateway.
+
 On the request port, any line-based client works, for example `PING`, `SNAPSHOT SYM0000 SYM0001` or `STATS`.
 
 ## Limitations and next steps
 
 - **Linux:** a `linux` preset is included, but only the Windows build has been compiled and tested so far. CI on both is the next step.
-- **Real feed:** Alpaca trades flow in, and minute bars are stored with `--pg`; quotes are not ingested (a `Tick` carries one price). The free plan streams at most 30 symbols, so a larger universe needs its history backfilled through Alpaca's REST API. Next: that backfill, history queries on the request port served through the pool, and the terminal as a client.
+- **Real feed:** Alpaca trades flow in and minute bars are stored; quotes are not ingested (a `Tick` carries one price). The terminal takes history from the gateway but still keeps its own live stream: the next step is the terminal subscribing to the gateway's push port, so the gateway holds the account's one stream connection.
+- **History:** daily bars are not served (they need the exchange calendar, not UTC midnights), and raw prices are stored, so a split inside the window would differ from the broker's split-adjusted bars. The broker path covers both.
 - **Pool fairness:** waiters wake through a condition variable, which is not FIFO; under sustained overload one waiter can lose to newer arrivals until its timeout. A ticket queue would fix that if it ever shows up in practice.
 - **Per-client queue:** it uses a mutex and `std::unordered_map`. Dense symbol ids would allow a flat array, but that costs memory per client in proportion to the largest id subscribed.
 - **Fan-out at scale:** over TCP, every client costs a `send` syscall per write, which is why exchanges distribute over UDP multicast and latency-critical consumers use kernel bypass. That is a different architecture, not a tuning change.

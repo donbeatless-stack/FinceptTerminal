@@ -11,6 +11,8 @@
 #include <QStringList>
 #include <QTimer>
 
+#include <algorithm>
+
 namespace fincept::algo {
 
 RealtimeScanRunner::RealtimeScanRunner(QString watch_id, QStringList universe, QJsonArray conditions, QString logic,
@@ -117,12 +119,23 @@ void RealtimeScanRunner::warm(const QString& symbol, const QVector<OhlcvCandle>&
     const OhlcvCandle& last = history.constLast();
     const int64_t period_ms = static_cast<int64_t>(timeframe_seconds(tf_enum_)) * 1000;
     const auto stamp = [](int64_t ms) { return QDateTime::fromMSecsSinceEpoch(ms).toString("yyyy-MM-dd HH:mm"); };
-    const QString msg = QString("watch=%1 warm %2: %3 bars %4 .. %5, last bar ended %6 min ago, %7 unfinished dropped")
+    // A fingerprint of the recent history (the last 500 closes, summed), so two
+    // sources (broker REST, the market-data gateway) can be checked for agreeing
+    // bar for bar without dumping the bars.
+    double tail_sum = 0;
+    const qsizetype tail = std::min<qsizetype>(500, history.size());
+    for (qsizetype i = history.size() - tail; i < history.size(); ++i)
+        tail_sum += history[i].close;
+    const QString msg = QString("watch=%1 warm %2: %3 bars %4 .. %5, last bar ended %6 min ago, %7 unfinished dropped, "
+                                "last %8 closes sum %9, last close %10")
                             .arg(watch_id_, symbol)
                             .arg(history.size())
                             .arg(stamp(history.constFirst().open_time), stamp(last.open_time))
                             .arg((now - (last.open_time + period_ms)) / 60000)
-                            .arg(dropped);
+                            .arg(dropped)
+                            .arg(tail)
+                            .arg(tail_sum, 0, 'f', 4)
+                            .arg(last.close, 0, 'f', 4);
     if (universe_.size() <= 50)
         LOG_INFO("RealtimeScanRunner", msg);
     else

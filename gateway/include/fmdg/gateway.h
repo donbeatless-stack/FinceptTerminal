@@ -4,8 +4,10 @@
 #include "fmdg/symbol_table.h"
 #include "fmdg/tick.h"
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -27,7 +29,18 @@ struct GatewayConfig {
     /// fresher once it reads, at the cost of more, smaller writes.
     int send_buffer = 0;
     bool busy_poll = false; ///< distributor never sleeps: lowest latency, one core busy
+    /// Worker threads for commands added with add_command() (database queries);
+    /// started only if any command is added.
+    int command_threads = 4;
+    /// How long a request-port client waits for such a command before
+    /// "ERR timed out" (the I/O-side wait; the command itself is not killed).
+    std::chrono::milliseconds command_timeout{30'000};
 };
+
+/// A request-port command that does slow work, a database query for example.
+/// It runs on a worker thread, never on an I/O thread, and calls `reply` once,
+/// from any thread; later calls are ignored.
+using AsyncCommand = std::function<void(std::string_view line, std::function<void(std::string)> reply)>;
 
 struct GatewayStats {
     std::uint64_t clients = 0;      ///< push connections open now
@@ -88,8 +101,13 @@ class Gateway {
     std::uint16_t request_port() const; ///< the bound port (resolves 0)
     GatewayStats stats() const;
 
-    /// One request-port line → its reply (public so tests need no socket).
+    /// One request-port line → its reply, for the built-in commands (public so
+    /// tests need no socket).
     std::string handle_command(std::string_view line);
+
+    /// Adds a request-port command, matched on its first word (case-insensitive).
+    /// Before start(); throws std::logic_error after it.
+    void add_command(std::string verb, AsyncCommand command);
 
   private:
     struct Impl;

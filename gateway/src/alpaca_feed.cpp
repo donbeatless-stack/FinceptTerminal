@@ -4,7 +4,7 @@
 #include "fmdg/gateway.h"
 #include "fmdg/tick.h"
 #include "fmdg/ws_codec.h"
-#include "tls_roots.h"
+#include "net.h"
 
 #include <asio.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
@@ -51,62 +51,18 @@ std::array<std::uint8_t, N> random_bytes() {
     return b;
 }
 
-/// Runs `a`, noting the first exception any such wrapper sees. `x && y` cancels
-/// the survivor when one fails; the survivor then throws operation_aborted, and
-/// with two exceptions `&&` reports only asio::multiple_exceptions. The session
-/// rethrows the one that came first: the actual cause.
-awaitable<void> note_first_error(awaitable<void> a, std::exception_ptr& first) {
-    try {
-        co_await std::move(a);
-    } catch (...) {
-        if (!first)
-            first = std::current_exception();
-        throw;
-    }
-}
-
 std::string seconds_text(std::chrono::nanoseconds d) {
     return std::format("{:.1f} s", std::chrono::duration<double>(d).count());
 }
 
-/// TCP, or TLS over TCP, behind one read/write interface.
-class Connection {
-  public:
-    Connection(const asio::any_io_executor& ex, asio::ssl::context& ssl, bool tls) : plain_(ex) {
-        if (tls)
-            tls_.emplace(ex, ssl);
-    }
-
-    tcp::socket& socket() { return tls_ ? tls_->next_layer() : plain_; }
-    asio::ssl::stream<tcp::socket>* tls() { return tls_ ? &*tls_ : nullptr; }
-
-    awaitable<std::size_t> read_some(asio::mutable_buffer b, asio::error_code& ec) {
-        if (tls_)
-            co_return co_await tls_->async_read_some(b, asio::redirect_error(use_awaitable, ec));
-        co_return co_await plain_.async_read_some(b, asio::redirect_error(use_awaitable, ec));
-    }
-
-    awaitable<void> write(const std::string& data) {
-        if (tls_)
-            co_await asio::async_write(*tls_, asio::buffer(data), use_awaitable);
-        else
-            co_await asio::async_write(plain_, asio::buffer(data), use_awaitable);
-    }
-
-  private:
-    tcp::socket plain_;
-    std::optional<asio::ssl::stream<tcp::socket>> tls_;
-};
+using net::Connection;
+using net::note_first_error;
 
 } // namespace
 
 struct AlpacaFeed::Impl {
     Impl(Gateway& g, AlpacaFeedConfig c) : gateway(g), cfg(std::move(c)) {
-        ssl.set_verify_mode(asio::ssl::verify_peer);
-        if (!cfg.ca_file.empty())
-            ssl.load_verify_file(cfg.ca_file);
-        else
-            load_system_roots(ssl.native_handle());
+        net::configure_tls(ssl, cfg.ca_file);
     }
 
     Gateway& gateway;
@@ -158,15 +114,7 @@ awaitable<void> AlpacaFeed::Impl::session(bool& connected, bool& authenticated) 
             throw std::runtime_error("connect timed out after " + seconds_text(cfg.connect_timeout));
     };
     auto connect = [&]() -> awaitable<void> {
-        tcp::resolver resolver(ex);
-        const auto endpoints = co_await resolver.async_resolve(cfg.host, cfg.port, use_awaitable);
-        co_await asio::async_connect(conn.socket(), endpoints, use_awaitable);
-        conn.socket().set_option(tcp::no_delay(true));
-        if (auto* tls = conn.tls()) {
-            SSL_set_tlsext_host_name(tls->native_handle(), cfg.host.c_str()); // SNI
-            tls->set_verify_callback(asio::ssl::host_name_verification(cfg.host));
-            co_await tls->async_handshake(asio::ssl::stream_base::client, use_awaitable);
-        }
+        co_await conn.open(cfg.host, cfg.port); // resolve, TCP, TLS with SNI and hostname check
         const std::string key = ws::client_key(random_bytes<16>());
         const bool default_port = cfg.port == (cfg.tls ? "443" : "80");
         co_await conn.write(ws::upgrade_request(default_port ? cfg.host : cfg.host + ":" + cfg.port, cfg.path, key));

@@ -54,6 +54,7 @@ many TCP clients:
 - **Stats:** an HdrHistogram-style latency histogram.
 - **Feed:** Alpaca's real-time stream, through a WebSocket client written for the gateway (RFC 6455 framing, TLS with certificate checks, ping-based liveness, reconnect with backoff, error handling by code), or a synthetic feed for benchmarks. Alpaca allows one stream connection per account, so the gateway holds it and fans it out.
 - **Storage:** minute bars go into PostgreSQL through a connection pool written for the gateway. The pool caps connections (counting ones being opened), never holds its lock across a network round trip, health-checks idle connections and discards broken ones. A writer thread batches upserts, so the feed never waits on the database.
+- **History for the terminal:** a sync keeps the stored minutes complete from Alpaca's REST API: a backfill, then a top-up each minute, paced under the rate limit, with backpressure from the database. A `HISTORY` query, answered on a worker pool through the connection pool, returns any intraday timeframe aggregated in SQL. It also says up to when the data is complete. The terminal's realtime scan warms from it, and falls back to the broker for whatever the gateway cannot vouch for.
 
 | | |
 | --- | --- |
@@ -61,7 +62,10 @@ many TCP clients:
 | Distributor throughput | 12.9 M deliveries/s on one thread |
 | 5 slow clients among 50 | Fast clients unaffected (p99 336 µs vs 360 µs without); slow ones conflated to 11 % of ticks |
 | Connection pool vs connecting per query | 0.084 ms vs 239 ms median with 8 threads; 37,500 vs 33 queries/s (local PostgreSQL 18.6, Windows) |
-| Tests | 109: unit, end-to-end over sockets, concurrency, fuzzing, the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links), the pool, and bar storage against a real PostgreSQL (including a killed server session); clean under AddressSanitizer; 9 deliberately planted bugs all caught |
+| Scan warm-up, 6 symbols, broker vs gateway | 0.59 s vs 0.21 s; the same bars, symbol for symbol |
+| History for 504 symbols (S&P 500 + SPY), 55 days of 15m bars | 2.1 s from the gateway; the broker path needs 504 requests, at least 2.5 min on the free plan |
+| Backfill, 504 symbols × 60 days of one-minute bars | 5.37 M bars in 252 s, 512 requests, no 429s |
+| Tests | 138: unit, end-to-end over sockets, concurrency, fuzzing, the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links), the pool, bar storage and `HISTORY` against a real PostgreSQL (including a killed server session), the REST sync against a fake server; clean under AddressSanitizer; 9 deliberately planted bugs all caught |
 | Live check | Alpaca's test stream over TLS 1.3: trades reached the request port, minute bars landed in PostgreSQL about 1.4 s after each minute closed |
 
 Architecture, design trade-offs, the full benchmark matrix and its limits:

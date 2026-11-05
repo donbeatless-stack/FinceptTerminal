@@ -1,6 +1,8 @@
 // src/algo_engine/CandleDataFetcher.cpp
 #include "algo_engine/CandleDataFetcher.h"
 
+#include "algo_engine/GatewayHistory.h"
+
 #include "core/logging/Logger.h"
 #include "trading/AccountManager.h"
 #include "trading/BrokerRegistry.h"
@@ -17,9 +19,13 @@
 #include <QPointer>
 #include <QSet>
 #include <QUrl>
+#include <QTcpSocket>
+#include <QTimer>
+#include <QElapsedTimer>
 #include <QtConcurrent>
 
 #include <atomic>
+#include <limits>
 #include <memory>
 
 namespace fincept::algo {
@@ -262,48 +268,75 @@ void CandleDataFetcher::fetch_multi(const QStringList& symbols, const QString& t
                                     DataSource source, const QString& broker_id, const QString& account_id,
                                     MultiCandleCallback callback) {
     if (source == DataSource::Broker || (source == DataSource::Auto && !broker_id.isEmpty())) {
+        // The local market-data gateway first: one request for every symbol it
+        // keeps complete, instead of one broker request per symbol. Whatever it
+        // does not cover goes the old way.
         QPointer<CandleDataFetcher> self = this;
-        auto results = std::make_shared<QHash<QString, QVector<OhlcvCandle>>>();
-        auto errors = std::make_shared<QStringList>();
-        auto failed = std::make_shared<QStringList>();
-        auto remaining = std::make_shared<std::atomic<int>>(symbols.size());
-
-        for (const auto& sym : symbols) {
-            fetch_from_broker(sym, timeframe, lookback_days, broker_id, account_id,
-                              [self, sym, results, errors, failed, remaining, callback, timeframe,
-                               lookback_days](bool ok, const QVector<OhlcvCandle>& candles, const QString& err) {
-                                  // Broker callbacks are marshalled to self's (main) thread, so the
-                                  // shared containers are mutated serially — no extra locking needed.
-                                  if (ok && !candles.isEmpty()) {
-                                      results->insert(sym, candles);
-                                  } else {
-                                      failed->append(sym);
-                                      errors->append(QString("%1: %2").arg(sym, err));
-                                  }
-                                  if (remaining->fetch_sub(1) != 1)
-                                      return;
-                                  // Per-symbol Yahoo fallback: retry only the symbols the broker
-                                  // couldn't serve, then merge Yahoo data over the broker results.
-                                  if (failed->isEmpty() || !self) {
-                                      callback(*results, *errors);
-                                      return;
-                                  }
-                                  self->fetch_from_yahoo(
-                                      *failed, timeframe, lookback_days,
-                                      [results, errors, callback](const QHash<QString, QVector<OhlcvCandle>>& ydata,
-                                                                  const QStringList& yerr) {
-                                          for (auto it = ydata.begin(); it != ydata.end(); ++it)
-                                              results->insert(it.key(), it.value());
-                                          QStringList merged = *errors;
-                                          merged += yerr;
-                                          callback(*results, merged);
-                                      });
-                              });
-        }
+        fetch_from_gateway(
+            symbols, timeframe, lookback_days,
+            [self, timeframe, lookback_days, broker_id, account_id, callback](
+                QHash<QString, QVector<OhlcvCandle>> data, QStringList missing, QString note) {
+                if (missing.isEmpty() || !self) {
+                    callback(data, {});
+                    return;
+                }
+                Q_UNUSED(note);
+                self->fetch_multi_from_broker(
+                    missing, timeframe, lookback_days, broker_id, account_id,
+                    [data, callback](const QHash<QString, QVector<OhlcvCandle>>& more,
+                                     const QStringList& errors) mutable {
+                        for (auto it = more.begin(); it != more.end(); ++it)
+                            data.insert(it.key(), it.value());
+                        callback(data, errors);
+                    });
+            });
         return;
     }
 
     fetch_from_yahoo(symbols, timeframe, lookback_days, callback);
+}
+
+void CandleDataFetcher::fetch_multi_from_broker(const QStringList& symbols, const QString& timeframe,
+                                                int lookback_days, const QString& broker_id,
+                                                const QString& account_id, MultiCandleCallback callback) {
+    QPointer<CandleDataFetcher> self = this;
+    auto results = std::make_shared<QHash<QString, QVector<OhlcvCandle>>>();
+    auto errors = std::make_shared<QStringList>();
+    auto failed = std::make_shared<QStringList>();
+    auto remaining = std::make_shared<std::atomic<int>>(symbols.size());
+
+    for (const auto& sym : symbols) {
+        fetch_from_broker(sym, timeframe, lookback_days, broker_id, account_id,
+                          [self, sym, results, errors, failed, remaining, callback, timeframe,
+                           lookback_days](bool ok, const QVector<OhlcvCandle>& candles, const QString& err) {
+                              // Broker callbacks are marshalled to self's (main) thread, so the
+                              // shared containers are mutated serially — no extra locking needed.
+                              if (ok && !candles.isEmpty()) {
+                                  results->insert(sym, candles);
+                              } else {
+                                  failed->append(sym);
+                                  errors->append(QString("%1: %2").arg(sym, err));
+                              }
+                              if (remaining->fetch_sub(1) != 1)
+                                  return;
+                              // Per-symbol Yahoo fallback: retry only the symbols the broker
+                              // couldn't serve, then merge Yahoo data over the broker results.
+                              if (failed->isEmpty() || !self) {
+                                  callback(*results, *errors);
+                                  return;
+                              }
+                              self->fetch_from_yahoo(
+                                  *failed, timeframe, lookback_days,
+                                  [results, errors, callback](const QHash<QString, QVector<OhlcvCandle>>& ydata,
+                                                              const QStringList& yerr) {
+                                      for (auto it = ydata.begin(); it != ydata.end(); ++it)
+                                          results->insert(it.key(), it.value());
+                                      QStringList merged = *errors;
+                                      merged += yerr;
+                                      callback(*results, merged);
+                                  });
+                          });
+    }
 }
 
 void CandleDataFetcher::fetch_from_broker(const QString& symbol, const QString& timeframe, int lookback_days,
@@ -421,6 +454,98 @@ void CandleDataFetcher::yahoo_fetch_one(const QString& sym, const QString& yahoo
                 if (remaining->fetch_sub(1) == 1)
                     callback(*results, *errors);
             });
+}
+
+void CandleDataFetcher::fetch_from_gateway(const QStringList& symbols, const QString& timeframe, int lookback_days,
+                                           GatewayDone done) {
+    namespace gh = gateway_history;
+    const QString tf = gh::gateway_timeframe(timeframe);
+    QString endpoint = qEnvironmentVariable("FINCEPT_GATEWAY", QStringLiteral("127.0.0.1:8588")).trimmed();
+    if (tf.isEmpty() || symbols.isEmpty() || endpoint.compare(QLatin1String("off"), Qt::CaseInsensitive) == 0) {
+        done({}, symbols, tf.isEmpty() ? QStringLiteral("timeframe not served by the gateway") : QString());
+        return;
+    }
+    const qsizetype colon = endpoint.lastIndexOf(':');
+    const QString host = colon > 0 ? endpoint.left(colon) : endpoint;
+    const quint16 port = colon > 0 ? endpoint.mid(colon + 1).toUShort() : quint16(8588);
+
+    const qint64 period_ms = static_cast<qint64>(timeframe_seconds(timeframe_from_string(timeframe))) * 1000;
+    const qint64 now_ms = QDateTime::currentMSecsSinceEpoch();
+    const qint64 from_ms = gh::window_start_ms(now_ms, lookback_days); // the broker path's window too
+
+    // One request per chunk of symbols, all in flight at once; the last reply to
+    // arrive merges them. Everything below runs on this object's (main) thread.
+    struct Pending {
+        gh::Reply merged;
+        int left = 0;
+        QElapsedTimer clock;
+    };
+    auto pending = std::make_shared<Pending>();
+    pending->merged.ok = true;
+    pending->merged.complete_to_s = std::numeric_limits<qint64>::max();
+    pending->clock.start();
+    QList<QStringList> chunks;
+    for (qsizetype i = 0; i < symbols.size(); i += gh::kSymbolsPerRequest)
+        chunks.append(symbols.mid(i, gh::kSymbolsPerRequest));
+    pending->left = static_cast<int>(chunks.size());
+
+    auto finish_one = [pending, symbols, from_ms, now_ms, period_ms, done](const gh::Reply& r) {
+        if (!r.ok) {
+            pending->merged.ok = false;
+            if (pending->merged.error.isEmpty())
+                pending->merged.error = r.error;
+        } else {
+            pending->merged.complete_to_s = std::min(pending->merged.complete_to_s, r.complete_to_s);
+            for (auto it = r.bars.begin(); it != r.bars.end(); ++it)
+                pending->merged.bars.insert(it.key(), it.value());
+        }
+        if (--pending->left > 0)
+            return;
+        const gh::Accepted a = gh::accept(pending->merged, symbols, from_ms, now_ms, period_ms);
+        if (a.data.isEmpty())
+            LOG_DEBUG("CandleDataFetcher", QString("gateway: no history used (%1)").arg(a.note));
+        else
+            LOG_INFO("CandleDataFetcher", QString("gateway: %1 of %2 symbols in %3 ms%4")
+                                              .arg(a.data.size())
+                                              .arg(symbols.size())
+                                              .arg(pending->clock.elapsed())
+                                              .arg(a.missing.isEmpty() ? QString() : "; " + a.note));
+        done(a.data, a.missing, a.note);
+    };
+
+    const qint64 from_s = from_ms / 1000, to_s = now_ms / 1000 + 1;
+    for (const QStringList& chunk : chunks) {
+        auto* socket = new QTcpSocket(this);
+        auto buffer = std::make_shared<QByteArray>();
+        auto finished = std::make_shared<bool>(false);
+        // Exactly once per socket, whichever ends it: the reply, an error, or the timeout.
+        auto complete = [socket, buffer, finished, period_ms, finish_one](const QString& error) {
+            if (*finished)
+                return;
+            *finished = true;
+            gh::Reply r = error.isEmpty() ? gh::parse_reply(*buffer, period_ms) : gh::Reply{};
+            if (!error.isEmpty())
+                r.error = error;
+            socket->deleteLater();
+            finish_one(r);
+        };
+        connect(socket, &QTcpSocket::connected, socket,
+                [socket, tf, from_s, to_s, chunk] { socket->write(gh::request_line(tf, from_s, to_s, chunk)); });
+        connect(socket, &QTcpSocket::readyRead, socket, [socket, buffer] { buffer->append(socket->readAll()); });
+        connect(socket, &QTcpSocket::disconnected, socket, [socket, buffer, complete] {
+            buffer->append(socket->readAll());
+            complete({});
+        });
+        connect(socket, &QTcpSocket::errorOccurred, socket, [socket, complete](QAbstractSocket::SocketError e) {
+            if (e != QAbstractSocket::RemoteHostClosedError) // the gateway closing after its reply is the normal end
+                complete(QStringLiteral("gateway unreachable: ") + socket->errorString());
+        });
+        QTimer::singleShot(30'000, socket, [socket, complete] {
+            complete(QStringLiteral("gateway timed out"));
+            socket->abort();
+        });
+        socket->connectToHost(host, port);
+    }
 }
 
 } // namespace fincept::algo

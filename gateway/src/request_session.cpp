@@ -5,17 +5,29 @@
 
 namespace fmdg::detail {
 
-RequestSession::RequestSession(asio::ip::tcp::socket socket, Handler handler, Registry<RequestSession>& registry)
-    : socket_(std::move(socket)), timer_(socket_.get_executor()), handler_(std::move(handler)), registry_(registry) {}
+RequestSession::RequestSession(asio::ip::tcp::socket socket, Handler handler, Registry<RequestSession>& registry,
+                               std::chrono::milliseconds command_timeout)
+    : socket_(std::move(socket)), timer_(socket_.get_executor()), handler_(std::move(handler)), registry_(registry),
+      command_timeout_(command_timeout) {}
+
+// (Re)starts the session deadline. Re-arming cancels the previous wait, whose
+// handler then sees operation_aborted and does nothing.
+void RequestSession::arm(std::chrono::milliseconds timeout, bool reply_on_expiry) {
+    timer_.expires_after(timeout);
+    timer_.async_wait([self = shared_from_this(), reply_on_expiry](const asio::error_code& ec) {
+        if (ec)
+            return; // re-armed or cancelled: the session moved on
+        if (reply_on_expiry)
+            self->reply("ERR timed out");
+        else
+            self->close();
+    });
+}
 
 void RequestSession::start() {
     auto self = shared_from_this();
     asio::post(socket_.get_executor(), [self] {
-        self->timer_.expires_after(kTimeout);
-        self->timer_.async_wait([self](const asio::error_code& ec) {
-            if (!ec)
-                self->close(); // timed out; a cancelled wait means we finished first
-        });
+        self->arm(kTimeout, false);
         asio::async_read_until(self->socket_, asio::dynamic_buffer(self->in_, kMaxLine), '\n',
                                [self](const asio::error_code& ec, std::size_t n) {
                                    if (ec == asio::error::not_found) {
@@ -31,12 +43,24 @@ void RequestSession::start() {
                                    std::string_view line(self->in_.data(), n);
                                    while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
                                        line.remove_suffix(1);
-                                   self->reply(self->handler_(line));
+                                   // The handler may answer from another thread: hop
+                                   // back onto the strand before touching the session.
+                                   self->arm(self->command_timeout_, true);
+                                   self->handler_(line, [self](std::string text) {
+                                       asio::post(self->socket_.get_executor(),
+                                                  [self, text = std::move(text)]() mutable {
+                                                      self->reply(std::move(text));
+                                                  });
+                                   });
                                });
     });
 }
 
 void RequestSession::reply(std::string text) {
+    if (replied_ || closed_.load(std::memory_order_acquire))
+        return; // a late reply after a timeout, or a second call: ignored
+    replied_ = true;
+    arm(kTimeout, false); // the reply must drain, and the client close, in time
     out_ = std::move(text);
     if (out_.empty() || out_.back() != '\n')
         out_ += '\n';

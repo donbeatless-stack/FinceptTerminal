@@ -1279,6 +1279,7 @@ set(ALGO_ENGINE_SOURCES
     src/algo_engine/AlgoEngineProducer.cpp
     src/algo_engine/AlgoScanner.cpp
     src/algo_engine/CandleDataFetcher.cpp
+    src/algo_engine/GatewayHistory.cpp
     src/algo_engine/ScanMonitor.cpp
     src/algo_engine/RealtimeScanRunner.cpp
     src/algo_engine/UniverseScanSelftest.cpp

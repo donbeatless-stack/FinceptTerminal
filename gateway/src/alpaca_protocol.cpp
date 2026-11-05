@@ -1,9 +1,12 @@
 // gateway/src/alpaca_protocol.cpp
 #include "fmdg/alpaca_protocol.h"
 
+#include "fmdg/http.h"
+
 #include <simdjson.h>
 
 #include <cstdio>
+#include <format>
 
 namespace fmdg::alpaca {
 
@@ -170,6 +173,42 @@ std::string subscribe_message(const std::vector<std::string>& symbols, bool bars
     return m;
 }
 
+std::string rfc3339(std::int64_t unix_seconds) {
+    // H. Hinnant's civil_from_days.
+    std::int64_t days = unix_seconds / 86'400, secs = unix_seconds % 86'400;
+    if (secs < 0) {
+        secs += 86'400;
+        --days;
+    }
+    days += 719'468;
+    const std::int64_t era = (days >= 0 ? days : days - 146'096) / 146'097;
+    const std::int64_t doe = days - era * 146'097;
+    const std::int64_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146'096) / 365;
+    const std::int64_t doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    const std::int64_t mp = (5 * doy + 2) / 153;
+    const std::int64_t d = doy - (153 * mp + 2) / 5 + 1;
+    const std::int64_t m = mp < 10 ? mp + 3 : mp - 9;
+    const std::int64_t y = yoe + era * 400 + (m <= 2 ? 1 : 0);
+    return std::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z", y, m, d, secs / 3600, secs / 60 % 60, secs % 60);
+}
+
+std::string bars_target(const std::vector<std::string>& symbols, std::int64_t start, std::int64_t end,
+                        std::string_view feed, std::string_view page_token, int limit) {
+    std::string joined;
+    for (std::size_t i = 0; i < symbols.size(); ++i) {
+        if (i)
+            joined += ',';
+        joined += symbols[i];
+    }
+    std::string t = "/v2/stocks/bars?symbols=" + http::url_encode(joined) + "&timeframe=1Min&start=" +
+                    http::url_encode(rfc3339(start)) + "&end=" + http::url_encode(rfc3339(end)) +
+                    "&limit=" + std::to_string(limit) + "&feed=" + http::url_encode(feed) +
+                    "&adjustment=raw&sort=asc";
+    if (!page_token.empty())
+        t += "&page_token=" + http::url_encode(page_token);
+    return t;
+}
+
 ErrorAction classify_error(int code) {
     switch (code) {
         case 402: // auth failed: wrong key or secret
@@ -274,6 +313,48 @@ bool MessageParser::parse(std::string_view json, Batch& out, std::string* error)
             out.control.push_back(std::move(c));
         } else {
             ++out.other; // quotes, statuses, corrections, cancels, ...
+        }
+    }
+    return true;
+}
+
+bool MessageParser::parse_bars_page(std::string_view json, std::vector<Bar>& out, std::string& next_page_token,
+                                    std::size_t& malformed, std::string* error) {
+    next_page_token.clear();
+    element doc;
+    if (const auto err = impl_->parser.parse(json.data(), json.size(), true).get(doc); err != simdjson::SUCCESS) {
+        if (error)
+            *error = simdjson::error_message(err);
+        return false;
+    }
+    object root;
+    if (doc.get_object().get(root) != simdjson::SUCCESS) {
+        if (error)
+            *error = "not a JSON object";
+        return false;
+    }
+    std::string_view token;
+    if (root["next_page_token"].get_string().get(token) == simdjson::SUCCESS)
+        next_page_token.assign(token); // null on the last page
+    object by_symbol;
+    if (root["bars"].get_object().get(by_symbol) != simdjson::SUCCESS)
+        return true; // "bars": null or missing — an empty range
+    for (const auto field : by_symbol) {
+        simdjson::dom::array bars;
+        if (field.value.get_array().get(bars) != simdjson::SUCCESS) {
+            ++malformed;
+            continue;
+        }
+        for (element item : bars) {
+            object o;
+            Bar b;
+            b.symbol.assign(field.key);
+            if (item.get_object().get(o) == simdjson::SUCCESS && get_num(o, "o", b.open) && get_num(o, "h", b.high) &&
+                get_num(o, "l", b.low) && get_num(o, "c", b.close) && get_num(o, "v", b.volume) &&
+                get_time(o, "t", b.start_ns))
+                out.push_back(std::move(b));
+            else
+                ++malformed;
         }
     }
     return true;

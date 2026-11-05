@@ -59,6 +59,20 @@ class CandleDataFetcher : public QObject {
     void fetch_from_broker(const QString& symbol, const QString& timeframe, int lookback_days, const QString& broker_id,
                            const QString& account_id, CandleCallback callback);
 
+    // fetch_multi's broker path: one request per symbol, Yahoo for the ones it misses.
+    void fetch_multi_from_broker(const QStringList& symbols, const QString& timeframe, int lookback_days,
+                                 const QString& broker_id, const QString& account_id, MultiCandleCallback callback);
+
+    // Asks the local market-data gateway (FINCEPT_GATEWAY=host:port, default
+    // 127.0.0.1:8588; "off" disables) for the history of `symbols`, one HISTORY
+    // request per kSymbolsPerRequest symbols, in parallel. `done` gets what the
+    // gateway covers and the symbols to fetch elsewhere: all of them when the
+    // gateway is not running, its sync is behind, or the timeframe is daily.
+    using GatewayDone = std::function<void(QHash<QString, QVector<OhlcvCandle>> data, QStringList missing,
+                                           QString note)>;
+    void fetch_from_gateway(const QStringList& symbols, const QString& timeframe, int lookback_days,
+                            GatewayDone done);
+
     // Native Yahoo Finance fetch (replaces the old Python yfinance fallback).
     void fetch_from_yahoo(const QStringList& symbols, const QString& timeframe, int lookback_days,
                           MultiCandleCallback callback);
