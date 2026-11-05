@@ -382,7 +382,7 @@ void PerformanceRiskView::update_chart() {
     chart->addSeries(line);
 
     auto* x_axis = new QDateTimeAxis;
-    x_axis->setFormat(current_period_ == "ALL" || current_period_ == "1Y" ? "MMM yy" : "dd MMM");
+    x_axis->setFormat(current_period_ == "ALL" || current_period_ == "1Y" ? "MMM yy" : "MMM d");
     x_axis->setTickCount(5);
     x_axis->setLabelsColor(QColor(ui::colors::TEXT_TERTIARY()));
     x_axis->setGridLineColor(QColor(ui::colors::BORDER_DIM()));

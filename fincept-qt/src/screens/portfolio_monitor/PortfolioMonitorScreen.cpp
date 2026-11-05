@@ -184,7 +184,7 @@ QWidget* PortfolioMonitorScreen::build_summary_bar() {
     float_btn_->setFixedSize(24, 24);
     float_btn_->setToolTip(tr("Detach into its own window"));
     float_btn_->setStyleSheet("QPushButton{background:transparent;border:1px solid #2a2a2a;color:#808080;"
-                              "font-size:13px;}QPushButton:hover{color:#e5e5e5;border-color:#d97706;}");
+                              "font-size:13px;}QPushButton:hover{color:#e5e5e5;border-color:#2dd4bf;}");
     connect(float_btn_, &QPushButton::clicked, this, [this]() {
         if (floating_)
             emit dock_requested();
@@ -235,9 +235,9 @@ QWidget* PortfolioMonitorScreen::build_summary_bar() {
     auto* square_all = new QPushButton(tr("SQUARE OFF ALL"));
     for (auto* b : {refresh, new_order}) {
         b->setCursor(Qt::PointingHandCursor);
-        b->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#d97706;"
+        b->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#2dd4bf;"
                          "padding:5px 12px;font-size:11px;font-weight:600;}"
-                         "QPushButton:hover{border-color:#d97706;}");
+                         "QPushButton:hover{border-color:#2dd4bf;}");
     }
     square_all->setCursor(Qt::PointingHandCursor);
     square_all->setStyleSheet("QPushButton{background:#1a0a0a;border:1px solid #5c1f1f;color:#ef4444;"
@@ -280,7 +280,7 @@ void PortfolioMonitorScreen::on_mode_toggled(bool live) {
     mode_btn_->setText(live ? tr("LIVE") : tr("PAPER"));
     mode_btn_->setStyleSheet(live ? "QPushButton{background:#1a0a0a;border:1px solid #ef4444;color:#ef4444;"
                                     "padding:4px 14px;font-size:11px;font-weight:700;}"
-                                  : "QPushButton{background:#111;border:1px solid #d97706;color:#d97706;"
+                                  : "QPushButton{background:#111;border:1px solid #2dd4bf;color:#2dd4bf;"
                                     "padding:4px 14px;font-size:11px;font-weight:700;}");
     mode_btn_->setToolTip(live ? tr("Showing REAL broker positions — click for paper")
                                : tr("Showing paper portfolios — click for live"));

@@ -706,7 +706,7 @@ void BacktestingScreen::display_result(const QString& command, const QJsonObject
             auto* x_axis = new QDateTimeAxis;
             // A "MMM yyyy" label is useless on an intraday run (every tick reads the same).
             const qint64 span_ms = static_cast<qint64>(eq_series->at(eq_series->count() - 1).x() - eq_series->at(0).x());
-            x_axis->setFormat(span_ms < 30LL * 86400000LL ? "dd MMM HH:mm" : "MMM yyyy");
+            x_axis->setFormat(span_ms < 30LL * 86400000LL ? "MMM d HH:mm" : "MMM yyyy");
             x_axis->setLabelsColor(QColor(ui::colors::TEXT_TERTIARY()));
             x_axis->setGridLineColor(QColor(ui::colors::BORDER_DIM()));
             chart->addAxis(x_axis, Qt::AlignBottom);
@@ -971,7 +971,7 @@ QStringList BacktestingScreen::export_header_lines() const {
     if (synthetic)
         h << QStringLiteral("# WARNING: SYNTHETIC DATA - prices were randomly generated; these results have NO market "
                             "meaning");
-    h << QStringLiteral("# Fincept Terminal backtest export, generated %1")
+    h << QStringLiteral("# Keystone Terminal backtest export, generated %1")
              .arg(QDateTime::currentDateTime().toString(Qt::ISODate));
     QStringList syms;
     for (const auto& v : last_run_meta_.value("symbols").toArray())

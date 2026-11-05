@@ -553,7 +553,7 @@ void AiChatBubble::on_send() {
     // delayed network failure.
     if (!ai_chat::LlmService::instance().is_configured()) {
         add_bubble("assistant", tr("AI chat is not configured. Open **Settings → LLM Config** "
-                                   "and add an API key or pick the Fincept provider."));
+                                   "and add an API key or pick the Cloud LLM provider."));
         return;
     }
 
@@ -704,9 +704,9 @@ void AiChatBubble::add_fincept_notice(const QString& error) {
     const bool credits = ai_chat::classify_llm_error(error) == ai_chat::LlmErrorKind::FinceptOutOfCredits;
     fincept::ai_chat::ChatBubbleFactory::Options opts;
     opts.role = "system";
-    opts.content = credits ? tr("**You're out of Fincept credits.** Top up, or add your own provider API key in "
+    opts.content = credits ? tr("**You're out of cloud credits.** Top up, or add your own provider API key in "
                                 "**Settings → LLM Configuration**.")
-                           : tr("**Fincept did not accept your sign-in.** Sign in again, or add your own provider "
+                           : tr("**The cloud service did not accept your sign-in.** Sign in again, or add your own provider "
                                 "API key in **Settings → LLM Configuration**.");
     opts.show_footer = true;
     opts.user_col_max_width = kBubbleColMaxWidth;

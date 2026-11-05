@@ -2,6 +2,7 @@
 
 #include "core/events/EventBus.h"
 #include "screens/launchpad/OnboardingTour.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/widgets/EnterprisePromo.h"
 
@@ -21,7 +22,7 @@ namespace fincept::screens {
 
 using namespace fincept::ui;
 
-static const char* MF = "font-family:'Consolas','Courier New',monospace;";
+static const char* MF = "font-family:'Cascadia Mono','Consolas','Courier New',monospace;";
 
 // ── Collapsible FAQ item ──────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ static QWidget* make_faq(const QString& question, const QString& answer, const Q
             QString("QPushButton { color: %1; background: %2; border: 1px solid %3;"
                     " border-left: 3px solid %3;"
                     " padding: 11px 14px; text-align: left;"
-                    " font-size: 12px; font-weight: 600; font-family:'Consolas','Courier New',monospace; }"
+                    " font-size: 12px; font-weight: 600; font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                     "QPushButton:hover { background: %4; }")
                 .arg(show ? colors::AMBER() : colors::TEXT_PRIMARY(), show ? colors::BG_RAISED() : colors::BG_SURFACE(),
                      show ? colors::AMBER() : colors::BORDER_DIM(), colors::BG_RAISED()));
@@ -184,7 +185,7 @@ QWidget* HelpScreen::build_page() {
                                  .arg(colors::AMBER(), MF));
         text_vl->addWidget(title);
 
-        auto* sub = new QLabel(tr("Find answers, get support, and connect with the Fincept community."));
+        auto* sub = new QLabel(tr("Find answers, get support, and connect with the community."));
         sub->setStyleSheet(
             QString("color: %1; font-size: 12px; background: transparent; %2").arg(colors::TEXT_SECONDARY(), MF));
         text_vl->addWidget(sub);
@@ -200,7 +201,7 @@ QWidget* HelpScreen::build_page() {
             if (url.isEmpty()) {
                 auto* chip = new QLabel(icon.isEmpty() ? text : QString("%1  %2").arg(icon, text));
                 chip->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                                            " font-family:'Consolas','Courier New',monospace;")
+                                            " font-family:'Cascadia Mono','Consolas','Courier New',monospace;")
                                         .arg(color));
                 return chip;
             }
@@ -209,7 +210,7 @@ QWidget* HelpScreen::build_page() {
             chip->setCursor(Qt::PointingHandCursor);
             chip->setStyleSheet(QString("QPushButton { color: %1; font-size: 11px; background: transparent;"
                                         " border: none; text-align: left; padding: 0;"
-                                        " font-family:'Consolas','Courier New',monospace; }"
+                                        " font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                                         "QPushButton:hover { color: %2; }")
                                     .arg(color, colors::AMBER()));
             QObject::connect(chip, &QPushButton::clicked, chip, [url]() { QDesktopServices::openUrl(QUrl(url)); });
@@ -217,15 +218,17 @@ QWidget* HelpScreen::build_page() {
         };
         // Email + Discord chip text is shown verbatim (URL/handle) — not translated.
         // Business-hours label IS translated.
-        chips_vl->addWidget(make_chip("✉", "support@fincept.in", colors::CYAN, "mailto:support@fincept.in"));
-        chips_vl->addWidget(make_chip("", "discord.gg/ae87a8ygbN", colors::POSITIVE, "https://discord.gg/ae87a8ygbN"));
+        if (brand::has_contact_email()) {
+            const QString contact_email = QString::fromLatin1(brand::kContactEmail);
+            chips_vl->addWidget(make_chip("✉", contact_email, colors::CYAN, QStringLiteral("mailto:") + contact_email));
+        }
         // No staffed-hours claim: the project has no published support roster,
         // and the previous "Mon-Fri 9AM-6PM EST" line implied one.
-        chips_vl->addWidget(
-            make_chip("", "github.com/Fincept-Corporation/FinceptTerminal", colors::TEXT_TERTIARY,
-                      "https://github.com/Fincept-Corporation/FinceptTerminal/issues"));
-        chips_vl->addWidget(make_chip("", tr("Fincept Terminal Enterprise ↗"), colors::AMBER,
-                                      enterprise::url_with_ref(enterprise::site_url(), QStringLiteral("help"))));
+        chips_vl->addWidget(make_chip("", QString::fromLatin1(brand::kSourceUrl).mid(8), colors::TEXT_TERTIARY,
+                                      QString::fromLatin1(brand::kIssuesUrl)));
+        if (brand::show_upstream_promos())
+            chips_vl->addWidget(make_chip("", tr("Enterprise edition ↗"), colors::AMBER,
+                                          enterprise::url_with_ref(enterprise::site_url(), QStringLiteral("help"))));
         hl->addLayout(chips_vl);
 
         vl->addWidget(hero);
@@ -257,12 +260,12 @@ QWidget* HelpScreen::build_page() {
         actions.append({"", "documentation", tr("Documentation"),
                         in_auth_stack ? tr("Guides, tutorials & API ref") : tr("Open the in-app documentation")});
         actions.append({"", "report_bug", tr("Report a Bug"), tr("Open a GitHub issue")});
-        actions.append({"", "join_discord", tr("Join Discord"), tr("Community & live support")});
         if (!in_auth_stack) {
             actions.append({"", "open_support", tr("Support Tickets"), tr("Open a ticket in the Support tab")});
             actions.append({"", "replay_tour", tr("Replay Welcome Tour"), tr("A 30-second walkthrough")});
         }
-        actions.append({"", "support_tickets", tr("Email Support"), tr("support@fincept.in")});
+        if (brand::has_contact_email())
+            actions.append({"", "support_tickets", tr("Email Support"), QString::fromLatin1(brand::kContactEmail)});
 
         int col = 0, row = 0;
         for (const auto& a : actions) {
@@ -332,7 +335,7 @@ QWidget* HelpScreen::build_page() {
                 connect(btn, &QPushButton::clicked, this, &HelpScreen::navigate_forgot_password);
             else if (key == "documentation") {
                 if (in_auth_stack)
-                    open(QStringLiteral("https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs"));
+                    open(QString::fromLatin1(brand::kDocsUrl));
                 else
                     open_panel("docs");
             } else if (key == "open_support")
@@ -345,11 +348,9 @@ QWidget* HelpScreen::build_page() {
                     OnboardingTour::show_for(window());
                 });
             else if (key == "report_bug")
-                open(QStringLiteral("https://github.com/Fincept-Corporation/FinceptTerminal/issues/new"));
-            else if (key == "join_discord")
-                open(QStringLiteral("https://discord.gg/ae87a8ygbN"));
+                open(QString::fromLatin1(brand::kNewIssueUrl));
             else if (key == "support_tickets")
-                open(QStringLiteral("mailto:support@fincept.in"));
+                open(QStringLiteral("mailto:") + QString::fromLatin1(brand::kContactEmail));
         }
 
         vl->addLayout(grid);
@@ -386,24 +387,16 @@ QWidget* HelpScreen::build_page() {
                 "Pro adds a fresh allowance every month. Your balance is shown in the toolbar and, "
                 "with your payment history, under Profile → Billing.")},
 
-            {"", tr("Is there an edition for firms and teams?"),
-             tr("Yes — Fincept Terminal Enterprise, the private, closed-source edition the team develops "
-                "daily for funds, family offices and research desks: proprietary and private datasets with "
-                "deeper point-in-time history, multi-agent AI research with AI credits included and a "
-                "private dataroom, 41 modules across six desks, and SSO/SAML, audit logs, role-based access "
-                "and SLA-backed support. It is a separate product with its own accounts — see "
-                "fincept.in/enterprise, or Help → Book an Enterprise Demo. This open-source edition stays "
-                "free under AGPL-3.0.")},
 
             {"", tr("How do I connect a broker?"),
              tr("Open Equity Trading and click ACCOUNTS to add a broker account, then enter your "
                 "API key and secret (or follow the broker's sign-in flow) and press CONNECT. "
-                "Fincept supports 20+ brokers including Zerodha, Angel One, Upstox, Interactive "
+                "Keystone Terminal supports 20+ brokers including Zerodha, Angel One, Upstox, Interactive "
                 "Brokers, Alpaca, and more. API keys for data providers and crypto exchanges are "
                 "managed under Settings → Credentials.")},
 
             {"", tr("Why does Python install at first launch?"),
-             tr("Fincept embeds Python 3.11 for its analytics scripts covering equity, "
+             tr("Keystone Terminal embeds Python 3.11 for its analytics scripts covering equity, "
                 "portfolio, derivatives, and quant analysis. The one-time install happens "
                 "automatically in the background.")},
 
@@ -414,7 +407,7 @@ QWidget* HelpScreen::build_page() {
 
             {"", tr("Is my data secure?"),
              tr("Credentials are stored encrypted via SecureStorage (OS keychain on each platform). "
-                "API keys are never logged or sent to Fincept servers — they are used only for "
+                "API keys are never logged or sent to cloud servers — they are used only for "
                 "direct broker connections from your machine.")},
 
             {"", tr("How do I report a bug?"),
@@ -432,7 +425,7 @@ QWidget* HelpScreen::build_page() {
 
     // ── Getting Started ────────────────────────────────────────────────────────
     {
-        vl->addWidget(section_header(tr("GETTING STARTED"), tr("New to Fincept? Start here")));
+        vl->addWidget(section_header(tr("GETTING STARTED"), tr("New to Keystone Terminal? Start here")));
         vl->addSpacing(8);
 
         struct Step {
@@ -507,12 +500,10 @@ QWidget* HelpScreen::build_page() {
             const char* value; // brand string — URL / handle, not translated
             const char* url;
         };
+        // Channels of this build: its source repository and issue tracker.
         const Contact contacts[] = {
-            {"✉", tr("Email Support"), "support@fincept.in", "mailto:support@fincept.in"},
-            {"", tr("Discord Server"), "discord.gg/ae87a8ygbN", "https://discord.gg/ae87a8ygbN"},
-            {"", tr("Website"), "fincept.in", "https://fincept.in"},
-            {"", tr("GitHub"), "github.com/Fincept-Corporation/FinceptTerminal",
-             "https://github.com/Fincept-Corporation/FinceptTerminal"},
+            {"", tr("Source Code"), "github.com/donbeatless-stack/FinceptTerminal", brand::kSourceUrl},
+            {"", tr("Issue Tracker"), "github.com/donbeatless-stack/FinceptTerminal/issues", brand::kIssuesUrl},
         };
 
         int ci = 0;

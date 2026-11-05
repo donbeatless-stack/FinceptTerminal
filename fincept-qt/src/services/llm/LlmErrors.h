@@ -27,11 +27,11 @@ enum class LlmErrorKind {
 };
 
 inline QString fincept_credits_error_lead() {
-    return QStringLiteral("You're out of Fincept credits.");
+    return QStringLiteral("You're out of cloud credits.");
 }
 
 inline QString fincept_auth_error_lead() {
-    return QStringLiteral("Fincept did not accept your sign-in.");
+    return QStringLiteral("The cloud service did not accept your sign-in.");
 }
 
 /// Recognise an error produced by make_fincept_error() (any consumer).
@@ -87,7 +87,7 @@ inline QString make_fincept_error(LlmErrorKind kind, const QString& raw = {}) {
     }
     if (kind == LlmErrorKind::FinceptAuth) {
         return fincept_auth_error_lead() +
-               QStringLiteral(" Sign in again (or check your Fincept API key), or add your own provider API key in "
+               QStringLiteral(" Sign in again (or check your cloud API key), or add your own provider API key in "
                               "Settings → LLM Configuration.");
     }
     return raw;

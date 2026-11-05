@@ -117,7 +117,7 @@ def _build_tools() -> list[BaseTool]:
 # System prompt
 # ---------------------------------------------------------------------------
 
-_FINCEPT_SYSTEM_PROMPT = """You are a Deep Agent for Fincept Terminal, an institutional-grade financial intelligence platform.
+_FINCEPT_SYSTEM_PROMPT = """You are a Deep Agent for Keystone Terminal, an institutional-grade financial intelligence platform.
 
 You have access to:
 - Financial market data (prices, OHLCV, order books)

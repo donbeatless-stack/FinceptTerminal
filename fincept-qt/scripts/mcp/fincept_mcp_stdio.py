@@ -165,13 +165,13 @@ class Bridge(object):
             try:
                 messages = [json.loads(data.decode("utf-8"))]
             except (UnicodeDecodeError, ValueError) as exc:
-                self.fail(ids, "Fincept Terminal returned an unreadable response: %s" % exc)
+                self.fail(ids, "Keystone Terminal returned an unreadable response: %s" % exc)
                 return
         for m in messages:
             self.note_incoming(m)
             self.emit(m)
         if not messages and ids:
-            self.fail(ids, "Fincept Terminal returned an empty response")
+            self.fail(ids, "Keystone Terminal returned an empty response")
 
     def http_failure(self, status, data, ids):
         try:
@@ -190,15 +190,15 @@ class Bridge(object):
                 self.emit(payload)
                 return
         if status == 401:
-            text = ("Fincept Terminal rejected the MCP token (HTTP 401). Copy the current token from Fincept "
+            text = ("Keystone Terminal rejected the MCP token (HTTP 401). Copy the current token from Keystone "
                     "Terminal -> Agent Workbench -> Connect into %s." % TOKEN_ENV)
         elif status == 403:
-            text = "Fincept Terminal refused the request (HTTP 403, origin policy)."
+            text = "Keystone Terminal refused the request (HTTP 403, origin policy)."
         else:
             detail = ""
             if isinstance(payload, dict):
                 detail = str(payload.get("message") or payload.get("error") or "")
-            text = "Fincept Terminal returned HTTP %d%s" % (status, (": " + detail[:300]) if detail else "")
+            text = "Keystone Terminal returned HTTP %d%s" % (status, (": " + detail[:300]) if detail else "")
         log(text)
         self.fail(ids, text)
 
@@ -221,17 +221,17 @@ class Bridge(object):
             self.http_failure(exc.code, data, ids)
             return
         except (socket.timeout, TimeoutError) as exc:
-            self.fail(ids, "Fincept Terminal did not answer within %d s: %s" % (int(self.timeout), exc))
+            self.fail(ids, "Keystone Terminal did not answer within %d s: %s" % (int(self.timeout), exc))
             return
         except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as exc:
             reason = getattr(exc, "reason", None) or exc
             log("cannot reach %s: %s" % (self.url, reason))
-            self.fail(ids, "Fincept Terminal is not running or its MCP server is disabled: %s" % reason)
+            self.fail(ids, "Keystone Terminal is not running or its MCP server is disabled: %s" % reason)
             return
         self.debug("HTTP %d in %.0f ms" % (status, (time.monotonic() - started) * 1000.0))
         if status == 202 or not data.strip():
             if ids:  # a request must be answered; an empty 200 is a server bug
-                self.fail(ids, "Fincept Terminal returned no response (HTTP %d)" % status)
+                self.fail(ids, "Keystone Terminal returned no response (HTTP %d)" % status)
             return
         self.deliver(data, content_type, ids)
 
@@ -292,7 +292,7 @@ def read_token(token_file):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Bridge a stdio MCP client to Fincept Terminal's MCP server (Streamable HTTP).")
+        description="Bridge a stdio MCP client to Keystone Terminal's MCP server (Streamable HTTP).")
     parser.add_argument("--url", default=os.environ.get(URL_ENV, DEFAULT_URL),
                         help="server endpoint (default: %s)" % DEFAULT_URL)
     parser.add_argument("--token-file", help="file holding the bearer token (default: $%s)" % TOKEN_ENV)

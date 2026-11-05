@@ -192,7 +192,7 @@ void BacktestingScreen::retranslateUi() {
     if (summary_hint_)
         summary_hint_->setText(
             tr("Select a provider, command, and strategy, then click RUN to execute.\n\n"
-               "Supported providers: VectorBT, Backtesting.py, FastTrade, Zipline, BT, Fincept\n"
+               "Supported providers: VectorBT, Backtesting.py, FastTrade, Zipline, BT, Keystone\n"
                "Commands: Backtest, Optimize, Walk-Forward, Indicators, ML Labels, CV Splits, Returns"));
     if (equity_hint_)
         equity_hint_->setText(tr("Run a backtest to see the equity curve."));
@@ -334,8 +334,8 @@ void BacktestingScreen::refresh_theme() {
               .arg(BORDER_MED(), BORDER_BRIGHT());
 
     // Top bar chips
-    ss += pill("QLabel#btBrand", AMBER(), "rgba(217,119,6,0.1)", AMBER_DIM(), "700");
-    ss += pill("QPushButton#btRunButton", AMBER(), "rgba(217,119,6,0.1)", AMBER_DIM(), "700");
+    ss += pill("QLabel#btBrand", AMBER(), "rgba(45,212,191,0.1)", AMBER_DIM(), "700");
+    ss += pill("QPushButton#btRunButton", AMBER(), "rgba(45,212,191,0.1)", AMBER_DIM(), "700");
     ss += QString("QPushButton#btRunButton:hover { background:%1; color:%2; }\n"
                   "QPushButton#btRunButton:disabled { background:%3; color:%4; border-color:%5; }\n")
               .arg(AMBER(), BG_BASE(), BG_RAISED(), TEXT_DIM(), BORDER_DIM());
@@ -360,7 +360,7 @@ void BacktestingScreen::refresh_theme() {
     const StateColors states[] = {
         {"ready", POSITIVE(), "rgba(22,163,74,0.08)", "rgba(22,163,74,0.25)"},
         {"done", POSITIVE(), "rgba(22,163,74,0.08)", "rgba(22,163,74,0.25)"},
-        {"running", WARNING(), "rgba(217,119,6,0.08)", WARNING()},
+        {"running", WARNING(), "rgba(251,191,36,0.08)", WARNING()},
         {"error", NEGATIVE(), "rgba(220,38,38,0.08)", NEGATIVE()},
         {"cancelled", TEXT_SECONDARY(), BG_RAISED(), BORDER_MED()},
         {"synthetic", NEGATIVE(), "rgba(220,38,38,0.15)", NEGATIVE()},
@@ -413,7 +413,7 @@ void BacktestingScreen::refresh_theme() {
               .arg(panels_in.arg("QComboBox"), BG_RAISED(), TEXT_PRIMARY(), BORDER_MED(), ff)
               .arg(small);
     ss += QString("%1 { border:none; }\n").arg(panels_in.arg("QComboBox::drop-down"));
-    ss += QString("%1 { background:%2; color:%3; border:1px solid %4; selection-background-color:rgba(217,119,6,0.15); }\n")
+    ss += QString("%1 { background:%2; color:%3; border:1px solid %4; selection-background-color:rgba(45,212,191,0.15); }\n")
               .arg(panels_in.arg("QComboBox QAbstractItemView"), BG_RAISED(), TEXT_PRIMARY(), BORDER_MED());
     for (const char* type : {"QLineEdit", "QDoubleSpinBox", "QSpinBox", "QDateEdit"}) {
         ss += QString("%1 { background:%2; color:%3; border:1px solid %4; font-family:%5; font-size:%6px;"

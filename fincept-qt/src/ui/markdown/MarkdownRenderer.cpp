@@ -23,29 +23,29 @@ QString MarkdownRenderer::wrap_html(const QString& body) {
     // We embed a <style> block that overrides the defaults.
     static const QLatin1String kStyle(R"(
 <style>
-body  { color:#e5e5e5; font-family:'Consolas','Courier New',monospace; font-size:14px; margin:0; padding:0; }
-h1    { color:#d97706; font-size:18px; font-weight:700; margin:8px 0 4px; }
-h2    { color:#d97706; font-size:16px; font-weight:700; margin:7px 0 3px; }
-h3    { color:#d97706; font-size:14px; font-weight:700; margin:6px 0 2px; }
-h4,h5,h6 { color:#b45309; font-size:13px; font-weight:600; margin:5px 0 2px; }
+body  { color:#e5e5e5; font-family:'Cascadia Mono','Consolas','Courier New',monospace; font-size:14px; margin:0; padding:0; }
+h1    { color:#2dd4bf; font-size:18px; font-weight:700; margin:8px 0 4px; }
+h2    { color:#2dd4bf; font-size:16px; font-weight:700; margin:7px 0 3px; }
+h3    { color:#2dd4bf; font-size:14px; font-weight:700; margin:6px 0 2px; }
+h4,h5,h6 { color:#14b8a6; font-size:13px; font-weight:600; margin:5px 0 2px; }
 p     { margin:4px 0; line-height:1.55; }
-a     { color:#d97706; text-decoration:none; }
-strong,b { color:#f59e0b; font-weight:700; }
+a     { color:#2dd4bf; text-decoration:none; }
+strong,b { color:#5eead4; font-weight:700; }
 em,i  { color:#808080; font-style:italic; }
-code  { font-family:'Consolas','Courier New',monospace;
+code  { font-family:'Cascadia Mono','Consolas','Courier New',monospace;
         font-size:13px; color:#16a34a;
         background:#111111; padding:1px 5px; }
 pre   { background:#111111; border:1px solid #1a1a1a;
         padding:10px 12px; margin:6px 0;
-        font-family:'Consolas','Courier New',monospace;
+        font-family:'Cascadia Mono','Consolas','Courier New',monospace;
         font-size:13px; color:#16a34a; white-space:pre-wrap; }
 pre code { background:transparent; padding:0; }
-blockquote { border-left:2px solid #d97706; margin:6px 0 6px 4px;
+blockquote { border-left:2px solid #2dd4bf; margin:6px 0 6px 4px;
              padding:4px 10px; color:#808080; font-style:italic; }
 ul,ol { margin:4px 0; padding-left:22px; }
 li    { margin:2px 0; line-height:1.5; }
 table { border-collapse:collapse; margin:6px 0; width:100%; }
-th    { background:#111111; color:#d97706; font-weight:700;
+th    { background:#111111; color:#2dd4bf; font-weight:700;
         padding:5px 10px; border:1px solid #1a1a1a; text-align:left; }
 td    { padding:4px 10px; border:1px solid #1a1a1a; color:#e5e5e5; }
 tr:nth-child(even) td { background:#0d0d0d; }

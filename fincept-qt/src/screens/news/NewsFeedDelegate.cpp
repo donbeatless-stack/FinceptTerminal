@@ -85,7 +85,7 @@ void NewsFeedDelegate::paint_wire_row(QPainter* painter, const QRect& rect, cons
     int pulse = index.data(PulsePhaseRole).toInt();
     if (is_new && pulse >= 0) {
         int alpha = (pulse == 0) ? 40 : (pulse == 1 ? 25 : (pulse == 2 ? 15 : 8));
-        painter->fillRect(rect, QColor(217, 119, 6, alpha)); // amber glow overlay
+        painter->fillRect(rect, QColor(45, 212, 191, alpha)); // accent glow overlay
     }
 
     // New indicator — 3px amber dot

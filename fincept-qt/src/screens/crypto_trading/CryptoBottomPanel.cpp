@@ -451,9 +451,9 @@ void CryptoBottomPanel::setup_orders_tab() {
     cancel_all_btn_->setCursor(Qt::PointingHandCursor);
     cancel_all_btn_->setAccessibleName(tr("Cancel every pending order"));
     cancel_all_btn_->setStyleSheet(
-        QString("QPushButton{background:rgba(217,119,6,0.12);color:%1;border:1px solid %2;"
+        QString("QPushButton{background:rgba(45,212,191,0.12);color:%1;border:1px solid %2;"
                 "padding:3px 12px;font-size:10px;font-weight:700;letter-spacing:0.5px;border-radius:2px;}"
-                "QPushButton:hover{background:rgba(217,119,6,0.25);}")
+                "QPushButton:hover{background:rgba(45,212,191,0.25);}")
             .arg(colors::AMBER(), colors::AMBER_DIM()));
     connect(cancel_all_btn_, &QPushButton::clicked, this, [this]() {
         auto answer = QMessageBox::warning(

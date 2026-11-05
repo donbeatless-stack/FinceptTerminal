@@ -33,7 +33,7 @@ void WhatsAppProvider::send(const NotificationRequest& req, std::function<void(b
     // embedded in the URL.
     const QString url = QString("https://api.twilio.com/2010-04-01/Accounts/%1/Messages.json").arg(account_sid_);
 
-    const QString msg = QString("[Fincept] %1\n%2").arg(req.title, req.message);
+    const QString msg = QString("[Keystone] %1\n%2").arg(req.title, req.message);
 
     QMap<QString, QString> form;
     form["To"] = to_number_.startsWith("whatsapp:") ? to_number_ : "whatsapp:" + to_number_;

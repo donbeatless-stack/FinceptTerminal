@@ -48,7 +48,7 @@ DashboardToolBar::DashboardToolBar(QWidget* parent) : QWidget(parent) {
         layout->addWidget(s);
     };
 
-    auto* brand = new QLabel("FINCEPT");
+    auto* brand = new QLabel("KEYSTONE");
     brand->setObjectName("dtBrand");
     ll->addWidget(brand);
 

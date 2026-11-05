@@ -108,6 +108,7 @@
 #include "trading/replication/PortfolioReplicationSelftest.h"
 #include "ui/notifications/DesktopNotifier.h"
 #include "ui/tables/LiveTableSelftest.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -860,7 +861,7 @@ int main(int argc, char* argv[]) {
         // A newer-than-build schema never reaches here: MigrationRunner::run()
         // warns and returns ok() for that case, so the DB opens normally.
         if (fincept::MigrationRunner::is_fatal_error(db_err)) {
-            QMessageBox::critical(nullptr, QObject::tr("Fincept Terminal — database error"),
+            QMessageBox::critical(nullptr, QObject::tr("%1 — database error").arg(fincept::brand::product_name()),
                                   QString::fromStdString(db_err));
             // Returning from main() never reaches exec(), so aboutToQuit never
             // fires and the shell's clean-shutdown marker would never be
@@ -931,7 +932,7 @@ int main(int argc, char* argv[]) {
             auto r_family = repo.get("appearance.font_family");
             auto r_size = repo.get("appearance.font_size");
             auto r_density = repo.get("appearance.density");
-            QString family = r_family.is_ok() ? r_family.value() : "Consolas";
+            QString family = r_family.is_ok() && !r_family.value().isEmpty() ? r_family.value() : "Cascadia Mono";
             QString size_s = r_size.is_ok() ? r_size.value() : "14px";
             int size_px = size_s.left(size_s.indexOf("px")).toInt();
             if (size_px <= 0)

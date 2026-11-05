@@ -29,8 +29,8 @@ QString build_agent_system_prompt(const SystemPromptContext& ctx) {
     const QString server = ctx.mcp_server_name.isEmpty() ? QStringLiteral("fincept") : ctx.mcp_server_name;
 
     QStringList p;
-    p << QStringLiteral("You are an AI research agent running inside the Agent Workbench of Fincept Terminal, working "
-                        "for a professional trader or financial analyst who uses Fincept Terminal - a desktop "
+    p << QStringLiteral("You are an AI research agent running inside the Agent Workbench of Keystone Terminal, working "
+                        "for a professional trader or financial analyst who uses Keystone Terminal - a desktop "
                         "market-data, research and trading terminal - every day.");
     p << QString();
     p << QStringLiteral("Current local time: %1 (%2%3). Use it to judge whether data is current, and say so when the "

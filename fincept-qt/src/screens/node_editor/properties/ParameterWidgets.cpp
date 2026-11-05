@@ -447,7 +447,7 @@ QWidget* ParameterWidgetFactory::create(const ParamDef& param, const QJsonValue&
         layout->addWidget(row);
 
         auto* hint = new QLabel(QCoreApplication::translate(
-            "ParameterWidgetFactory", "All Fincept internal tools. Input JSON flows in as arguments."));
+            "ParameterWidgetFactory", "All built-in tools. Input JSON flows in as arguments."));
         hint->setStyleSheet(
             QString("color:%1; font-family:Consolas; font-size:10px;").arg(ui::colors::TEXT_TERTIARY()));
         hint->setWordWrap(true);

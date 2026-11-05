@@ -120,7 +120,7 @@ const QVector<ProviderDef>& provider_defs() {
          "",
          {{"webhook_url", "Webhook URL", "https://your-mattermost.com/hooks/..."},
           {"channel", "Channel", "#town-square (optional)"},
-          {"username", "Username", "Fincept (optional)"}}},
+          {"username", "Username", "Keystone (optional)"}}},
         {"teams", "MS Teams", "", {{"webhook_url", "Webhook URL", "https://outlook.office.com/webhook/..."}}},
         {"webhook", "Webhook", "", {{"url", "URL", "https://your-endpoint.com/notify"}, {"method", "Method", "POST"}}},
         {"pagerduty", "PagerDuty", "", {{"routing_key", "Routing Key", "32-character integration key", true}}},
@@ -364,8 +364,8 @@ void NotificationsSection::build_ui() {
             pw.status_lbl->setStyleSheet(QString("color:%1;background:transparent;").arg(ui::colors::TEXT_SECONDARY()));
 
             NotificationRequest req;
-            req.title = tr("Fincept Test");
-            req.message = tr("This is a test notification from Fincept Terminal.");
+            req.title = tr("Keystone Test");
+            req.message = tr("This is a test notification from Keystone Terminal.");
             req.trigger = NotifTrigger::Manual;
 
             // Transport errors can echo the request URL, which for Telegram embeds

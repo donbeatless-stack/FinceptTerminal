@@ -98,7 +98,7 @@ LeaderboardCards::LeaderboardCards(QWidget* parent) : QWidget(parent) {
     // Includes the ACT cell-widget rules — cell widgets are descendants of the
     // table, so this one stylesheet covers every row's buttons and container.
     table_->setStyleSheet("QTableWidget{background:#0D0D0D;border:none;font-size:11px;"
-                          " font-family:'Consolas','Courier New',monospace;}"
+                          " font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                           "QTableWidget::item{padding:0 6px;border-bottom:1px solid #1C1C1C;}"
                           "QHeaderView::section{background:#141414;color:#777;border:none;"
                           " border-bottom:1px solid #2A2A2A;padding:2px 6px;font-size:10px;font-weight:700;}"
@@ -154,7 +154,7 @@ void LeaderboardCards::rebuild() {
         table_->setItem(i, ColRank, cell(QString::number(i + 1), QColor("#777"), Qt::AlignCenter));
         table_->setItem(i, ColChip, cell(QStringLiteral("●"), d.color, Qt::AlignCenter));
         table_->setItem(i, ColModel,
-                        cell(d.name, selected ? QColor("#FF8800") : QColor("#EEE"), Qt::AlignLeft | Qt::AlignVCenter));
+                        cell(d.name, selected ? QColor("#2dd4bf") : QColor("#EEE"), Qt::AlignLeft | Qt::AlignVCenter));
         table_->setItem(i, ColEquity, cell(fmt_usd(d.equity), QColor("#FFF")));
         table_->setItem(
             i, ColPnlPct,

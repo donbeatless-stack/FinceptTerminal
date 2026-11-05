@@ -165,7 +165,7 @@ void SupportScreen::rebuild_ticket_rows() {
         else if (!needle.isEmpty() || !want_status.isEmpty())
             msg = tr("No tickets match this search or filter.");
         else
-            msg = tr("No tickets yet.\nUse “New Ticket” to contact the Fincept team.");
+            msg = tr("No tickets yet.\nUse “New Ticket” to contact the support team.");
         auto* empty = lbl(msg, ui::colors::TEXT_TERTIARY(), 12, false, true);
         empty->setAlignment(Qt::AlignCenter);
         empty->setContentsMargins(0, 40, 0, 0);
@@ -182,7 +182,7 @@ void SupportScreen::rebuild_ticket_rows() {
         QString date_str;
         const QDateTime dt = support_parse_utc(obj["created_at"].toString());
         if (dt.isValid())
-            date_str = dt.toString("d MMM yyyy");
+            date_str = dt.toString("MMM d, yyyy");
 
         auto* row_inner = new QWidget(this);
         row_inner->setStyleSheet("background:transparent;");
@@ -269,7 +269,7 @@ void SupportScreen::open_ticket(const QJsonObject& ticket) {
     detail_meta_lbl_->setText(tr("%1  ·  %2  ·  Opened %3")
                                   .arg(ticket["category"].toString().toLower().replace('_', ' '),
                                        ticket["priority"].toString().toLower(),
-                                       opened.isValid() ? opened.toString("d MMM yyyy  hh:mm") : QString()));
+                                       opened.isValid() ? opened.toString("MMM d, yyyy  h:mm AP") : QString()));
     // The list endpoint carries no description; it arrives with the details.
     detail_body_lbl_->setText(tr("Loading…"));
     apply_detail_status(ticket["status"].toString());
@@ -346,7 +346,7 @@ void SupportScreen::load_ticket_details(int ticket_id) {
                 mcl->insertWidget(mcl->count() - 1,
                                   support_message_bubble(self, is_user ? tr("You") : tr("Support Team"),
                                                          is_user ? QString(ui::colors::CYAN()) : QStringLiteral("#9333ea"),
-                                                         mdt.isValid() ? mdt.toString("d MMM yyyy  hh:mm") : QString(),
+                                                         mdt.isValid() ? mdt.toString("MMM d, yyyy  h:mm AP") : QString(),
                                                          mo["message"].toString()));
             }
             if (msgs.isEmpty())
@@ -477,7 +477,7 @@ void SupportScreen::on_send_message() {
                 return;
             mcl->insertWidget(mcl->count() - 1,
                               support_message_bubble(self, tr("You"), ui::colors::CYAN(),
-                                                     QDateTime::currentDateTime().toString("d MMM yyyy  hh:mm"), msg));
+                                                     QDateTime::currentDateTime().toString("MMM d, yyyy  h:mm AP"), msg));
             QPointer<SupportScreen> guard(self);
             QTimer::singleShot(50, self.data(), [guard]() {
                 if (guard && guard->detail_scroll_)

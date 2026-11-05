@@ -1909,13 +1909,13 @@ std::vector<ToolDef> get_ma_analytics_tools() {
         {
             ToolDef t;
             t.name = "ma_run_backtest";
-            t.description = "Run a registered Fincept strategy (FCT-… id from the strategy registry) through a "
+            t.description = "Run a registered strategy (FCT-… id from the strategy registry) through a "
                             "backtesting provider over historical yfinance data. Returns performance (total return, "
                             "final equity, trade count), the trade list, and the equity curve.";
             t.category = "ma-analytics";
             t.input_schema.properties =
                 QJsonObject{{"provider", str("Backtest provider: backtestingpy, bt, fasttrade, vectorbt, or zipline.")},
-                            {"strategy_id", str("Registered Fincept strategy id, e.g. FCT-19E8A564.")},
+                            {"strategy_id", str("Registered strategy id, e.g. FCT-19E8A564.")},
                             {"symbols", arr("Symbols to backtest, e.g. [\"AAPL\"].")},
                             {"start_date", str("Backtest start date, YYYY-MM-DD.")},
                             {"end_date", str("Backtest end date, YYYY-MM-DD.")},

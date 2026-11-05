@@ -20,6 +20,7 @@
 #include "storage/repositories/ChatRepository.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QApplication>
@@ -87,13 +88,13 @@ void AiChatScreen::on_send() {
     }
     if (!ai_chat::LlmService::instance().is_configured()) {
         // System bubbles render Markdown and follow https links (ChatBubbleFactory).
-        const QString ent_url =
-            ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("ai"));
-        add_message_bubble("system",
-                           tr("No LLM provider configured. Go to Settings > LLM Configuration to set up a provider.") +
-                               QStringLiteral("\n\n") +
-                               tr("Or use Fincept Terminal Enterprise — AI credits included.") +
-                               QStringLiteral(" [%1](%2)").arg(tr("See Enterprise ↗"), ent_url));
+        QString msg = tr("No LLM provider configured. Go to Settings > LLM Configuration to set up a provider.");
+        if (brand::show_upstream_promos()) {
+            const QString ent_url = ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("ai"));
+            msg += QStringLiteral("\n\n") + tr("Or use Enterprise edition — AI credits included.") +
+                   QStringLiteral(" [%1](%2)").arg(tr("See Enterprise ↗"), ent_url);
+        }
+        add_message_bubble("system", msg);
         return;
     }
 
@@ -363,7 +364,7 @@ void AiChatScreen::on_streaming_done(ai_chat::LlmResponse response) {
 QString AiChatScreen::answer_footer_meta(const QString& provider, const QString& model, int tokens) const {
     QStringList parts;
     if (provider.compare(QLatin1String("fincept"), Qt::CaseInsensitive) == 0)
-        parts << tr("Fincept LLM");
+        parts << tr("Cloud LLM");
     else if (!provider.isEmpty())
         parts << (model.isEmpty() ? provider : provider + QStringLiteral(" / ") + model);
     if (tokens > 0)
@@ -597,7 +598,7 @@ void AiChatScreen::retire_answer_action() {
 
 void AiChatScreen::show_fincept_notice(const ai_chat::LlmResponse& response) {
     const bool credits = ai_chat::classify_llm_error(response.error) == ai_chat::LlmErrorKind::FinceptOutOfCredits;
-    QString text = credits ? tr("**You're out of Fincept credits.**") : tr("**Fincept did not accept your sign-in.**");
+    QString text = credits ? tr("**You're out of cloud credits.**") : tr("**The cloud service did not accept your sign-in.**");
     // The service's sentence carries the cost/balance figures when known.
     static const QRegularExpression rx_figures(QStringLiteral("This request needs ([^;]+); your balance is ([^.]+)\\."));
     const auto m = rx_figures.match(response.error);
@@ -606,7 +607,7 @@ void AiChatScreen::show_fincept_notice(const ai_chat::LlmResponse& response) {
     text += QStringLiteral("\n\n") +
             (credits ? tr("Top up your credits, or add your own provider API key in **Settings → LLM Configuration** "
                           "to keep chatting.")
-                     : tr("Sign in again (or check your Fincept API key), or add your own provider API key in "
+                     : tr("Sign in again (or check your cloud API key), or add your own provider API key in "
                           "**Settings → LLM Configuration**."));
 
     fincept::ai_chat::ChatBubbleFactory::Options opts;
@@ -815,10 +816,10 @@ void AiChatScreen::update_stats() {
         const bool is_fincept = (provider_raw.toLower() == "fincept");
 
         // Display names
-        const QString prov_display = is_fincept ? tr("Fincept LLM") : provider_raw.toUpper();
+        const QString prov_display = is_fincept ? tr("Cloud LLM") : provider_raw.toUpper();
         const QString model_raw = llm.active_model();
         // For fincept, don't expose internal model name
-        const QString model_display = is_fincept ? tr("Fincept LLM") : model_raw;
+        const QString model_display = is_fincept ? tr("Cloud LLM") : model_raw;
         QString model_short = model_display;
         if (model_short.length() > 24)
             model_short = model_short.left(22) + "..";
@@ -827,14 +828,14 @@ void AiChatScreen::update_stats() {
         provider_lbl_->setText(prov_display);
         provider_lbl_->setStyleSheet(
             QString("color:%1;font-size:%2px;font-weight:600;").arg(col::AMBER()).arg(fnt::SMALL));
-        model_lbl_->setText(is_fincept ? tr("Managed by Fincept") : model_short);
-        model_lbl_->setToolTip(is_fincept ? tr("Fincept LLM — managed AI service") : model_raw);
+        model_lbl_->setText(is_fincept ? tr("Managed cloud model") : model_short);
+        model_lbl_->setToolTip(is_fincept ? tr("Cloud LLM — managed AI service") : model_raw);
         model_lbl_->setStyleSheet(QString("color:%1;font-size:%2px;").arg(col::TEXT_SECONDARY()).arg(fnt::TINY));
 
         // Header model pill — show "Provider / Model" for clarity
         if (is_fincept) {
-            hdr_model_lbl_->setText(tr("Fincept LLM"));
-            hdr_model_lbl_->setToolTip(tr("Fincept managed AI service\n\nChange in Settings > LLM Configuration"));
+            hdr_model_lbl_->setText(tr("Cloud LLM"));
+            hdr_model_lbl_->setToolTip(tr("Managed cloud AI service\n\nChange in Settings > LLM Configuration"));
         } else {
             hdr_model_lbl_->setText(provider_raw.left(1).toUpper() + provider_raw.mid(1) + " / " + model_short);
             hdr_model_lbl_->setToolTip(

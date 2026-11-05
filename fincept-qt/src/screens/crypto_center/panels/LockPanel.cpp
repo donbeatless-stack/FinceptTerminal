@@ -321,7 +321,7 @@ void LockPanel::apply_theme() {
                        "  font-size:11px; font-weight:700; letter-spacing:1px;"
                        "  background:transparent; padding:6px 10px; border:1px solid %3; }"
                        "QRadioButton#lockPanelDurationRadio:checked { color:%4; border-color:%12;"
-                       "  background:rgba(217,119,6,0.10); }"
+                       "  background:rgba(45,212,191,0.10); }"
                        "QRadioButton#lockPanelDurationRadio::indicator { width:0; height:0; }"
 
                        "QFrame#lockPanelPreviewBlock { background:%8; border:1px solid %3; }"
@@ -339,7 +339,7 @@ void LockPanel::apply_theme() {
                        "  font-family:%5; font-size:11px; font-weight:700; letter-spacing:1px;"
                        "  padding:0 14px; }"
                        "QPushButton#lockPanelButton:hover { background:%10; color:%7; border-color:%11; }"
-                       "QPushButton#lockPanelPrimaryButton { background:rgba(217,119,6,0.10); color:%4;"
+                       "QPushButton#lockPanelPrimaryButton { background:rgba(45,212,191,0.10); color:%4;"
                        "  border:1px solid %12; font-family:%5; font-size:12px; font-weight:700;"
                        "  letter-spacing:1.5px; padding:0 18px; }"
                        "QPushButton#lockPanelPrimaryButton:hover { background:%4; color:%1; }"
@@ -356,7 +356,7 @@ void LockPanel::apply_theme() {
                  NEGATIVE())                 // %9
             .arg(BG_HOVER(),                 // %10
                  BORDER_BRIGHT(),            // %11
-                 QStringLiteral("#78350f")); // %12 darker amber
+                 QStringLiteral("#115e59")); // %12 darker accent
     setStyleSheet(ss);
 }
 

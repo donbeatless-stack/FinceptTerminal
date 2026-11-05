@@ -14,7 +14,7 @@ namespace fincept::screens {
 
 using namespace fincept::ui;
 
-static const char* MF = "font-family:'Consolas','Courier New',monospace;";
+static const char* MF = "font-family:'Cascadia Mono','Consolas','Courier New',monospace;";
 
 static QLabel* heading(const QString& num, const QString& title) {
     auto* lbl = new QLabel(QString("%1. %2").arg(num, title));

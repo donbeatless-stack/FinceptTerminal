@@ -409,7 +409,7 @@ bool CodingAgentService::launch(const QString& run_id, QString* error) {
         auto& srv = mcp::McpHttpServer::instance();
         if (!srv.is_running() && !srv.start())
             return fail(QStringLiteral("The terminal's MCP server could not start (%1). Open Agent Workbench › CONNECT, "
-                                       "or untick “Use Fincept terminal tools”.")
+                                       "or untick “Use Keystone Terminal tools”.")
                             .arg(srv.last_error().isEmpty() ? QStringLiteral("unknown error") : srv.last_error()));
         token = srv.token();
         mcp_url = srv.url();

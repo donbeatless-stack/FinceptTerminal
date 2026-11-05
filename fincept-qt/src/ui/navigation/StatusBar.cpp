@@ -4,6 +4,7 @@
 #include "core/symbol/SymbolGroup.h"
 #include "core/symbol/SymbolGroupRegistry.h"
 #include "core/symbol/SymbolRef.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/widgets/EnterprisePromo.h"
@@ -35,7 +36,8 @@ StatusBar::StatusBar(QWidget* parent) : QWidget(parent) {
     // private edition's page. Styled by refresh_theme() — no inline sheets.
     edition_label_ = mk({}, "sbEdition");
     hl->addWidget(edition_label_);
-    hl->addWidget(mk(QString::fromUtf8(" \xc2\xb7 "), "sbSep")); // U+00B7 middle dot
+    auto* edition_dot = mk(QString::fromUtf8(" \xc2\xb7 "), "sbSep"); // U+00B7 middle dot
+    hl->addWidget(edition_dot);
     enterprise_btn_ = new QPushButton(this);
     enterprise_btn_->setObjectName("sbEnterprise");
     enterprise_btn_->setFlat(true);
@@ -45,6 +47,8 @@ StatusBar::StatusBar(QWidget* parent) : QWidget(parent) {
         enterprise::open_url(enterprise::url_with_ref(enterprise::site_url(), QStringLiteral("statusbar")));
     });
     hl->addWidget(enterprise_btn_);
+    edition_dot->setVisible(brand::show_upstream_promos());
+    enterprise_btn_->setVisible(brand::show_upstream_promos());
     hl->addWidget(mk("  |  ", "sbSep"));
 
     const char* feeds[] = {"EQ", "FX", "CM", "FI", "CR"};
@@ -98,7 +102,7 @@ void StatusBar::retranslateUi() {
         edition_label_->setText(tr("OPEN SOURCE"));
     if (enterprise_btn_) {
         enterprise_btn_->setText(tr("ENTERPRISE ↗"));
-        enterprise_btn_->setToolTip(tr("Fincept Terminal Enterprise — the private edition for firms (opens fincept.in)"));
+        enterprise_btn_->setToolTip(tr("Enterprise edition — the private edition for firms"));
     }
 }
 

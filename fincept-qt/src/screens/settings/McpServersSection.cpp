@@ -111,7 +111,7 @@ void McpServersSection::retranslateUi() {
         title_lbl_->setText(tr("MCP SERVERS"));
     if (about_lbl_)
         about_lbl_->setText(tr("MCP (Model Context Protocol) servers are programs that give the AI assistant extra "
-                               "tools, such as database access, file search or third-party APIs. Fincept Terminal "
+                               "tools, such as database access, file search or third-party APIs. Keystone Terminal "
                                "also ships its own built-in (internal) tools."));
     if (manage_lbl_)
         manage_lbl_->setText(tr("Servers are managed on the MCP Servers screen: add one from the marketplace or as a "

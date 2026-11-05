@@ -15,6 +15,7 @@
 #include "storage/workspace/WorkspaceDb.h"
 #include "storage/workspace/WorkspaceSnapshotRing.h"
 #include "ui/theme/Theme.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QApplication>
@@ -97,7 +98,7 @@ LaunchpadScreen* LaunchpadScreen::instance() {
 }
 
 LaunchpadScreen::LaunchpadScreen(QWidget* parent) : QMainWindow(parent) {
-    setWindowTitle(tr("Fincept Launchpad"));
+    setWindowTitle(tr("Keystone Launchpad"));
     setMinimumSize(480, 320);
     resize(480, 320);
 
@@ -252,6 +253,7 @@ LaunchpadScreen::LaunchpadScreen(QWidget* parent) : QMainWindow(parent) {
         QString(), ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("launchpad")),
         ui::enterprise::CtaStyle::Quiet, central);
     ent_link->setObjectName("launchpadEnterpriseLink");
+    ent_link->setVisible(brand::show_upstream_promos());
     vl->addWidget(ent_link, 0, Qt::AlignLeft);
 
     setCentralWidget(central);
@@ -283,7 +285,7 @@ void LaunchpadScreen::changeEvent(QEvent* event) {
 }
 
 void LaunchpadScreen::retranslateUi() {
-    setWindowTitle(tr("Fincept Launchpad"));
+    setWindowTitle(tr("Keystone Launchpad"));
 
     if (greeting_) {
         const QString profile = ProfileManager::instance().active();
@@ -326,7 +328,7 @@ void LaunchpadScreen::retranslateUi() {
     if (template_picker_label_)
         template_picker_label_->setText(tr("Pick a starting template:"));
     if (auto* ent_link = findChild<QPushButton*>(QStringLiteral("launchpadEnterpriseLink")))
-        ent_link->setText(tr("Fincept Terminal Enterprise — the private edition for firms ↗"));
+        ent_link->setText(tr("Enterprise edition — the private edition for firms ↗"));
 }
 
 void LaunchpadScreen::surface() {
@@ -472,7 +474,7 @@ void LaunchpadScreen::on_switch_profile() {
     // instant the picker was dismissed with OK.
     const auto reply = QMessageBox::question(
         this, tr("Switch Profile"),
-        tr("Switch to profile \"%1\"?\n\nFincept Terminal will restart.").arg(target),
+        tr("Switch to profile \"%1\"?\n\nKeystone Terminal will restart.").arg(target),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (reply != QMessageBox::Yes)
         return;
@@ -484,7 +486,7 @@ void LaunchpadScreen::on_switch_profile() {
         // Quitting anyway would leave the user with no app at all.
         LOG_WARN(kLaunchpadTag, QString("Switch Profile: could not start '%1'").arg(exe));
         QMessageBox::warning(this, tr("Switch Profile"),
-                             tr("Could not restart Fincept Terminal with profile \"%1\".").arg(target));
+                             tr("Could not restart Keystone Terminal with profile \"%1\".").arg(target));
         return;
     }
     QCoreApplication::quit();

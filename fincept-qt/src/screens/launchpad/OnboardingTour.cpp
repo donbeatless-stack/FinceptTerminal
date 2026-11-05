@@ -53,7 +53,7 @@ void OnboardingTour::show_for(QWidget* parent) {
 }
 
 OnboardingTour::OnboardingTour(QWidget* parent) : QDialog(parent) {
-    setWindowTitle(tr("Welcome to Fincept Terminal"));
+    setWindowTitle(tr("Welcome to Keystone Terminal"));
     setModal(true);
     setSizeGripEnabled(false);
     resize(560, 360);
@@ -151,7 +151,7 @@ void OnboardingTour::changeEvent(QEvent* event) {
 }
 
 void OnboardingTour::retranslateUi() {
-    setWindowTitle(tr("Welcome to Fincept Terminal"));
+    setWindowTitle(tr("Welcome to Keystone Terminal"));
     if (heading_)
         heading_->setText(tr("A 30-second tour"));
 
@@ -192,13 +192,11 @@ void OnboardingTour::retranslateUi() {
         step_labels_[3].tip->setText(tr("Tip: F11 toggles fullscreen on the focused window."));
     }
     if (step_labels_.size() > 4 && step_labels_[4].title) {
-        step_labels_[4].title->setText(tr("Two editions"));
-        step_labels_[4].body->setText(tr("You're on the free, open-source edition (AGPL-3.0). Your Fincept "
-                                         "account is Free, or Pro at $10/month for monthly credits and higher "
-                                         "limits. Fincept Terminal Enterprise is the private edition for funds "
-                                         "and research desks — a separate product with its own accounts."));
-        step_labels_[4].tip->setText(
-            tr("Tip: Ctrl+Shift+P → \"plans\" or \"enterprise\" — or use the Help menu."));
+        step_labels_[4].title->setText(tr("Plans and credits"));
+        step_labels_[4].body->setText(tr("Keystone Terminal is open source (AGPL-3.0). Your cloud account is "
+                                         "Free, or Pro at $10/month for monthly credits and higher limits. "
+                                         "Credits pay for cloud analytics, AI and premium data calls."));
+        step_labels_[4].tip->setText(tr("Tip: Ctrl+Shift+P → \"plans\" — or use the Help menu."));
     }
 
     if (btn_skip_)

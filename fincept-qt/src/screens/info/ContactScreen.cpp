@@ -2,6 +2,7 @@
 
 #include "core/events/EventBus.h"
 #include "ui/theme/Theme.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QDesktopServices>
@@ -27,7 +28,7 @@ static QString PANEL() {
         .arg(colors::BG_SURFACE(), colors::BORDER_DIM());
 }
 
-static const char* MF = "font-family:'Consolas','Courier New',monospace;";
+static const char* MF = "font-family:'Cascadia Mono','Consolas','Courier New',monospace;";
 
 static QLabel* make_header(const QString& icon, const QString& title, const QString& icon_color) {
     auto* lbl = new QLabel(QString("%1  %2").arg(icon, title));
@@ -181,21 +182,25 @@ QWidget* ContactScreen::build_page() {
         // none of which are documented anywhere in this project. Publishing
         // unreachable contact details on a contact page is worse than
         // publishing none.
-        grid->addWidget(
-            make_contact_card(tr("EMAIL SUPPORT"), "support@fincept.in", tr("Primary support channel")), 0, 0);
-        grid->addWidget(make_contact_card(tr("COMMUNITY"), "discord.gg/ae87a8ygbN", tr("Discussion and peer help")), 0,
-                        1);
-        grid->addWidget(make_contact_card(tr("ISSUE TRACKER"), "github.com/Fincept-Corporation/FinceptTerminal",
+        int card_row = 0;
+        if (brand::has_contact_email()) {
+            grid->addWidget(make_contact_card(tr("EMAIL SUPPORT"), QString::fromLatin1(brand::kContactEmail),
+                                              tr("Primary support channel")),
+                            card_row++, 0, 1, 2);
+        }
+        grid->addWidget(make_contact_card(tr("ISSUE TRACKER"), QString::fromLatin1(brand::kSourceUrl).mid(8),
                                           tr("Bug reports and feature requests")),
-                        1, 0);
+                        card_row, 0);
         grid->addWidget(make_contact_card(tr("IN-APP TICKETS"), tr("Support tab"),
                                           tr("Open a tracked ticket from inside the terminal")),
-                        1, 1);
-        grid->addWidget(make_contact_card(tr("ENTERPRISE DEMO"), tr("Book a walkthrough ↗"),
-                                          tr("Fincept Terminal Enterprise — the private edition for funds, family "
-                                             "offices and research desks. Separate product, separate account."),
-                                          enterprise::demo_url()),
-                        2, 0, 1, 2);
+                        card_row++, 1);
+        if (brand::show_upstream_promos()) {
+            grid->addWidget(make_contact_card(tr("ENTERPRISE DEMO"), tr("Book a walkthrough ↗"),
+                                              tr("Enterprise edition — the private edition for funds, family "
+                                                 "offices and research desks. Separate product, separate account."),
+                                              enterprise::demo_url()),
+                            card_row++, 0, 1, 2);
+        }
 
         pvl->addWidget(body);
         vl->addWidget(panel);
@@ -223,29 +228,25 @@ QWidget* ContactScreen::build_page() {
             btn->setCursor(Qt::PointingHandCursor);
             btn->setStyleSheet(QString("QPushButton { background: %1; color: %2; border: 1px solid %3; "
                                        "border-radius: 2px; padding: 8px 16px; font-size: 12px; "
-                                       "font-family:'Consolas','Courier New',monospace; }"
+                                       "font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                                        "QPushButton:hover { background: %4; color: #38bdf8; }")
                                    .arg(colors::BG_RAISED(), colors::CYAN(), colors::BORDER_DIM(), colors::BG_HOVER()));
             return btn;
         };
 
-        auto* email_btn = make_action(tr("Send Email"));
-        email_btn->setAccessibleName(tr("Send an email to support"));
-        connect(email_btn, &QPushButton::clicked, this,
-                []() { QDesktopServices::openUrl(QUrl("mailto:support@fincept.in")); });
-        hl->addWidget(email_btn);
-
-        auto* discord_btn = make_action(tr("Join Discord"));
-        discord_btn->setAccessibleName(tr("Open the Fincept Discord server"));
-        connect(discord_btn, &QPushButton::clicked, this,
-                []() { QDesktopServices::openUrl(QUrl("https://discord.gg/ae87a8ygbN")); });
-        hl->addWidget(discord_btn);
+        if (brand::has_contact_email()) {
+            auto* email_btn = make_action(tr("Send Email"));
+            email_btn->setAccessibleName(tr("Send an email to support"));
+            connect(email_btn, &QPushButton::clicked, this, []() {
+                QDesktopServices::openUrl(QUrl(QStringLiteral("mailto:") + QString::fromLatin1(brand::kContactEmail)));
+            });
+            hl->addWidget(email_btn);
+        }
 
         auto* github_btn = make_action(tr("GitHub Issues"));
         github_btn->setAccessibleName(tr("Open the GitHub issue tracker"));
-        connect(github_btn, &QPushButton::clicked, this, []() {
-            QDesktopServices::openUrl(QUrl("https://github.com/Fincept-Corporation/FinceptTerminal/issues"));
-        });
+        connect(github_btn, &QPushButton::clicked, this,
+                []() { QDesktopServices::openUrl(QUrl(QString::fromLatin1(brand::kIssuesUrl))); });
         hl->addWidget(github_btn);
 
         // Signed in (docked copy): the "IN-APP TICKETS" channel above is one click
@@ -260,9 +261,7 @@ QWidget* ContactScreen::build_page() {
             hl->addWidget(tickets_btn);
         }
 
-        hl->addStretch();
-        setTabOrder(email_btn, discord_btn);
-        setTabOrder(discord_btn, github_btn);
+        hl->addStretch(); // buttons are created in tab order (email, GitHub, tickets)
         pvl->addWidget(body);
         vl->addWidget(panel);
     }

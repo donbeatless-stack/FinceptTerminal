@@ -17,7 +17,7 @@ namespace fincept::screens::widgets {
 using namespace fincept::ui;
 using fincept::services::FileManagerService;
 
-static const char* MF = "font-family:'Consolas','Courier New',monospace;";
+static const char* MF = "font-family:'Cascadia Mono','Consolas','Courier New',monospace;";
 
 RecentFilesWidget::RecentFilesWidget(QWidget* parent)
     : BaseWidget(tr("Recent Files"), parent, ui::colors::AMBER.get()) {

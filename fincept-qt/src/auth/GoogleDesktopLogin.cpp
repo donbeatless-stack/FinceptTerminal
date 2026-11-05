@@ -91,7 +91,7 @@ void GoogleDesktopLogin::on_new_connection() {
         if (buffer->indexOf("\r\n\r\n") < 0 && buffer->indexOf("\n\n") < 0) {
             if (buffer->size() < 16384)
                 return;
-            send_page(sock, tr("Fincept"), tr("Malformed request."));
+            send_page(sock, tr("Keystone Terminal"), tr("Malformed request."));
             sock->disconnectFromHost();
             return;
         }
@@ -102,7 +102,7 @@ void GoogleDesktopLogin::on_new_connection() {
             request_line.chop(1);
         const QList<QByteArray> parts = request_line.split(' ');
         if (parts.size() < 2 || parts.at(0) != "GET") {
-            send_page(sock, tr("Fincept"), tr("Malformed request."));
+            send_page(sock, tr("Keystone Terminal"), tr("Malformed request."));
             sock->disconnectFromHost();
             return;
         }
@@ -113,7 +113,7 @@ void GoogleDesktopLogin::on_new_connection() {
         const auto check = fincept::auth::check_loopback_request(*buffer, port_);
         if (!check.allowed) {
             LOG_WARN("GoogleLogin", "Rejected loopback callback: " + check.reason);
-            send_page(sock, tr("Fincept"), tr("Request rejected."));
+            send_page(sock, tr("Keystone Terminal"), tr("Request rejected."));
             sock->disconnectFromHost();
             return;
         }
@@ -153,7 +153,7 @@ void GoogleDesktopLogin::on_new_connection() {
                                         "query back. CSRF protection is degraded until it does.");
             } else if (!fincept::auth::constant_time_equals(echoed, state_)) {
                 LOG_WARN("GoogleLogin", "Rejected loopback callback: state nonce mismatch");
-                send_page(sock, tr("Fincept"), tr("Request rejected."));
+                send_page(sock, tr("Keystone Terminal"), tr("Request rejected."));
                 sock->disconnectFromHost();
                 return;
             }
@@ -162,13 +162,13 @@ void GoogleDesktopLogin::on_new_connection() {
         if (code.isEmpty()) {
             // Secondary request (e.g. /favicon.ico) or callback without a code.
             // Keep the listener alive — the real callback may still be coming.
-            send_page(sock, tr("Fincept Terminal"), tr("Waiting for sign-in to complete…"));
+            send_page(sock, tr("Keystone Terminal"), tr("Waiting for sign-in to complete…"));
             sock->disconnectFromHost();
             return;
         }
 
         if (done_) {
-            send_page(sock, tr("Fincept Terminal"), tr("Login already completed — you can close this tab."));
+            send_page(sock, tr("Keystone Terminal"), tr("Login already completed — you can close this tab."));
             sock->disconnectFromHost();
             return;
         }
@@ -178,7 +178,7 @@ void GoogleDesktopLogin::on_new_connection() {
 
 void GoogleDesktopLogin::finish_success(const QString& code, QTcpSocket* sock) {
     done_ = true;
-    send_page(sock, tr("Login complete"), tr("You can close this tab and return to Fincept Terminal."));
+    send_page(sock, tr("Login complete"), tr("You can close this tab and return to Keystone Terminal."));
     sock->disconnectFromHost();
     LOG_INFO("GoogleLogin", "Handoff code received via loopback");
     emit code_received(code);

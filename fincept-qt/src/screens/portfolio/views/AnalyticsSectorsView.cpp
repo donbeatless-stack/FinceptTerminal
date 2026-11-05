@@ -144,7 +144,7 @@ void AnalyticsSectorsView::build_ui() {
                                  "  border-bottom:2px solid transparent; font-size:%6px; font-weight:700;"
                                  "  letter-spacing:1px; text-transform:uppercase; }"
                                  "QTabBar::tab:selected { color:%4; border-bottom:2px solid %4;"
-                                 "  background:rgba(217,119,6,0.08); }"
+                                 "  background:rgba(45,212,191,0.08); }"
                                  "QTabBar::tab:hover:!selected { color:%5; }")
                              .arg(ui::colors::BG_BASE(), ui::colors::BG_SURFACE(), ui::colors::TEXT_SECONDARY(),
                                   ui::colors::AMBER(), ui::colors::TEXT_PRIMARY())
@@ -284,7 +284,7 @@ QWidget* AnalyticsSectorsView::build_overview_tab() {
     sector_table_->setStyleSheet(QString("QTableWidget { background:%1; color:%2; border:none;"
                                          "  font-family:%3; font-size:%4px; gridline-color:transparent; }"
                                          "QTableWidget::item { padding:6px 8px; border-bottom:1px solid %5; }"
-                                         "QTableWidget::item:selected { background:rgba(217,119,6,0.10); color:%2; }"
+                                         "QTableWidget::item:selected { background:rgba(45,212,191,0.10); color:%2; }"
                                          "QHeaderView::section { background:%6; color:%2; border:none;"
                                          "  border-bottom:1px solid %7; padding:6px 8px;"
                                          "  font-size:%8px; font-weight:700; letter-spacing:1px; }")

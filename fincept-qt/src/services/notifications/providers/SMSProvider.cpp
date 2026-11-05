@@ -34,7 +34,7 @@ void SMSProvider::send(const NotificationRequest& req, std::function<void(bool, 
     QMap<QString, QString> form;
     form["To"] = to_number_;
     form["From"] = from_number_;
-    form["Body"] = QString("[Fincept] %1: %2").arg(req.title, req.message);
+    form["Body"] = QString("[Keystone] %1: %2").arg(req.title, req.message);
 
     HttpClient::Headers headers;
     headers.insert("Authorization", "Basic " + QString("%1:%2").arg(account_sid_, auth_token_).toUtf8().toBase64());

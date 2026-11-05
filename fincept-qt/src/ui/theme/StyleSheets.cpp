@@ -102,10 +102,10 @@ QString news_screen_styles() {
                "#newsCommandRowScroll { background: transparent; border: none; }"
 
                /* ── Drawer toggle button ── */
-               "#newsDrawerBtn { background: rgba(217,119,6,0.08); color: %12; "
+               "#newsDrawerBtn { background: rgba(45,212,191,0.08); color: %12; "
                "  border: 1px solid %10; padding: 0 10px; font-size: 11px; "
                "  font-weight: 700; letter-spacing: 0.5px; }"
-               "#newsDrawerBtn:hover { background: rgba(217,119,6,0.15); }"
+               "#newsDrawerBtn:hover { background: rgba(45,212,191,0.15); }"
                "#newsDrawerBtn:checked { background: %12; color: %1; }"
 
                /* ── Intel strip (row 2 of header) ── */
@@ -213,11 +213,11 @@ QString news_screen_styles() {
                "  border: 1px solid %3; font-size: 11px; font-weight: 700; padding: 0 8px; }"
                "#newsDetailOpenBtn:hover, #newsDetailCopyBtn:hover, #newsDetailCopyTitleBtn:hover, "
                "#newsDetailSaveBtn:hover { color: %4; background: %13; }"
-               "#newsDetailAnalyzeBtn { background: rgba(217,119,6,0.1); color: %12; "
+               "#newsDetailAnalyzeBtn { background: rgba(45,212,191,0.1); color: %12; "
                "  border: 1px solid %10; font-size: 11px; font-weight: 700; padding: 0 10px; }"
                "#newsDetailAnalyzeBtn:hover { background: %12; color: %1; }"
                "#newsDetailAnalyzeBtn:disabled { color: %6; background: %8; border-color: %3; }"
-               "#newsDetailAiFetchNote { color: %16; font-size: 10px; background: rgba(217,119,6,0.08); "
+               "#newsDetailAiFetchNote { color: %16; font-size: 10px; background: rgba(45,212,191,0.08); "
                "  border-left: 2px solid %16; padding: 3px 6px; }"
                "#newsDetailAiSummary { color: %7; font-size: 12px; line-height: 1.4; background: transparent; }"
                "#newsDetailAiSentiment { font-size: 12px; font-weight: 700; background: transparent; }"
@@ -268,7 +268,7 @@ QString news_screen_styles() {
 QString crypto_trading_styles() {
     return QString(
                /* ── Root ── */
-               "#cryptoScreen { background: %1; font-family: 'Consolas','Courier New',monospace; }"
+               "#cryptoScreen { background: %1; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
 
                /* ── Command bar ── */
                "#cryptoCommandBar { background: %8; border-bottom: 1px solid %3; }"
@@ -354,7 +354,7 @@ QString crypto_trading_styles() {
                "  background: %16; }"
                "#cryptoChartOhlc { background: rgba(8,8,8,220); color: %4; "
                "  border: 1px solid %10; border-radius: 4px; "
-               "  padding: 8px 12px; font-family: 'Consolas','Courier New',monospace; "
+               "  padding: 8px 12px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; "
                "  min-width: 130px; }"
 
                /* ── Order book ── */
@@ -586,7 +586,7 @@ QString equity_trading_styles() {
     // Reuse same Obsidian color palette as crypto — identical visual language
     return QString(
                /* ── Root ── */
-               "#eqScreen { background: %1; font-family: 'Consolas','Courier New',monospace; }"
+               "#eqScreen { background: %1; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
 
                /* ── Command bar ── */
                "#eqCommandBar { background: %8; border-bottom: 1px solid %3; }"

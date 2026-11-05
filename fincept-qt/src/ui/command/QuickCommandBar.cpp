@@ -35,7 +35,7 @@ QuickCommandBar::QuickCommandBar(QWidget* parent) : QFrame(parent) {
     hl->setSpacing(8);
 
     auto* prompt = new QLabel(">", this);
-    prompt->setStyleSheet("color: #d97706; font-weight: 700;");
+    prompt->setStyleSheet("color: #2dd4bf; font-weight: 700;");
     hl->addWidget(prompt);
 
     input_ = new QLineEdit(this);

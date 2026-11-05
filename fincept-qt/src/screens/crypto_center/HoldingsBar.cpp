@@ -174,7 +174,7 @@ void HoldingsBar::apply_theme() {
                                       // Discount chip — amber/neutral, not "money saved" green:
                                       // the discount is planned, not applied.
                                       "QLabel#holdingsBarDiscountChip { color:%6; font-family:%4; font-size:10px;"
-                                      "  font-weight:700; letter-spacing:1.2px; background:rgba(217,119,6,0.08);"
+                                      "  font-weight:700; letter-spacing:1.2px; background:rgba(45,212,191,0.08);"
                                       "  border:1px solid %2; padding:2px 8px; }"
 
                                       // Feed status (5 variants)

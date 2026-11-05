@@ -306,7 +306,7 @@ void AgentRunPanel::retranslate() {
     mode_lbl_->setText(tr("MODE"));
     mode_combo_->setItemText(0, tr("Analysis (read-only)"));
     mode_combo_->setItemText(1, tr("Workspace edits (may write files)"));
-    tools_check_->setText(tr("Use Fincept terminal tools (live data over MCP)"));
+    tools_check_->setText(tr("Use Keystone Terminal tools (live data over MCP)"));
     tools_check_->setToolTip(tr("Connects the agent to this terminal's MCP server: quotes, history, fundamentals, "
                                 "filings, news, macro and portfolio tools. Orders still need your approval."));
     budget_lbl_->setText(tr("MAX BUDGET"));

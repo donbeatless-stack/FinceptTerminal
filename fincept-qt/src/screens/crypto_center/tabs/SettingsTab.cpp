@@ -292,7 +292,7 @@ void SettingsTab::apply_theme() {
                        "  font-family:%6; font-size:10px; font-weight:700; letter-spacing:1.2px;"
                        "  padding:0 14px; }"
                        "QPushButton#settingsTabToggle:hover { color:%9; border-color:%11; }"
-                       "QPushButton#settingsTabToggle:checked { background:rgba(217,119,6,0.12);"
+                       "QPushButton#settingsTabToggle:checked { background:rgba(45,212,191,0.12);"
                        "  color:%5; border-color:%5; }"
 
                        // Slider
@@ -300,7 +300,7 @@ void SettingsTab::apply_theme() {
                        "  height:6px; border-radius:0; }"
                        "QSlider#settingsTabSlider::handle:horizontal { background:%5; border:1px solid %5;"
                        "  width:14px; margin:-6px 0; }"
-                       "QSlider#settingsTabSlider::sub-page:horizontal { background:rgba(217,119,6,0.30); }"
+                       "QSlider#settingsTabSlider::sub-page:horizontal { background:rgba(45,212,191,0.30); }"
                        "QLabel#settingsTabSliderValue { color:%5; font-family:%6; font-size:14px;"
                        "  font-weight:700; background:transparent; }"
 

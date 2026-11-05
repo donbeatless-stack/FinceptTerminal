@@ -161,7 +161,7 @@ void MultiStraddleChart::update_crosshair(const QPoint& widget_pos) {
     hover_line_->setVisible(true);
 
     QStringList lines;
-    lines.append(QDateTime::fromMSecsSinceEpoch(snap_ms).toString("dd MMM, HH:mm"));
+    lines.append(QDateTime::fromMSecsSinceEpoch(snap_ms).toString("MMM d, HH:mm"));
     for (const auto& sel : data_) {
         // Find the closest point in this selection to snap_ms.
         if (sel.points.isEmpty())

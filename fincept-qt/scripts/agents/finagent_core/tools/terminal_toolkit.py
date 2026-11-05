@@ -299,7 +299,7 @@ class TerminalToolkit:
 
 
 _GENERIC_DESCRIPTION = (
-    "Call any Fincept Terminal tool by its exact name, including tools that are not listed "
+    "Call any Keystone Terminal tool by its exact name, including tools that are not listed "
     "among your functions. Find tools with tool_list and read their parameters with "
     "tool_describe first. Pass server_id only for a tool on an external MCP server (as "
     "tool_describe reports it). Also pages a truncated result: tool='result_fetch'."

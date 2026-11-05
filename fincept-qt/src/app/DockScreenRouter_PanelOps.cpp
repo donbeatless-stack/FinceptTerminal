@@ -178,7 +178,7 @@ void DockScreenRouter::show_tab_context_menu(const QString& id, const QPoint& gl
     QMenu menu;
     menu.setStyleSheet("QMenu{background:#111827;color:#e5e7eb;border:1px solid #374151;padding:4px 0;}"
                        "QMenu::item{padding:5px 24px 5px 12px;}"
-                       "QMenu::item:selected{background:#1f2937;color:#d97706;}"
+                       "QMenu::item:selected{background:#1f2937;color:#2dd4bf;}"
                        "QMenu::item:disabled{color:#6b7280;}"
                        "QMenu::separator{background:#374151;height:1px;margin:4px 8px;}");
 

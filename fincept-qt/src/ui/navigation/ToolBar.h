@@ -64,7 +64,8 @@ class ToolBar : public QWidget {
     QPushButton* logout_btn_ = nullptr;
     QTimer* clock_timer_ = nullptr;
     QVector<QLabel*> separators_;
-    QLabel* fincept_label_ = nullptr;
+    QLabel* fincept_label_ = nullptr; // wordmark, first word ("KEYSTONE")
+    QLabel* logo_label_ = nullptr;
 
     CommandBar* command_bar_ = nullptr;
     PushpinBar* pushpin_bar_ = nullptr;

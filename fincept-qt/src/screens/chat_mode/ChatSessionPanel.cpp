@@ -40,7 +40,7 @@ void ChatSessionPanel::build_ui() {
     header_row->setSpacing(4);
     title_lbl_ = new QLabel(tr("CONVERSATIONS"));
     title_lbl_->setStyleSheet(QString("color:%1;font-size:11px;font-weight:700;"
-                                      "font-family:'Consolas','Courier New',monospace;"
+                                      "font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
                                       "background:transparent;letter-spacing:1px;")
                                   .arg(ui::colors::AMBER()));
     header_row->addWidget(title_lbl_);
@@ -53,7 +53,7 @@ void ChatSessionPanel::build_ui() {
     exit_btn_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     exit_btn_->setStyleSheet(QString("QPushButton{background:transparent;color:%1;border:1px solid %2;"
                                      "padding:0 8px;font-weight:700;font-size:10px;"
-                                     "font-family:'Consolas','Courier New',monospace;}"
+                                     "font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                                      "QPushButton:hover{background:%2;color:%3;border-color:%1;}")
                                  .arg(ui::colors::AMBER(), ui::colors::AMBER_DIM(), ui::colors::TEXT_PRIMARY()));
     connect(exit_btn_, &QPushButton::clicked, this, &ChatSessionPanel::exit_chat_mode_requested);
@@ -66,7 +66,7 @@ void ChatSessionPanel::build_ui() {
     search_edit_->setFixedHeight(28);
     search_edit_->setStyleSheet(QString("QLineEdit{background:%1;color:%2;border:1px solid %3;"
                                         "border-radius:0px;padding:4px 8px;font-size:12px;"
-                                        "font-family:'Consolas','Courier New',monospace;}"
+                                        "font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                                         "QLineEdit:focus{border:1px solid %4;}")
                                     .arg(ui::colors::BG_RAISED(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM(),
                                          ui::colors::BORDER_BRIGHT()));
@@ -82,7 +82,7 @@ void ChatSessionPanel::build_ui() {
     // Session list
     session_list_ = new QListWidget;
     session_list_->setStyleSheet(QString("QListWidget{background:%1;border:none;color:%2;"
-                                         "font-size:12px;font-family:'Consolas','Courier New',monospace;outline:none;}"
+                                         "font-size:12px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;outline:none;}"
                                          "QListWidget::item{padding:6px 6px;border-bottom:1px solid %3;}"
                                          "QListWidget::item:selected{background:%3;color:%4;"
                                          "border-left:2px solid %4;}"
@@ -98,7 +98,7 @@ void ChatSessionPanel::build_ui() {
 
     // Stats label
     stats_lbl_ = new QLabel;
-    stats_lbl_->setStyleSheet(QString("color:%1;font-size:11px;font-family:'Consolas','Courier New',monospace;"
+    stats_lbl_->setStyleSheet(QString("color:%1;font-size:11px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
                                       "background:transparent;")
                                   .arg(ui::colors::TEXT_DIM()));
     stats_lbl_->setAlignment(Qt::AlignCenter);
@@ -111,7 +111,7 @@ void ChatSessionPanel::build_ui() {
         btn->setFixedHeight(24);
         btn->setStyleSheet(QString("QPushButton{background:%1;color:%2;border:1px solid %3;"
                                    "border-radius:0px;font-size:11px;"
-                                   "font-family:'Consolas','Courier New',monospace;}"
+                                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                                    "QPushButton:hover{background:%4;color:%5;border-color:%6;}"
                                    "QPushButton:disabled{color:%7;border-color:%1;}")
                                .arg(ui::colors::BG_RAISED(), ui::colors::TEXT_SECONDARY(), ui::colors::BORDER_DIM(),

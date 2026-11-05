@@ -1451,7 +1451,7 @@ QString EconPanelBase::default_source() const {
         {QStringLiteral("wto"), QStringLiteral("World Trade Organization")},
         {QStringLiteral("unesco"), QStringLiteral("UNESCO Institute for Statistics")},
         {QStringLiteral("bea"), QStringLiteral("U.S. Bureau of Economic Analysis — NIPA")},
-        {QStringLiteral("fincept"), QStringLiteral("Fincept")},
+        {QStringLiteral("fincept"), QStringLiteral("Cloud")},
     };
     return kSources.value(source_id_);
 }

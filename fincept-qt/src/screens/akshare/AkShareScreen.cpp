@@ -41,7 +41,7 @@ static const QString kStyle =
                    "#akSourceBtn { background: %7; color: %5; border: 1px solid %8; "
                    "  font-size: 9px; font-weight: 700; padding: 6px 4px; text-align: center; }"
                    "#akSourceBtn:hover { color: %4; border-color: %9; }"
-                   "#akSourceBtn[active=\"true\"] { background: rgba(217,119,6,0.15); "
+                   "#akSourceBtn[active=\"true\"] { background: rgba(45,212,191,0.15); "
                    "  color: %3; border-color: %3; }"
 
                    "#akEndpointPanel { background: %7; border-right: 1px solid %8; }"
@@ -52,7 +52,7 @@ static const QString kStyle =
                    "#akEndpointList { background: %1; border: none; outline: none; font-size: 11px; }"
                    "#akEndpointList::item { color: %5; padding: 4px 8px; border-bottom: 1px solid %8; }"
                    "#akEndpointList::item:hover { color: %4; background: %10; }"
-                   "#akEndpointList::item:selected { color: %3; background: rgba(217,119,6,0.1); "
+                   "#akEndpointList::item:selected { color: %3; background: rgba(45,212,191,0.1); "
                    "  border-left: 2px solid %3; }"
 
                    "#akParamsPanel { background: %7; border-bottom: 1px solid %8; }"
@@ -68,7 +68,7 @@ static const QString kStyle =
 
                    "#akExecBtn { background: %3; color: %1; border: none; padding: 4px 16px; "
                    "  font-size: 9px; font-weight: 700; }"
-                   "#akExecBtn:hover { background: #FF8800; }"
+                   "#akExecBtn:hover { background: #5eead4; }"
                    "#akExecBtn:disabled { background: %11; color: %12; }"
 
                    "#akViewToggle { background: %7; color: %5; border: 1px solid %8; "
@@ -87,7 +87,7 @@ static const QString kStyle =
                    "QTableWidget { background: %1; color: %4; border: none; gridline-color: %8; "
                    "  font-size: 11px; }"
                    "QTableWidget::item { padding: 2px 6px; border-bottom: 1px solid %8; }"
-                   "QTableWidget::item:selected { background: rgba(217,119,6,0.1); color: %3; }"
+                   "QTableWidget::item:selected { background: rgba(45,212,191,0.1); color: %3; }"
                    "QHeaderView::section { background: %2; color: %5; border: none; "
                    "  border-bottom: 1px solid %8; border-right: 1px solid %8; "
                    "  padding: 4px 6px; font-size: 10px; font-weight: 700; }"

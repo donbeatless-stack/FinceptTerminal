@@ -54,7 +54,7 @@ BasketOrdersDialog::BasketOrdersDialog(QWidget* parent) : QDialog(parent) {
     basket_list_ = new QListWidget;
     basket_list_->setStyleSheet("QListWidget{background:#080808;border:1px solid #1a1a1a;font-size:12px;}"
                                 "QListWidget::item{padding:6px 8px;}"
-                                "QListWidget::item:selected{background:rgba(217,119,6,0.15);color:#d97706;}");
+                                "QListWidget::item:selected{background:rgba(45,212,191,0.15);color:#2dd4bf;}");
     connect(basket_list_, &QListWidget::currentRowChanged, this, &BasketOrdersDialog::on_basket_selected);
     lv->addWidget(basket_list_, 1);
     auto* lbtns = new QHBoxLayout;
@@ -62,9 +62,9 @@ BasketOrdersDialog::BasketOrdersDialog(QWidget* parent) : QDialog(parent) {
     delete_btn_ = new QPushButton(tr("DELETE"));
     for (auto* b : {new_btn_, delete_btn_}) {
         b->setCursor(Qt::PointingHandCursor);
-        b->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#d97706;"
+        b->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#2dd4bf;"
                          "padding:5px 10px;font-size:11px;font-weight:600;}"
-                         "QPushButton:hover{border-color:#d97706;}");
+                         "QPushButton:hover{border-color:#2dd4bf;}");
         lbtns->addWidget(b);
     }
     connect(new_btn_, &QPushButton::clicked, this, &BasketOrdersDialog::on_new_basket);
@@ -84,9 +84,9 @@ BasketOrdersDialog::BasketOrdersDialog(QWidget* parent) : QDialog(parent) {
     name_row->addWidget(name_edit_, 1);
     save_btn_ = new QPushButton(tr("SAVE BASKET"));
     save_btn_->setCursor(Qt::PointingHandCursor);
-    save_btn_->setStyleSheet("QPushButton{background:#111;border:1px solid #d97706;color:#d97706;"
+    save_btn_->setStyleSheet("QPushButton{background:#111;border:1px solid #2dd4bf;color:#2dd4bf;"
                              "padding:5px 12px;font-size:11px;font-weight:700;}"
-                             "QPushButton:hover{background:#d97706;color:#080808;}");
+                             "QPushButton:hover{background:#2dd4bf;color:#080808;}");
     connect(save_btn_, &QPushButton::clicked, this, &BasketOrdersDialog::on_save_basket);
     name_row->addWidget(save_btn_);
     rv->addLayout(name_row);
@@ -126,9 +126,9 @@ BasketOrdersDialog::BasketOrdersDialog(QWidget* parent) : QDialog(parent) {
     leg_product_->addItems({tr("INTRADAY"), tr("DELIVERY"), tr("MARGIN")});
     auto* add_btn = new QPushButton(tr("+ ADD"));
     add_btn->setCursor(Qt::PointingHandCursor);
-    add_btn->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#d97706;"
+    add_btn->setStyleSheet("QPushButton{background:#111;border:1px solid #2a2a2a;color:#2dd4bf;"
                            "padding:4px 10px;font-size:11px;font-weight:600;}"
-                           "QPushButton:hover{border-color:#d97706;}");
+                           "QPushButton:hover{border-color:#2dd4bf;}");
     connect(add_btn, &QPushButton::clicked, this, &BasketOrdersDialog::on_add_leg);
     connect(leg_symbol_, &QLineEdit::returnPressed, this, &BasketOrdersDialog::on_add_leg);
     for (QWidget* w : std::initializer_list<QWidget*>{leg_symbol_, leg_exchange_, leg_side_, leg_qty_, leg_type_,
@@ -384,7 +384,7 @@ void BasketOrdersDialog::on_execute() {
                                             .arg(immediate.size())
                                             .arg(queued)
                                       : tr("Executing on %1 account(s)…").arg(immediate.size()));
-    status_label_->setStyleSheet("color:#d97706;font-size:11px;");
+    status_label_->setStyleSheet("color:#2dd4bf;font-size:11px;");
 
     // place_basket_orders runs on its own background thread per call and
     // invokes the callback on this (caller's) thread. Aggregate across accounts.

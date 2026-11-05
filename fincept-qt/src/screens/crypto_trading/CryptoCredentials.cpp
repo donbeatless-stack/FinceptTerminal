@@ -17,7 +17,7 @@ using namespace fincept::ui;
 // setStyleSheet calls collapsed into one CSS parse. Applied in the ctor.
 namespace {
 static QString kDialogStyle() {
-    const QString mono = "'Consolas', 'Courier New', monospace";
+    const QString mono = "'Cascadia Mono', 'Consolas', 'Courier New', monospace";
     return QString(
                // Dialog background
                "QDialog { background: %1; color: %2; font-family: %13; }"
@@ -41,7 +41,7 @@ static QString kDialogStyle() {
                "QPushButton#credClearBtn { background: rgba(220,38,38,0.1); color: %9; border: 1px solid %12; "
                "                          padding: 6px 16px; font-weight: 700; font-size: 12px; font-family: %13; }"
                "QPushButton#credClearBtn:hover { background: %9; color: %2; }"
-               "QPushButton#credSaveBtn { background: rgba(217,119,6,0.1); color: %6; border: 1px solid %14; "
+               "QPushButton#credSaveBtn { background: rgba(45,212,191,0.1); color: %6; border: 1px solid %14; "
                "                         padding: 6px 16px; font-weight: 700; font-size: 12px; font-family: %13; }"
                "QPushButton#credSaveBtn:hover { background: %6; color: %1; }")
         .arg(colors::BG_BASE(),        // %1

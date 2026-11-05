@@ -105,7 +105,7 @@ static QString dbn_date_format(const QVector<services::DbnDataPoint>& series) {
             sub_annual = true;
     }
     if (daily)
-        return QStringLiteral("dd MMM yy");
+        return QStringLiteral("MMM d, yy");
     return sub_annual ? QStringLiteral("MMM yyyy") : QStringLiteral("yyyy");
 }
 

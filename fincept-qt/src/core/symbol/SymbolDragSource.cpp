@@ -39,7 +39,7 @@ static QPixmap make_drag_pixmap(const SymbolRef& ref) {
     p.setRenderHint(QPainter::Antialiasing, true);
     QPainterPath path;
     path.addRoundedRect(QRectF(0, 0, w, h), h / 2.0, h / 2.0);
-    p.fillPath(path, QColor("#d97706")); // amber
+    p.fillPath(path, QColor("#2dd4bf")); // brand accent
     p.setPen(Qt::white);
     p.setFont(font);
     p.drawText(QRectF(0, 0, w, h), Qt::AlignCenter, text);

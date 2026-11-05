@@ -37,7 +37,7 @@ using namespace fincept::ui::colors;
 
 // §5.2 — List items: 26px row, alternating bg, hairline borders
 static QString kListItem() {
-    return QString("QListWidget { background: %1; border: none; font-family: 'Consolas','Courier New',monospace; "
+    return QString("QListWidget { background: %1; border: none; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; "
                    "font-size: 12px; }"
                    "QListWidget::item { padding: 6px 12px; color: %3; border-bottom: 1px solid %2; height: 26px; }"
                    "QListWidget::item:selected { background: %4; color: %3; }"
@@ -48,7 +48,7 @@ static QString kListItem() {
 // §5.6 — Input fields
 static QString kInput() {
     return QString("QLineEdit { background: %1; color: %2; border: 1px solid %3; "
-                   "padding: 3px 6px; font-size: 13px; font-family: 'Consolas','Courier New',monospace; height: 28px; }"
+                   "padding: 3px 6px; font-size: 13px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; height: 28px; }"
                    "QLineEdit:focus { border-color: %4; }"
                    "QLineEdit::selection { background: %5; color: %6; }")
         .arg(BG_BASE(), TEXT_PRIMARY(), BORDER_DIM(), BORDER_BRIGHT(), AMBER(), BG_BASE());
@@ -57,7 +57,7 @@ static QString kInput() {
 // §5.6 — Combo: same input style
 static QString kCombo() {
     return QString("QComboBox { background: %1; color: %2; border: 1px solid %3; "
-                   "padding: 3px 6px; font-size: 12px; font-family: 'Consolas','Courier New',monospace; }"
+                   "padding: 3px 6px; font-size: 12px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QComboBox:focus { border-color: %4; }"
                    "QComboBox QAbstractItemView { background: %1; color: %2; "
                    "selection-background-color: %3; border: 1px solid %3; }")
@@ -67,7 +67,7 @@ static QString kCombo() {
 // §5.6 — Text editor: same as input
 static QString kTextEdit() {
     return QString("QTextEdit { background: %1; color: %2; border: 1px solid %3; "
-                   "padding: 6px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }"
+                   "padding: 6px; font-size: 14px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QTextEdit:focus { border-color: %4; }"
                    "QTextEdit::selection { background: %5; color: %6; }")
         .arg(BG_BASE(), TEXT_PRIMARY(), BORDER_DIM(), BORDER_BRIGHT(), AMBER(), BG_BASE());
@@ -75,9 +75,9 @@ static QString kTextEdit() {
 
 // §5.5 — Accent button (amber): rgba bg + amber text + amber_dim border
 static QString kActionBtn() {
-    return QString("QPushButton { background: rgba(217,119,6,0.1); color: %1; "
+    return QString("QPushButton { background: rgba(45,212,191,0.1); color: %1; "
                    "border: 1px solid %2; padding: 0 12px; height: 24px; "
-                   "font-size: 12px; font-weight: 700; font-family: 'Consolas','Courier New',monospace; }"
+                   "font-size: 12px; font-weight: 700; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QPushButton:hover { background: %1; color: %3; }")
         .arg(AMBER(), AMBER_DIM(), BG_BASE());
 }
@@ -86,7 +86,7 @@ static QString kActionBtn() {
 static QString kSecondaryBtn() {
     return QString("QPushButton { background: %1; color: %2; border: 1px solid %3; "
                    "padding: 0 10px; height: 24px; "
-                   "font-size: 11px; font-weight: 700; font-family: 'Consolas','Courier New',monospace; }"
+                   "font-size: 11px; font-weight: 700; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QPushButton:hover { color: %4; background: %5; }")
         .arg(BG_RAISED(), TEXT_SECONDARY(), BORDER_DIM(), TEXT_PRIMARY(), BG_HOVER());
 }
@@ -95,7 +95,7 @@ static QString kSecondaryBtn() {
 static QString kDangerBtn() {
     return QString("QPushButton { background: rgba(220,38,38,0.1); color: %1; "
                    "border: 1px solid #7f1d1d; padding: 0 10px; height: 24px; "
-                   "font-size: 11px; font-weight: 700; font-family: 'Consolas','Courier New',monospace; }"
+                   "font-size: 11px; font-weight: 700; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QPushButton:hover { background: %1; color: %2; }")
         .arg(NEGATIVE(), TEXT_PRIMARY());
 }
@@ -254,7 +254,7 @@ QWidget* NotesScreen::build_category_sidebar() {
     category_header_->setFixedHeight(34);
     category_header_->setStyleSheet(QString("background: %1; color: %2; font-size: 12px; font-weight: 700; "
                                             "letter-spacing: 0.5px; border-bottom: 1px solid %3; padding-left: 12px; "
-                                            "font-family: 'Consolas','Courier New',monospace;")
+                                            "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                         .arg(BG_RAISED(), AMBER(), BORDER_DIM()));
     lay->addWidget(category_header_);
 
@@ -272,7 +272,7 @@ QWidget* NotesScreen::build_category_sidebar() {
     stats_label_->setFixedHeight(26);
     stats_label_->setAlignment(Qt::AlignCenter);
     stats_label_->setStyleSheet(QString("background: %1; color: %2; font-size: 11px; border-top: 1px solid %3; "
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(BG_SURFACE(), TEXT_SECONDARY(), BORDER_DIM()));
     lay->addWidget(stats_label_);
 
@@ -324,7 +324,7 @@ QWidget* NotesScreen::build_notes_list_panel() {
     count_label_->setFixedHeight(26);
     count_label_->setAlignment(Qt::AlignCenter);
     count_label_->setStyleSheet(QString("background: %1; color: %2; font-size: 11px; border-top: 1px solid %3; "
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(BG_SURFACE(), TEXT_TERTIARY(), BORDER_DIM()));
     lay->addWidget(count_label_);
 
@@ -343,7 +343,7 @@ QWidget* NotesScreen::build_editor_panel() {
     el->setAlignment(Qt::AlignCenter);
     empty_label_ = new QLabel(tr("Select a note or create a new one"));
     empty_label_->setStyleSheet(
-        QString("color: %1; font-size: 14px; font-family: 'Consolas','Courier New',monospace;").arg(TEXT_TERTIARY()));
+        QString("color: %1; font-size: 14px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;").arg(TEXT_TERTIARY()));
     el->addWidget(empty_label_, 0, Qt::AlignCenter);
     right_stack_->addWidget(empty); // index 0
 
@@ -381,14 +381,14 @@ QWidget* NotesScreen::build_editor_panel() {
 
     view_title_ = new QLabel;
     view_title_->setStyleSheet(
-        QString("color: %1; font-size: 20px; font-weight: bold; font-family: 'Consolas','Courier New',monospace;")
+        QString("color: %1; font-size: 20px; font-weight: bold; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
             .arg(TEXT_PRIMARY()));
     view_title_->setWordWrap(true);
     vl->addWidget(view_title_);
 
     view_meta_ = new QLabel;
     view_meta_->setStyleSheet(
-        QString("color: %1; font-size: 11px; font-family: 'Consolas','Courier New',monospace;").arg(TEXT_SECONDARY()));
+        QString("color: %1; font-size: 11px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;").arg(TEXT_SECONDARY()));
     view_meta_->setWordWrap(true);
     // Tickers are links ("Open in…" menu).
     view_meta_->setTextFormat(Qt::RichText);
@@ -462,7 +462,7 @@ QWidget* NotesScreen::build_editor_panel() {
     edit_toolbar->addStretch();
     autosave_label_ = new QLabel;
     autosave_label_->setStyleSheet(
-        QString("color: %1; font-size: 11px; font-family: 'Consolas','Courier New',monospace;").arg(TEXT_TERTIARY()));
+        QString("color: %1; font-size: 11px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;").arg(TEXT_TERTIARY()));
     edit_toolbar->addWidget(autosave_label_);
     edl->addLayout(edit_toolbar);
 
@@ -479,7 +479,7 @@ QWidget* NotesScreen::build_editor_panel() {
 
     auto make_label = [](const QString& text) {
         auto* l = new QLabel(text);
-        l->setStyleSheet(QString("color: %1; font-size: 11px; font-family: 'Consolas','Courier New',monospace;")
+        l->setStyleSheet(QString("color: %1; font-size: 11px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                              .arg(TEXT_SECONDARY()));
         return l;
     };

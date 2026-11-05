@@ -26,7 +26,7 @@ namespace fincept::screens {
 
 namespace {
 constexpr const char* kDefaultFontSize = "14px";
-constexpr const char* kDefaultFontFamily = "Consolas";
+constexpr const char* kDefaultFontFamily = "Cascadia Mono";
 constexpr const char* kDefaultDensity = "Default";
 
 /// Dynamic-property guard set by reload() when a settings *read* failed. While

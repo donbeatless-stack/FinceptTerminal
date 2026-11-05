@@ -81,7 +81,7 @@ QWidget* MaritimeScreen::build_top_bar() {
     accent->setFixedSize(4, 18);
     hl->addWidget(accent);
 
-    brand_label_ = new QLabel(tr("FINCEPT MARITIME INTELLIGENCE"), bar);
+    brand_label_ = new QLabel(tr("KEYSTONE MARITIME INTELLIGENCE"), bar);
     brand_label_->setObjectName(QStringLiteral("mtBrand"));
     hl->addWidget(brand_label_);
 
@@ -91,7 +91,7 @@ QWidget* MaritimeScreen::build_top_bar() {
     // the balance after the last call is shown here, with PLANS when it runs low.
     credits_label_ = new QLabel(tr("CREDITS: —"), bar);
     credits_label_->setObjectName(QStringLiteral("mtCredits"));
-    credits_label_->setToolTip(tr("Fincept API credit balance after the last vessel request"));
+    credits_label_->setToolTip(tr("Cloud API credit balance after the last vessel request"));
     hl->addWidget(credits_label_);
 
     plans_btn_ = new QPushButton(tr("PLANS"), bar);

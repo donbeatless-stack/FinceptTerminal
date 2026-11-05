@@ -16,7 +16,7 @@ namespace fincept::screens {
 
 using namespace fincept::ui;
 
-static const char* MF = "font-family:'Consolas','Courier New',monospace;";
+static const char* MF = "font-family:'Cascadia Mono','Consolas','Courier New',monospace;";
 
 static QLabel* section_heading(const QString& number, const QString& title) {
     auto* lbl = new QLabel(QString("%1. %2").arg(number, title));
@@ -191,7 +191,7 @@ QWidget* TermsScreen::build_page() {
         auto* btn = new QPushButton(text);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setStyleSheet(QString("QPushButton { color: %1; background: transparent; border: none; "
-                                   "font-size: 12px; font-family:'Consolas','Courier New',monospace; }"
+                                   "font-size: 12px; font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                                    "QPushButton:hover { color: #38bdf8; }")
                                .arg(colors::CYAN()));
         return btn;

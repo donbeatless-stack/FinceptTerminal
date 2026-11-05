@@ -71,7 +71,7 @@ inline QString kStyle() {
                "#mktCardCmd   { color:%13; font-family:monospace; background:transparent; }"
                "#mktCardEnv   { color:%3; background:transparent; }"
                "#mktCatBadge  { color:%3; font-weight:700; "
-               "  background:rgba(217,119,6,0.12); padding:1px 6px; border:1px solid rgba(217,119,6,0.3); }"
+               "  background:rgba(45,212,191,0.12); padding:1px 6px; border:1px solid rgba(45,212,191,0.3); }"
                "#mktAddBtn    { background:%3; color:%1; border:none; padding:5px 16px; "
                "  font-weight:700; }"
                "#mktAddBtn:hover { background:%10; }"
@@ -82,7 +82,7 @@ inline QString kStyle() {
                "#catList { background:%2; border:none; outline:none; }"
                "#catList::item { color:%5; font-weight:700; padding:6px 12px; }"
                "#catList::item:hover { color:%4; background:%12; }"
-               "#catList::item:selected { color:%3; background:rgba(217,119,6,0.1); "
+               "#catList::item:selected { color:%3; background:rgba(45,212,191,0.1); "
                "  border-left:2px solid %3; }"
 
                // ── Installed server cards ──

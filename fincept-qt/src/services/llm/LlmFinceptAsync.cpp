@@ -393,7 +393,7 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
             resp.error = make_fincept_error(kind, QString::fromUtf8(submit.body) + QLatin1Char(' ') + submit.error);
             return resp;
         }
-        resp.error = "Fincept AI request failed: " + fincept_humanize_error(submit.error);
+        resp.error = "Cloud AI request failed: " + fincept_humanize_error(submit.error);
         // 5xx / gateway / transport trouble may clear on a resubmit; a 4xx will not.
         resp.retryable = submit.status == 0 || submit.status >= 500;
         return resp;
@@ -401,7 +401,7 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
 
     auto submit_doc = QJsonDocument::fromJson(submit.body);
     if (submit_doc.isNull()) {
-        resp.error = QStringLiteral("The Fincept server sent an unreadable reply (details in the log).");
+        resp.error = QStringLiteral("The cloud server sent an unreadable reply (details in the log).");
         LOG_ERROR(kLlmFinceptTag, "Fincept async: failed to parse submit response: " +
                                       QString::fromUtf8(submit.body.left(600)));
         return resp;
@@ -413,7 +413,7 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
     if (task_id.isEmpty())
         task_id = sj["data"].toObject()["task_id"].toString();
     if (task_id.isEmpty()) {
-        resp.error = QStringLiteral("The Fincept server did not accept the request (no task id; details in the log).");
+        resp.error = QStringLiteral("The cloud server did not accept the request (no task id; details in the log).");
         LOG_ERROR(kLlmFinceptTag, "Fincept async: no task_id in submit response: " +
                                       QString::fromUtf8(submit.body.left(600)));
         return resp;
@@ -449,13 +449,13 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
             }
             if (poll.status == 404) {
                 // The backend keeps tasks for 30 min and loses them on restart.
-                resp.error = QStringLiteral("The Fincept server lost this request before it finished (task expired). "
+                resp.error = QStringLiteral("The cloud server lost this request before it finished (task expired). "
                                             "Please try again.");
                 resp.retryable = true;
                 return resp;
             }
             if (++poll_failures >= kMaxConsecutivePollFailures) {
-                resp.error = "Lost contact with the Fincept server while waiting for the answer: " +
+                resp.error = "Lost contact with the cloud server while waiting for the answer: " +
                              fincept_humanize_error(poll.error);
                 resp.retryable = true;
                 return resp;
@@ -497,9 +497,9 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
                 resp.error = make_fincept_error(kind, err);
                 return resp;
             }
-            resp.error = err.isEmpty() ? QStringLiteral("The Fincept AI service reported a failure but gave no reason "
+            resp.error = err.isEmpty() ? QStringLiteral("The cloud AI service reported a failure but gave no reason "
                                                         "(details in the log). Please try again.")
-                                       : "The Fincept AI service could not complete this request: " +
+                                       : "The cloud AI service could not complete this request: " +
                                              fincept_humanize_error(err);
             resp.retryable = true; // upstream/model failure, not a bad request
             return resp;
@@ -527,7 +527,7 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
         }
 
         if (response.isEmpty() && (!out_tool_calls || out_tool_calls->isEmpty())) {
-            resp.error = QStringLiteral("The Fincept AI service returned an empty answer. Please try again.");
+            resp.error = QStringLiteral("The cloud AI service returned an empty answer. Please try again.");
             LOG_WARN(kLlmFinceptTag, "Fincept async task completed with empty response field");
             return resp;
         }
@@ -544,7 +544,7 @@ LlmResponse LlmService::fincept_submit_poll(const QString& prompt, QJsonArray* o
         return resp;
     }
 
-    resp.error = QStringLiteral("The Fincept AI service did not answer within %1 s. Please try again.")
+    resp.error = QStringLiteral("The cloud AI service did not answer within %1 s. Please try again.")
                      .arg(kPollBudgetMs / 1000);
     LOG_ERROR(kLlmFinceptTag, "Fincept async timed out waiting for task " + task_id);
     return resp;
@@ -659,7 +659,7 @@ LlmResponse LlmService::fincept_async_request(const QString& user_message,
 
         if (out.size() > kServerMaxPromptChars) {
             LOG_ERROR(kLlmFinceptTag,
-                      QString("Fincept: composed prompt is %1 chars, still over the cap").arg(out.size()));
+                      QString("Cloud LLM: composed prompt is %1 chars, still over the cap").arg(out.size()));
         }
         return out;
     };
@@ -979,7 +979,7 @@ LlmResponse LlmService::fincept_async_request(const QString& user_message,
 
     // Nothing usable — surface the failure instead of leaking tool markup.
     LlmResponse err;
-    err.error = final_turn.error.isEmpty() ? QStringLiteral("Fincept LLM stopped without producing an answer.")
+    err.error = final_turn.error.isEmpty() ? QStringLiteral("Cloud LLM stopped without producing an answer.")
                                            : final_turn.error;
     return err;
 }

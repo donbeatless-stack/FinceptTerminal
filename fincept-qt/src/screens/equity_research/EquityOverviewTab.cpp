@@ -272,9 +272,9 @@ void ResearchCandleCanvas::rebuild_cache() {
         if (span_sec > 365LL * 86400)
             label = dt.toString("MMM yy");
         else if (span_sec > 60LL * 86400)
-            label = dt.toString("dd MMM");
+            label = dt.toString("MMM d");
         else
-            label = dt.toString("dd MMM");
+            label = dt.toString("MMM d");
 
         int lx = static_cast<int>((i + 0.5) * slot_w);
         int tw = fm.horizontalAdvance(label);

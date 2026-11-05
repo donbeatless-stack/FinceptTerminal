@@ -269,7 +269,7 @@ QWidget* AgentsViewPanel::build_config_panel() {
     jl->setContentsMargins(8, 8, 8, 8);
     json_editor_ = new QPlainTextEdit;
     json_editor_->setStyleSheet(QString("QPlainTextEdit{background:%1;color:%2;border:1px solid %3;padding:8px;"
-                                        "font-size:12px;font-family:'Consolas','Courier New',monospace;}")
+                                        "font-size:12px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;}")
                                     .arg(ui::colors::BG_BASE(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM()));
     jl->addWidget(json_editor_);
     json_apply_btn_ = new QPushButton(tr("APPLY JSON"));

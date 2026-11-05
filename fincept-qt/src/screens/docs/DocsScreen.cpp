@@ -31,11 +31,11 @@
 namespace fincept::screens {
 
 using fincept::screens::docs_internal::SCROLL_SS;
-static const char* FONT = "'Consolas','Courier New',monospace";
+static const char* FONT = "'Cascadia Mono','Consolas','Courier New',monospace";
 
 static QString SIDEBAR_SS() {
     return QString("QTreeWidget { background: %1; color: %2; border: none;"
-                   "  font-size: 12px; font-family: 'Consolas','Courier New',monospace;"
+                   "  font-size: 12px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "  outline: none; }"
                    "QTreeWidget::item { height: 26px; padding-left: 6px; border: none; }"
                    "QTreeWidget::item:hover { background: %3; color: %4; }"
@@ -88,7 +88,7 @@ static QString docs_screen_target(const QString& topic) {
 QLabel* DocsScreen::make_heading(const QString& text) {
     auto* lbl = new QLabel(text);
     lbl->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: bold; letter-spacing: 0.5px;"
-                               " background: transparent; font-family: 'Consolas','Courier New',monospace;"
+                               " background: transparent; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                                " padding: 4px 0;")
                            .arg(ui::colors::AMBER()));
     lbl->setWordWrap(true);
@@ -98,7 +98,7 @@ QLabel* DocsScreen::make_heading(const QString& text) {
 QLabel* DocsScreen::make_body_label(const QString& text) {
     auto* lbl = new QLabel(text);
     lbl->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent; line-height: 1.5;"
-                               " font-family: 'Consolas','Courier New',monospace;")
+                               " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(ui::colors::TEXT_PRIMARY()));
     lbl->setWordWrap(true);
     return lbl;
@@ -107,7 +107,7 @@ QLabel* DocsScreen::make_body_label(const QString& text) {
 QLabel* DocsScreen::make_muted_label(const QString& text) {
     auto* lbl = new QLabel(text);
     lbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                               " font-family: 'Consolas','Courier New',monospace;")
+                               " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(ui::colors::TEXT_SECONDARY()));
     lbl->setWordWrap(true);
     return lbl;
@@ -126,14 +126,14 @@ QWidget* DocsScreen::make_section_panel(const QString& icon, const QString& titl
     auto* hdr = new QLabel(QString("%1  %2").arg(icon, title));
     hdr->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;"
                                " background: %2; padding: 8px 12px; border-bottom: 1px solid %3;"
-                               " font-family: 'Consolas','Courier New',monospace;")
+                               " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(accent_color, ui::colors::BG_RAISED(), ui::colors::BORDER_DIM()));
     vl->addWidget(hdr);
 
     // Body
     auto* content = new QLabel(body);
     content->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent; padding: 10px 12px;"
-                                   " font-family: 'Consolas','Courier New',monospace; line-height: 1.6;")
+                                   " font-family: 'Cascadia Mono','Consolas','Courier New',monospace; line-height: 1.6;")
                                .arg(ui::colors::TEXT_PRIMARY()));
     content->setWordWrap(true);
     vl->addWidget(content);
@@ -153,7 +153,7 @@ QWidget* DocsScreen::make_skill_panel(const QString& beginner, const QString& in
     auto* hdr = new QLabel(tr("SKILL LEVELS"));
     hdr->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;"
                                " background: %2; padding: 8px 12px; border-bottom: 1px solid %3;"
-                               " font-family: 'Consolas','Courier New',monospace;")
+                               " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(ui::colors::AMBER(), ui::colors::BG_RAISED(), ui::colors::BORDER_DIM()));
     vl->addWidget(hdr);
 
@@ -180,13 +180,13 @@ QWidget* DocsScreen::make_skill_panel(const QString& beginner, const QString& in
         auto* badge = new QLabel(lvl.tag);
         badge->setFixedWidth(105);
         badge->setStyleSheet(QString("color: %1; font-size: 10px; font-weight: bold; background: transparent;"
-                                     " letter-spacing: 0.5px; font-family: 'Consolas','Courier New',monospace;")
+                                     " letter-spacing: 0.5px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                  .arg(lvl.color));
         rl->addWidget(badge);
 
         auto* desc = new QLabel(lvl.text);
         desc->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                                    " font-family: 'Consolas','Courier New',monospace;")
+                                    " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                 .arg(ui::colors::TEXT_PRIMARY()));
         desc->setWordWrap(true);
         rl->addWidget(desc, 1);
@@ -200,7 +200,7 @@ QWidget* DocsScreen::make_tip_box(const QString& text, const QString& color) {
     auto* box = new QLabel(text);
     box->setStyleSheet(QString("color: %1; font-size: 11px; background: rgba(%2, 0.08);"
                                " border: 1px solid rgba(%2, 0.3); padding: 8px 12px;"
-                               " font-family: 'Consolas','Courier New',monospace;")
+                               " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(color, color));
     box->setWordWrap(true);
     return box;
@@ -575,7 +575,7 @@ DocsScreen::DocsScreen(QWidget* parent) : QWidget(parent) {
     setStyleSheet(QString("QWidget#docsScreen { background: %1; }"
                           "QPushButton#docsOpenBtn { background: %2; color: %3; border: 1px solid %4;"
                           "  padding: 2px 10px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;"
-                          "  font-family: 'Consolas','Courier New',monospace; }"
+                          "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                           "QPushButton#docsOpenBtn:hover { background: %3; color: %1; }")
                       .arg(ui::colors::BG_BASE(), ui::colors::BG_RAISED(), ui::colors::AMBER(),
                            ui::colors::AMBER_DIM()));
@@ -595,7 +595,7 @@ DocsScreen::DocsScreen(QWidget* parent) : QWidget(parent) {
 
     cmd_title_ = new QLabel(tr("DOCUMENTATION"));
     cmd_title_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; letter-spacing: 1px;"
-                                      " background: transparent; font-family: 'Consolas','Courier New',monospace;")
+                                      " background: transparent; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                   .arg(ui::colors::AMBER()));
     cmd_hl->addWidget(cmd_title_);
 
@@ -607,10 +607,10 @@ DocsScreen::DocsScreen(QWidget* parent) : QWidget(parent) {
     // Brand + version string — shown verbatim, not translated. Read from the
     // running application rather than hardcoded: the literal here said v4.0.0
     // while the app shipped as 4.0.1.
-    breadcrumb_ = new QLabel(QStringLiteral("FINCEPT TERMINAL v%1").arg(QCoreApplication::applicationVersion()));
+    breadcrumb_ = new QLabel(QStringLiteral("KEYSTONE TERMINAL v%1").arg(QCoreApplication::applicationVersion()));
     breadcrumb_->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold;"
                                        " background: transparent; letter-spacing: 0.5px;"
-                                       " font-family: 'Consolas','Courier New',monospace;")
+                                       " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                    .arg(ui::colors::TEXT_SECONDARY()));
     cmd_hl->addWidget(breadcrumb_);
 
@@ -624,7 +624,7 @@ DocsScreen::DocsScreen(QWidget* parent) : QWidget(parent) {
     search_input_->setAccessibleName(tr("Search documentation topics"));
     search_input_->setStyleSheet(QString("QLineEdit { background: %1; color: %2; border: 1px solid %3;"
                                          "  padding: 2px 6px; font-size: 11px;"
-                                         "  font-family: 'Consolas','Courier New',monospace; }"
+                                         "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                                          "QLineEdit:focus { border-color: %4; }")
                                      .arg(ui::colors::BG_BASE(), ui::colors::TEXT_PRIMARY(),
                                           ui::colors::BORDER_DIM(), ui::colors::BORDER_BRIGHT()));
@@ -655,7 +655,7 @@ DocsScreen::DocsScreen(QWidget* parent) : QWidget(parent) {
 
     cmd_count_ = new QLabel;
     cmd_count_->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                                      " font-family: 'Consolas','Courier New',monospace;")
+                                      " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                   .arg(ui::colors::TEXT_TERTIARY()));
     cmd_hl->addWidget(cmd_count_);
 

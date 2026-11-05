@@ -8,6 +8,7 @@
 #include "core/config/AppConfig.h"
 #include "core/keys/WindowCycler.h"
 #include "core/logging/Logger.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 
@@ -28,6 +29,7 @@
 #include <QStyle>
 #include <QTimer>
 #include <QUrl>
+#include <QVBoxLayout>
 #include <QUrlQuery>
 #include <QVBoxLayout>
 
@@ -241,6 +243,11 @@ QLabel* make_mention_label(QWidget* parent) {
 void set_mention_text(QLabel* label, const QString& lead, const QString& link_text, const QString& url) {
     if (!label)
         return;
+    if (!brand::show_upstream_promos()) { // every caller is an Enterprise mention
+        label->clear();
+        label->hide();
+        return;
+    }
     const QString link = QStringLiteral("<a href=\"%1\" style=\"color:%2;text-decoration:none;\">%3</a>")
                              .arg(url.toHtmlEscaped(), QString(colors::AMBER()), link_text.toHtmlEscaped());
     label->setText(lead.isEmpty() ? link : lead.toHtmlEscaped() + QStringLiteral(" ") + link);
@@ -248,6 +255,8 @@ void set_mention_text(QLabel* label, const QString& lead, const QString& link_te
 }
 
 bool placement_dismissed(const QString& placement) {
+    if (!brand::show_upstream_promos())
+        return true; // promos off: treat every placement as dismissed
     return AppConfig::instance().get(QString::fromLatin1(kEntDismissedPrefix) + placement).toString() ==
            ent_app_version();
 }
@@ -409,11 +418,11 @@ void UpgradeDialog::changeEvent(QEvent* event) {
 }
 
 void UpgradeDialog::retranslateUi() {
-    setWindowTitle(tr("Fincept Terminal Enterprise"));
+    setWindowTitle(tr("Enterprise edition"));
     if (kicker_label_)
         kicker_label_->setText(tr("PRIVATE EDITION"));
     if (title_label_)
-        title_label_->setText(tr("Fincept Terminal Enterprise"));
+        title_label_->setText(tr("Enterprise edition"));
     if (pitch_label_)
         pitch_label_->setText(tr("You are running the free, open-source edition. Enterprise is the private, "
                                  "closed-source edition the team develops daily — built for funds, family "
@@ -437,7 +446,7 @@ void UpgradeDialog::retranslateUi() {
     }
     if (oss_note_label_)
         oss_note_label_->setText(tr("This open-source edition stays free under AGPL-3.0. Enterprise is a separate "
-                                    "product with its own account — a Fincept login from this terminal does not "
+                                    "product with its own account — a login from this terminal does not "
                                     "sign in to it."));
 
     if (dont_remind_check_)
@@ -451,7 +460,7 @@ void UpgradeDialog::retranslateUi() {
 }
 
 void UpgradeDialog::show_now(QWidget* parent, const QString& placement) {
-    if (ent_headless_platform())
+    if (!brand::show_upstream_promos() || ent_headless_platform())
         return;
     if (UpgradeDialog* open = ent_active_dialog().data()) {
         open->raise();
@@ -469,7 +478,7 @@ void UpgradeDialog::show_now(QWidget* parent, const QString& placement) {
 }
 
 void UpgradeDialog::maybe_show(QWidget* parent) {
-    if (ent_headless_platform())
+    if (!brand::show_upstream_promos() || ent_headless_platform())
         return;
     ent_migrate_legacy_suppression();
 
@@ -683,7 +692,7 @@ void EnterpriseShowcase::changeEvent(QEvent* event) {
 }
 
 void EnterpriseShowcase::retranslateUi() {
-    header_->setText(tr("FINCEPT TERMINAL ENTERPRISE · PRIVATE EDITION"));
+    header_->setText(tr("ENTERPRISE EDITION · PRIVATE EDITION"));
     primary_btn_->setText(tr("SEE ENTERPRISE ↗"));
     primary_btn_->setToolTip(enterprise::site_url());
     demo_btn_->setText(tr("BOOK A DEMO"));
@@ -719,7 +728,57 @@ void EnterpriseShowcase::refresh_theme() {
                            colors::AMBER_DIM()));
 }
 
+// Product panel shown in place of the Enterprise showcase when upstream
+// promos are off: logo, wordmark, one-line description, incubator line.
+static QWidget* make_brand_panel(QWidget* parent) {
+    auto* panel = new QFrame(parent);
+    panel->setObjectName(QStringLiteral("brandPanel"));
+    panel->setStyleSheet(QString("QFrame#brandPanel{background:%1;border:1px solid %2;}")
+                             .arg(colors::BG_SURFACE(), colors::BORDER_DIM()));
+    auto* vl = new QVBoxLayout(panel);
+    vl->setContentsMargins(28, 28, 28, 28);
+    vl->setSpacing(14);
+    vl->addStretch(1);
+
+    auto* logo = new QLabel(panel);
+    logo->setPixmap(brand::logo_pixmap(88, QColor(colors::AMBER()), panel->devicePixelRatioF()));
+    logo->setAlignment(Qt::AlignCenter);
+    logo->setStyleSheet(QStringLiteral("background:transparent;border:none;"));
+    vl->addWidget(logo);
+
+    auto* wordmark = new QLabel(panel);
+    wordmark->setTextFormat(Qt::RichText);
+    wordmark->setAlignment(Qt::AlignCenter);
+    wordmark->setStyleSheet(QString("background:transparent;border:none;font-family:%1;font-size:22px;"
+                                    "letter-spacing:3px;")
+                                .arg(QString::fromLatin1(brand::kWordmarkFamily)));
+    wordmark->setText(QString("<span style='color:%1;font-weight:700;'>%2</span> "
+                              "<span style='color:%3;font-weight:400;'>%4</span>")
+                          .arg(colors::TEXT_PRIMARY(), QString::fromLatin1(brand::kWordmarkPrimary),
+                               colors::TEXT_SECONDARY(), QString::fromLatin1(brand::kWordmarkSecondary)));
+    vl->addWidget(wordmark);
+
+    auto* tagline = new QLabel(QObject::tr("Research, analytics and trading in one native desktop terminal."), panel);
+    tagline->setWordWrap(true);
+    tagline->setAlignment(Qt::AlignCenter);
+    tagline->setStyleSheet(QString("background:transparent;border:none;color:%1;font-size:13px;")
+                               .arg(colors::TEXT_SECONDARY()));
+    vl->addWidget(tagline);
+
+    vl->addSpacing(8);
+    auto* incubator = new QLabel(QString::fromLatin1(brand::kIncubatorLine).toUpper(), panel);
+    incubator->setAlignment(Qt::AlignCenter);
+    incubator->setStyleSheet(QString("background:transparent;color:%1;border:1px solid %2;padding:4px 10px;"
+                                     "font-size:11px;font-weight:700;letter-spacing:1px;")
+                                 .arg(colors::AMBER(), colors::AMBER_DIM()));
+    vl->addWidget(incubator, 0, Qt::AlignHCenter);
+    vl->addStretch(2);
+    return panel;
+}
+
 QWidget* make_enterprise_showcase(QWidget* parent) {
+    if (!brand::show_upstream_promos())
+        return make_brand_panel(parent);
     return new EnterpriseShowcase(parent);
 }
 

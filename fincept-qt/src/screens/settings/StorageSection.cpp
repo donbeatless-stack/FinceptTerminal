@@ -813,11 +813,11 @@ void StorageSection::build_ui() {
             // told the user the wipe had finished (or only partly worked).
             if (failures.isEmpty()) {
                 QMessageBox::information(this, tr("Clear ALL User Data"),
-                                         tr("All user data was deleted. Restart Fincept Terminal so every screen "
+                                         tr("All user data was deleted. Restart Keystone Terminal so every screen "
                                             "starts from a clean state."));
             } else {
                 QMessageBox::warning(this, tr("Clear ALL User Data"),
-                                     tr("Some items could not be deleted:\n\n%1\n\nRestart Fincept Terminal and "
+                                     tr("Some items could not be deleted:\n\n%1\n\nRestart Keystone Terminal and "
                                         "try again.")
                                          .arg(failures.join(QStringLiteral("\n"))));
             }

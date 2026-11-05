@@ -337,7 +337,7 @@ QDialog* WebScraperWidget::make_config_dialog(QWidget* parent) {
 
     auto* ua_edit = new QLineEdit(dlg);
     ua_edit->setText(user_agent_);
-    ua_edit->setPlaceholderText(tr("default Fincept user agent"));
+    ua_edit->setPlaceholderText(tr("default user agent"));
     form->addRow(tr("User-Agent"), ua_edit);
 
     auto* fmt_combo = new QComboBox(dlg);

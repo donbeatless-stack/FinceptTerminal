@@ -3048,11 +3048,11 @@ qt6_add_lupdate(FinceptTerminal
 if(APPLE)
     set_target_properties(FinceptTerminal PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER    "com.fincept.terminal"
-        MACOSX_BUNDLE_BUNDLE_NAME       "Fincept Terminal"
+        MACOSX_BUNDLE_BUNDLE_NAME       "Keystone Terminal"
         MACOSX_BUNDLE_BUNDLE_VERSION    "${CMAKE_PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${CMAKE_PROJECT_VERSION}"
         MACOSX_BUNDLE_ICON_FILE         "fincept.icns"
-        MACOSX_BUNDLE_COPYRIGHT         "Copyright © 2025 Fincept Corporation"
+        MACOSX_BUNDLE_COPYRIGHT         "Based on FinceptTerminal, Copyright © 2025-2026 Fincept Corporation"
     )
     # Copy .icns into the bundle Resources folder at build time
     set(_FINCEPT_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/resources/fincept.icns")

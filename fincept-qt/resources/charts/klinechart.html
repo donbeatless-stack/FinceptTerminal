@@ -17,17 +17,17 @@
   .tb-sep { width: 1px; height: 18px; background: #222; margin: 0 4px; }
   .tb-btn { background: transparent; border: 1px solid transparent; color: #808080; font: 10px Consolas; padding: 2px 6px; cursor: pointer; border-radius: 2px; white-space: nowrap; }
   .tb-btn:hover { background: #161616; color: #e5e5e5; border-color: #333; }
-  .tb-btn.active { background: #1a1a1a; color: #d97706; border-color: #d97706; }
+  .tb-btn.active { background: #1a1a1a; color: #2dd4bf; border-color: #2dd4bf; }
   #activeInds { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-  .ind-chip { display: inline-flex; align-items: center; background: #1a1a1a; color: #d97706; border: 1px solid #d97706; border-radius: 2px; font: 10px Consolas; padding: 1px 2px 1px 7px; }
-  .ind-x { background: transparent; border: none; color: #d97706; font: 13px Consolas; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .ind-chip { display: inline-flex; align-items: center; background: #1a1a1a; color: #2dd4bf; border: 1px solid #2dd4bf; border-radius: 2px; font: 10px Consolas; padding: 1px 2px 1px 7px; }
+  .ind-x { background: transparent; border: none; color: #2dd4bf; font: 13px Consolas; line-height: 1; cursor: pointer; padding: 0 4px; }
   .ind-x:hover { color: #fff; }
   .tb-dropdown { position: relative; display: inline-block; }
   .tb-dropdown-content { display: none; position: absolute; top: 100%; left: 0; background: #111; border: 1px solid #222; min-width: 140px; z-index: 100; max-height: 300px; overflow-y: auto; }
   .tb-dropdown:hover .tb-dropdown-content { display: block; }
   .tb-dropdown-content .tb-btn { display: block; width: 100%; text-align: left; border: none; padding: 4px 10px; border-radius: 0; }
   .tb-dropdown-content .tb-btn:hover { background: #1a1a1a; }
-  .tb-dropdown-content .section { color: #d97706; font-size: 9px; padding: 6px 10px 2px; font-weight: 700; letter-spacing: 0.5px; }
+  .tb-dropdown-content .section { color: #2dd4bf; font-size: 9px; padding: 6px 10px 2px; font-weight: 700; letter-spacing: 0.5px; }
   #debug { position: fixed; bottom: 2px; left: 4px; color: #525252; font: 9px Consolas; z-index: 999; pointer-events: none; }
 </style>
 </head>
@@ -219,21 +219,21 @@
           show: true,
           horizontal: {
             show: true,
-            line: { show: true, style: 'dashed', size: 1, color: '#d97706' },
+            line: { show: true, style: 'dashed', size: 1, color: '#2dd4bf' },
             text: { show: true, color: '#080808', size: 10, family: 'Consolas, monospace',
-                    backgroundColor: '#d97706', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
+                    backgroundColor: '#2dd4bf', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
           },
           vertical: {
             show: true,
-            line: { show: true, style: 'dashed', size: 1, color: '#d97706' },
+            line: { show: true, style: 'dashed', size: 1, color: '#2dd4bf' },
             text: { show: true, color: '#080808', size: 10, family: 'Consolas, monospace',
-                    backgroundColor: '#d97706', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
+                    backgroundColor: '#2dd4bf', paddingLeft: 4, paddingRight: 4, paddingTop: 2, paddingBottom: 2 }
           }
         },
         overlay: {
-          point: { color: '#d97706', borderColor: '#d97706', activeColor: '#d97706', activeBorderColor: '#d97706' },
-          line: { color: '#d97706', size: 1 },
-          rect: { color: 'rgba(217,119,6,0.1)', borderColor: '#d97706', borderSize: 1 },
+          point: { color: '#2dd4bf', borderColor: '#2dd4bf', activeColor: '#2dd4bf', activeBorderColor: '#2dd4bf' },
+          line: { color: '#2dd4bf', size: 1 },
+          rect: { color: 'rgba(45,212,191,0.1)', borderColor: '#2dd4bf', borderSize: 1 },
           text: { color: '#e5e5e5', size: 11, family: 'Consolas, monospace' }
         }
       }

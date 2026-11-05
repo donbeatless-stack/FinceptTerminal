@@ -42,7 +42,7 @@ class AgentPanelShowLoader : public QObject {
 
 static QString list_ss() {
     return QString("QListWidget{background:%1;border:1px solid %2;color:%3;"
-                   "font-size:12px;font-family:'Consolas','Courier New',monospace;"
+                   "font-size:12px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
                    "border-radius:0px;outline:none;}"
                    "QListWidget::item{padding:6px 8px;border-bottom:1px solid %4;}"
                    "QListWidget::item:selected{background:%4;color:%5;}"
@@ -56,13 +56,13 @@ static QString list_ss() {
 
 static QString section_title_ss() {
     return QString("color:%1;font-size:11px;font-weight:700;letter-spacing:0.5px;"
-                   "font-family:'Consolas','Courier New',monospace;background:transparent;")
+                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;background:transparent;")
         .arg(ui::colors::TEXT_SECONDARY());
 }
 
 static QString hint_ss() {
     return QString("color:%1;font-size:11px;"
-                   "font-family:'Consolas','Courier New',monospace;background:transparent;")
+                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;background:transparent;")
         .arg(ui::colors::TEXT_DIM());
 }
 
@@ -114,7 +114,7 @@ void ChatAgentPanel::build_ui() {
     tab_bar_->addTab(tr("Monitor"));
     tab_bar_->setStyleSheet(QString("QTabBar{background:%1;border-bottom:1px solid %2;}"
                                     "QTabBar::tab{background:%1;color:%3;padding:6px 0;"
-                                    "font-size:11px;font-family:'Consolas','Courier New',monospace;"
+                                    "font-size:11px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;"
                                     "border:none;border-bottom:2px solid transparent;}"
                                     "QTabBar::tab:selected{color:%4;border-bottom:2px solid %4;}"
                                     "QTabBar::tab:hover{color:%5;}")
@@ -138,7 +138,7 @@ QPushButton* ChatAgentPanel::make_btn(const QString& text, const QString& toolti
     btn->setFixedHeight(22);
     btn->setStyleSheet(QString("QPushButton{background:%1;color:%2;border:1px solid %3;"
                                "border-radius:0px;font-size:11px;"
-                               "font-family:'Consolas','Courier New',monospace;}"
+                               "font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                                "QPushButton:hover{background:%4;color:%5;border-color:%6;}"
                                "QPushButton:disabled{color:%7;border-color:%1;}")
                            .arg(ui::colors::BG_RAISED(), ui::colors::TEXT_SECONDARY(), ui::colors::BORDER_DIM(),

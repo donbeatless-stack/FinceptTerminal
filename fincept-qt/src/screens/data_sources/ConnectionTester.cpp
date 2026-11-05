@@ -524,7 +524,7 @@ bool probe_target(const ProbeEndpoint& endpoint, QString* host, int* port) {
 namespace {
 
 QString simple_dialog_qss() {
-    return QString("QDialog{background:%1;color:%2;font-family:'Consolas','Courier New',monospace;}"
+    return QString("QDialog{background:%1;color:%2;font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                    "QLabel{font-size:13px;background:transparent;}"
                    "QPushButton{background:%3;color:%2;border:1px solid %4;"
                    "padding:6px 18px;font-size:12px;font-weight:700;}"

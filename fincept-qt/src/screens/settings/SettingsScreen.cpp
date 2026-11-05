@@ -32,6 +32,7 @@
 #include "services/voice_trigger/ClapDetectorService.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QEvent>
@@ -220,6 +221,7 @@ SettingsScreen::SettingsScreen(QWidget* parent) : QWidget(parent) {
         QString(), ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("settings")),
         ui::enterprise::CtaStyle::Quiet, nav_);
     ent_link->setObjectName("settingsEnterpriseLink");
+    ent_link->setVisible(brand::show_upstream_promos());
     nvl->addWidget(ent_link);
     root->addWidget(nav_);
     root->addWidget(sections_, 1);
@@ -317,7 +319,7 @@ void SettingsScreen::retranslateUi() {
             scope_headers_[i]->setText(tr(scope_header_keys_[i].toUtf8().constData()));
     }
     if (auto* ent_link = findChild<QPushButton*>(QStringLiteral("settingsEnterpriseLink")))
-        ent_link->setText(tr("Fincept Terminal Enterprise ↗"));
+        ent_link->setText(tr("Enterprise edition ↗"));
 }
 
 void SettingsScreen::rebuild_sections_for_language_change() {

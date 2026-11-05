@@ -224,7 +224,7 @@ void WalletActionConfirmDialog::apply_theme() {
                            "  border-color:%12; }"
 
                            // Primary (safe — amber)
-                           "QPushButton#walletActionDialogPrimary { background:rgba(217,119,6,0.10); color:%4;"
+                           "QPushButton#walletActionDialogPrimary { background:rgba(45,212,191,0.10); color:%4;"
                            "  border:1px solid %13; font-family:%5; font-size:11px; font-weight:700;"
                            "  letter-spacing:1.2px; padding:0 16px; }"
                            "QPushButton#walletActionDialogPrimary:hover { background:%4; color:%1; }"
@@ -250,7 +250,7 @@ void WalletActionConfirmDialog::apply_theme() {
                            .arg(NEGATIVE(),                 // %10
                                 BG_HOVER(),                 // %11
                                 BORDER_BRIGHT(),            // %12
-                                QStringLiteral("#78350f"),  // %13 darker amber border
+                                QStringLiteral("#115e59"),  // %13 darker accent border
                                 QStringLiteral("#7f1d1d")); // %14 darker red border
 
     setStyleSheet(ss);

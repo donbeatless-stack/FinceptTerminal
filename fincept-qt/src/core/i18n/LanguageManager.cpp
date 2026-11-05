@@ -79,12 +79,14 @@ void LanguageManager::initialize() {
     QString code = read_failed ? QString() : r.value();
 
     if (code.isEmpty()) {
-        // No saved preference — try the OS locale. The Settings save in
-        // set_language() will record whatever we picked, so subsequent runs
-        // skip this detection and honour the explicit value.
-        code = detect_system_language();
-        if (!code.isEmpty() && !read_failed)
-            LOG_INFO("i18n", QStringLiteral("First launch — detected system language: %1").arg(code));
+        // No saved preference: this build targets US users, so first launch
+        // starts in English whatever the OS locale is (the language picker on
+        // the login screen and in Settings still switches it). The Settings
+        // save in set_language() records the choice for later runs.
+        code = QString::fromLatin1(kDefaultCode);
+        if (!read_failed)
+            LOG_INFO("i18n", QStringLiteral("First launch — defaulting to English (system language: %1)")
+                                 .arg(detect_system_language()));
     }
     if (code.isEmpty())
         code = QString::fromLatin1(kDefaultCode);

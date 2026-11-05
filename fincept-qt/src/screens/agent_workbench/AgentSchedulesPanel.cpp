@@ -240,7 +240,7 @@ void AgentSchedulesPanel::retranslate() {
     mode_combo_->setItemText(1, tr("Workspace edits"));
     budget_lbl_->setText(tr("MAX BUDGET"));
     budget_spin_->setSpecialValueText(tr("No cap"));
-    tools_check_->setText(tr("Use Fincept terminal tools (live data over MCP)"));
+    tools_check_->setText(tr("Use Keystone Terminal tools (live data over MCP)"));
     when_lbl_->setText(tr("WHEN"));
     daily_radio_->setText(tr("Daily at"));
     interval_radio_->setText(tr("Every"));

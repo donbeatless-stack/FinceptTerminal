@@ -955,7 +955,7 @@ def _selftest() -> int:
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Fincept MCP server for RD-Agent")
+    parser = argparse.ArgumentParser(description="Keystone Terminal MCP server for RD-Agent")
     parser.add_argument("--port", type=int, default=18765)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--selftest", action="store_true",

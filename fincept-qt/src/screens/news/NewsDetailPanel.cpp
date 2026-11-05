@@ -219,7 +219,7 @@ QWidget* NewsDetailPanel::build_content_view() {
     copy_title_btn_->setToolTip(tr("Copy article headline to clipboard"));
     analyze_btn_ = new QPushButton(tr("ANALYZE"), content);
     analyze_btn_->setObjectName("newsDetailAnalyzeBtn");
-    analyze_btn_->setToolTip(tr("Fincept AI analysis of the full article — uses Fincept API credits "
+    analyze_btn_->setToolTip(tr("Keystone AI analysis of the full article — uses cloud API credits "
                                 "(the cost and remaining balance are shown after each run)"));
     save_btn_ = new QPushButton(tr("SAVE"), content);
     save_btn_->setObjectName("newsDetailSaveBtn");

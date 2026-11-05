@@ -31,11 +31,11 @@ namespace fincept::screens {
 
 // ── Style constants ─────────────────────────────────────────────────────────
 
-static const char* FONT = "'Consolas','Courier New',monospace";
+static const char* FONT = "'Cascadia Mono','Consolas','Courier New',monospace";
 
 static QString combo_ss() {
     return QString("QComboBox { background: %1; color: %2; border: 1px solid %3;"
-                   "  padding: 2px 8px; font-size: 11px; font-family: 'Consolas','Courier New',monospace;"
+                   "  padding: 2px 8px; font-size: 11px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "  min-width: 100px; }"
                    "QComboBox:hover { border-color: %4; }"
                    "QComboBox::drop-down { border: none; width: 16px; }"
@@ -43,19 +43,19 @@ static QString combo_ss() {
                    "  border-right: 4px solid transparent; border-top: 5px solid %5; }"
                    "QComboBox QAbstractItemView { background: %6; color: %2;"
                    "  border: 1px solid %3; selection-background-color: %7;"
-                   "  selection-color: %8; font-family: 'Consolas','Courier New',monospace; }")
+                   "  selection-color: %8; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }")
         .arg(ui::colors::BG_RAISED(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM(), ui::colors::BORDER_BRIGHT(),
              ui::colors::TEXT_SECONDARY(), ui::colors::BG_BASE(), ui::colors::BG_HOVER(), ui::colors::AMBER());
 }
 
 static QString table_ss() {
     return QString("QTableWidget { background: %1; color: %2; border: none;"
-                   "  gridline-color: %3; font-size: 13px; font-family: 'Consolas','Courier New',monospace; }"
+                   "  gridline-color: %3; font-size: 13px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QTableWidget::item { padding: 3px 10px; border-bottom: 1px solid %3; }"
                    "QTableWidget::item:selected { background: %4; color: %2; }"
                    "QHeaderView::section { background: %5; color: %6; font-size: 12px;"
                    "  font-weight: bold; border: none; border-bottom: 1px solid %7;"
-                   "  padding: 6px 10px; font-family: 'Consolas','Courier New',monospace; }"
+                   "  padding: 6px 10px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QScrollBar:vertical { width: 5px; background: transparent; }"
                    "QScrollBar::handle:vertical { background: %8; }"
                    "QScrollBar::handle:vertical:hover { background: %9; }"
@@ -439,12 +439,12 @@ QWidget* TradeVizScreen::build_tab_bar() {
     bar->setStyleSheet(
         QString("#tvTabBar, #tvTabBar * { background: %1; border-bottom: 1px solid %2; }"
                 "QLabel#tvTabNum { color: %3; font-size: 11px; background: transparent;"
-                " font-family: 'Consolas','Courier New',monospace; }"
+                " font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                 "QLabel#tvTabName { color: %4; font-size: 13px; font-weight: bold; background: transparent;"
-                " font-family: 'Consolas','Courier New',monospace; }"
+                " font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                 "QPushButton#tvTabExport { color: %4; font-size: 13px; font-weight: bold;"
                 " background: transparent; border: none; padding: 0;"
-                " font-family: 'Consolas','Courier New',monospace; }"
+                " font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                 "QPushButton#tvTabExport:hover { color: %5; }"
                 "QPushButton#tvTabExport:disabled { color: %6; }")
             .arg(ui::colors::BG_BASE(), ui::colors::BORDER_BRIGHT(), ui::colors::TEXT_SECONDARY(),
@@ -498,7 +498,7 @@ QWidget* TradeVizScreen::build_tab_bar() {
     // Right side: "Trade Flow" title
     flow_title_ = new QLabel(tr("Trade Flow"));
     flow_title_->setStyleSheet(QString("color: %1; font-size: 16px; font-weight: bold; background: transparent;"
-                                       " padding-right: 14px; font-family: 'Consolas','Courier New',monospace;")
+                                       " padding-right: 14px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                    .arg(ui::colors::AMBER()));
     hl->addWidget(flow_title_);
 
@@ -529,7 +529,7 @@ QWidget* TradeVizScreen::build_filter_bar() {
     // Browse button
     browse_label_ = new QLabel(tr("20) Browse"));
     browse_label_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; background: transparent;"
-                                         " font-family: 'Consolas','Courier New',monospace;")
+                                         " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                      .arg(ui::colors::TEXT_PRIMARY()));
     hl->addWidget(browse_label_);
 
@@ -538,7 +538,7 @@ QWidget* TradeVizScreen::build_filter_bar() {
     // Order by
     order_caption_ = new QLabel(tr("Order by"));
     order_caption_->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; background: transparent;"
-                                          " font-family: 'Consolas','Courier New',monospace;")
+                                          " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                       .arg(ui::colors::TEXT_SECONDARY()));
     hl->addWidget(order_caption_);
 
@@ -555,7 +555,7 @@ QWidget* TradeVizScreen::build_filter_bar() {
     // Periodicity
     period_caption_ = new QLabel(tr("Periodicity"));
     period_caption_->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; background: transparent;"
-                                           " font-family: 'Consolas','Courier New',monospace;")
+                                           " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                        .arg(ui::colors::TEXT_SECONDARY()));
     hl->addWidget(period_caption_);
 
@@ -573,7 +573,7 @@ QWidget* TradeVizScreen::build_filter_bar() {
     // combo lists years newest-first, so earlier == higher index.
     const QString nav_style = QString("QToolButton { color: %1; font-size: 12px; font-weight: bold;"
                                       " background: transparent; border: none; padding: 0 4px;"
-                                      " font-family: 'Consolas','Courier New',monospace; }"
+                                      " font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                                       "QToolButton:hover { color: %2; }"
                                       "QToolButton:disabled { color: %3; }")
                                   .arg(ui::colors::TEXT_SECONDARY(), ui::colors::AMBER(), ui::colors::TEXT_DIM());
@@ -620,7 +620,7 @@ QWidget* TradeVizScreen::build_filter_bar() {
     // Clock
     clock_label_ = new QLabel(QDateTime::currentDateTime().toString("HH:mm:ss"));
     clock_label_->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                                        " font-family: 'Consolas','Courier New',monospace;")
+                                        " font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(ui::colors::TEXT_TERTIARY()));
     hl->addWidget(clock_label_);
 
@@ -956,7 +956,7 @@ void TradeVizScreen::setup_ui() {
     setObjectName("tradeVizScreen");
     setStyleSheet(QString("QWidget#tradeVizScreen { background: %1; }"
                           "QLabel#tvSourceNote { color: %2; background: %1; font-size: 11px; padding: 4px 10px;"
-                          " border-bottom: 1px solid %3; font-family: 'Consolas','Courier New',monospace; }"
+                          " border-bottom: 1px solid %3; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                           "QLabel#tvSourceNote[illustrative=\"true\"] { color: %4; font-weight: bold; }")
                       .arg(ui::colors::BG_BASE(), ui::colors::TEXT_SECONDARY(), ui::colors::BORDER_DIM(),
                            ui::colors::WARNING()));

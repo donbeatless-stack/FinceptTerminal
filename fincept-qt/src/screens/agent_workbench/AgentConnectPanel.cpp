@@ -412,7 +412,7 @@ QWidget* AgentConnectPanel::build_client_card(QWidget* parent, QLabel** title, Q
 }
 
 void AgentConnectPanel::retranslate() {
-    server_title_->setText(tr("FINCEPT MCP SERVER — LET YOUR OWN AGENTS USE THIS TERMINAL"));
+    server_title_->setText(tr("KEYSTONE MCP SERVER — LET YOUR OWN AGENTS USE THIS TERMINAL"));
     copy_url_btn_->setText(tr("COPY URL"));
     start_btn_->setText(tr("START"));
     stop_btn_->setText(tr("STOP"));

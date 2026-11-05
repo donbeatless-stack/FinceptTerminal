@@ -71,7 +71,7 @@ ArenaLlmResult ArenaLlmClient::parse_response(const QString& provider, const QBy
         const QJsonValue m = root.value("message");
         r.error = m.isObject() ? m.toObject().value("message").toString() : m.toString();
         if (r.error.isEmpty())
-            r.error = "Fincept request failed";
+            r.error = "Cloud request failed";
         return r;
     }
     const QJsonObject o =

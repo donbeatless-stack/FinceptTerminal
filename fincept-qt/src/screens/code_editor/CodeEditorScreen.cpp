@@ -93,7 +93,7 @@ inline QString kStyle() {
                // Library filter chips
                "#nbChip { background:transparent; color:%5; border:1px solid %8; font-weight:700; padding:3px 10px; }"
                "#nbChip:hover { color:%4; border-color:%9; }"
-               "#nbChip[active=\"true\"] { background:rgba(217,119,6,0.12); color:%3; border-color:%3; }"
+               "#nbChip[active=\"true\"] { background:rgba(45,212,191,0.12); color:%3; border-color:%3; }"
                "#nbLibLabel { color:%5; background:transparent; }"
 
                // Library cards
@@ -106,8 +106,8 @@ inline QString kStyle() {
                "  padding:1px 7px; border:1px solid rgba(8,145,178,0.35); }"
                "#nbDiffBeginner { color:%6; font-weight:700; background:rgba(22,163,74,0.12); "
                "  padding:1px 7px; border:1px solid rgba(22,163,74,0.35); }"
-               "#nbDiffIntermediate { color:%3; font-weight:700; background:rgba(217,119,6,0.12); "
-               "  padding:1px 7px; border:1px solid rgba(217,119,6,0.35); }"
+               "#nbDiffIntermediate { color:%3; font-weight:700; background:rgba(45,212,191,0.12); "
+               "  padding:1px 7px; border:1px solid rgba(45,212,191,0.35); }"
                "#nbDiffHard { color:%14; font-weight:700; background:rgba(220,38,38,0.12); "
                "  padding:1px 7px; border:1px solid rgba(220,38,38,0.35); }"
                "#nbCardOpenBtn { background:%3; color:%1; border:none; padding:5px 18px; font-weight:700; }"
@@ -323,7 +323,7 @@ QWidget* CodeEditorScreen::build_header() {
     hl->setContentsMargins(14, 0, 12, 0);
     hl->setSpacing(8);
 
-    header_title_ = new QLabel(tr("FINCEPT NOTEBOOK"), bar);
+    header_title_ = new QLabel(tr("KEYSTONE NOTEBOOK"), bar);
     header_title_->setObjectName("nbHeaderTitle");
     header_title_->setStyleSheet(QString("font-family:%1; font-size:%2px;").arg(fonts::DATA_FAMILY).arg(fonts::SMALL));
     hl->addWidget(header_title_);
@@ -645,10 +645,10 @@ void CodeEditorScreen::on_new_notebook() {
     NotebookCell cell;
     cell.id = new_cell_id();
     cell.cell_type = "code";
-    cell.source = "# Fincept Notebook\n"
+    cell.source = "# Keystone Notebook\n"
                   "# Write Python code and press Ctrl+Enter to run\n"
                   "\n"
-                  "print(\"Hello from Fincept Terminal!\")";
+                  "print(\"Hello from Keystone Terminal!\")";
     cells_.append(cell);
 
     selected_cell_id_ = cell.id;
@@ -1006,7 +1006,7 @@ void CodeEditorScreen::on_open_notebook() {
     if (!confirm_discard_changes(tr("Opening another notebook")))
         return;
     const QString path =
-        QFileDialog::getOpenFileName(this, tr("Open Notebook"), {}, tr("Fincept Notebooks (*.ipynb);;All Files (*)"));
+        QFileDialog::getOpenFileName(this, tr("Open Notebook"), {}, tr("Keystone Notebooks (*.ipynb);;All Files (*)"));
     if (path.isEmpty())
         return;
     if (!open_notebook_path(path)) {
@@ -1106,7 +1106,7 @@ void CodeEditorScreen::on_save_notebook() {
     QString path = notebook_path_;
     if (path.isEmpty()) {
         path = QFileDialog::getSaveFileName(this, tr("Save Notebook"), "notebook.ipynb",
-                                            tr("Fincept Notebooks (*.ipynb)"));
+                                            tr("Keystone Notebooks (*.ipynb)"));
         if (path.isEmpty())
             return;
     }
@@ -1140,7 +1140,7 @@ void CodeEditorScreen::on_save_notebook() {
     QJsonObject metadata;
     QJsonObject kernelspec;
     const bool numpy1 = kernel_ == QLatin1String("numpy1");
-    kernelspec["display_name"] = numpy1 ? "Python 3 (Fincept numpy1)" : "Python 3";
+    kernelspec["display_name"] = numpy1 ? "Python 3 (numpy1)" : "Python 3";
     kernelspec["language"] = "python";
     kernelspec["name"] = numpy1 ? "fincept-numpy1" : "python3";
     metadata["kernelspec"] = kernelspec;
@@ -1259,7 +1259,7 @@ void CodeEditorScreen::changeEvent(QEvent* event) {
 void CodeEditorScreen::retranslateUi() {
     // Header
     if (header_title_)
-        header_title_->setText(tr("FINCEPT NOTEBOOK"));
+        header_title_->setText(tr("KEYSTONE NOTEBOOK"));
     const QStringList tab_labels = {tr("LIBRARY"), tr("EDITOR")};
     for (int i = 0; i < view_btns_.size() && i < tab_labels.size(); ++i)
         view_btns_[i]->setText(tab_labels[i]);
@@ -1287,7 +1287,7 @@ void CodeEditorScreen::retranslateUi() {
         btn_stop_->setText(tr("■ STOP"));
     refresh_kernel_label();
     if (lib_toolbar_lbl_)
-        lib_toolbar_lbl_->setText(tr("FINCEPT NOTEBOOK LIBRARY — curated finance, economics, trading, "
+        lib_toolbar_lbl_->setText(tr("KEYSTONE NOTEBOOK LIBRARY — curated finance, economics, trading, "
                                      "investing, portfolio & quant notebooks"));
 
     // Status bar

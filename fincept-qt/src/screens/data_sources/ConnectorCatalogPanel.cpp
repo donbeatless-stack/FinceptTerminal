@@ -438,7 +438,7 @@ void ConnectorCatalogPanel::refresh_theme() {
         QStringLiteral(
             "#dcatRoot { background:%1; }"
             "#dcatRoot QLabel, #dcatRoot QCheckBox, #dcatRoot QLineEdit, #dcatRoot QComboBox, #dcatRoot QPlainTextEdit,"
-            " #dcatRoot QTableView, #dcatRoot QPushButton { font-family:'Consolas','Courier New',monospace; }"
+            " #dcatRoot QTableView, #dcatRoot QPushButton { font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
             "#dcatLeft { background:%1; border-right:1px solid %4; }"
             "#dcatRight { background:%2; }"
             "#dcatBar { background:%3; border-bottom:1px solid %4; }"

@@ -116,7 +116,7 @@ void MarketsListPanel::build_ui() {
     footer_note_->setWordWrap(true);
     footer_note_->setContentsMargins(12, 8, 12, 12);
     footer_note_->setText(tr("SAMPLE MARKETS — illustrative questions and prices, not live and not tradable. "
-                             "Fincept prediction markets are not launched yet."));
+                             "Built-in prediction markets are not launched yet."));
     root->addWidget(footer_note_);
 }
 
@@ -131,14 +131,14 @@ void MarketsListPanel::apply_theme() {
                                       "QLabel#marketsListStatusLive { color:%6; font-family:%5; font-size:10px;"
                                       "  font-weight:700; letter-spacing:1.2px; background:transparent; }"
                                       "QLabel#marketsListStatusDemo { color:%4; font-family:%5; font-size:10px;"
-                                      "  font-weight:700; letter-spacing:1.2px; background:rgba(217,119,6,0.10);"
+                                      "  font-weight:700; letter-spacing:1.2px; background:rgba(45,212,191,0.10);"
                                       "  border:1px solid %4; padding:2px 8px; }"
                                       "QLabel#marketsListStatusError { color:%8; font-family:%5; font-size:10px;"
                                       "  font-weight:700; letter-spacing:1.2px; background:transparent; }"
                                       "QTableWidget#marketsListTable { background:%1; color:%9;"
                                       "  font-family:%5; font-size:11px; gridline-color:%3; border:none; }"
                                       "QTableWidget#marketsListTable::item { padding:6px 10px; }"
-                                      "QTableWidget#marketsListTable::item:selected { background:rgba(217,119,6,0.10);"
+                                      "QTableWidget#marketsListTable::item:selected { background:rgba(45,212,191,0.10);"
                                       "  color:%4; }"
                                       "QHeaderView::section { background:%2; color:%7; font-family:%5;"
                                       "  font-size:10px; font-weight:700; letter-spacing:1.2px; padding:6px 10px;"
@@ -166,7 +166,7 @@ void MarketsListPanel::showEvent(QShowEvent* e) {
         return;
     auto* adapter = fincept_adapter();
     if (!adapter) {
-        set_status_error(tr("FinceptInternalAdapter not registered"));
+        set_status_error(tr("Internal markets adapter not registered"));
         return;
     }
     set_status_demo(adapter->is_demo_mode());
@@ -205,7 +205,7 @@ void MarketsListPanel::retranslateUi() {
     // only the fixed demo text while the pill reads DEMO.
     if (footer_note_ && status_pill_ && status_pill_->objectName() == QLatin1String("marketsListStatusDemo"))
         footer_note_->setText(tr("SAMPLE MARKETS — illustrative questions and prices, not live and not tradable. "
-                                 "Fincept prediction markets are not launched yet."));
+                                 "Built-in prediction markets are not launched yet."));
     // Re-apply the status pill text using its objectName as the state flag so
     // the live DEMO/LIVE/ERROR state survives the locale switch.
     if (status_pill_) {
@@ -264,7 +264,7 @@ void MarketsListPanel::set_status_demo(bool demo) {
         status_pill_->setText(tr("DEMO"));
         status_pill_->setObjectName(QStringLiteral("marketsListStatusDemo"));
         footer_note_->setText(tr("SAMPLE MARKETS — illustrative questions and prices, not live and not tradable. "
-                                 "Fincept prediction markets are not launched yet."));
+                                 "Built-in prediction markets are not launched yet."));
         footer_note_->show();
     } else {
         status_pill_->setText(tr("● LIVE"));

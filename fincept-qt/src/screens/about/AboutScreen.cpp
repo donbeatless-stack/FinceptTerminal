@@ -2,6 +2,7 @@
 
 #include "core/config/AppPaths.h"
 #include "services/updater/UpdateService.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/widgets/EnterprisePromo.h"
 
@@ -30,25 +31,25 @@ namespace fincept::screens {
 static QString SECTION_LABEL() {
     return QString("color: %1; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; "
                    "text-transform: uppercase; background: transparent; "
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_SECONDARY());
 }
 
 static QString BODY() {
     return QString("color: %1; font-size: 13px; background: transparent; "
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_PRIMARY());
 }
 
 static QString MUTED() {
     return QString("color: %1; font-size: 12px; background: transparent; "
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_TERTIARY());
 }
 
 static QString LINK_STYLE() {
     return QString("color: %1; font-size: 13px; background: transparent; "
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::CYAN());
 }
 
@@ -60,7 +61,7 @@ static QString PANEL() {
 static QString LINK_BTN() {
     return QString("QPushButton { background: %1; color: %2; border: 1px solid %3; "
                    "border-radius: 2px; padding: 8px 12px; font-size: 12px; text-align: left; "
-                   "font-family: 'Consolas','Courier New',monospace; }"
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                    "QPushButton:hover { background: %4; color: #38bdf8; }")
         .arg(ui::colors::BG_RAISED(), ui::colors::CYAN(), ui::colors::BORDER_DIM(), ui::colors::BG_HOVER());
 }
@@ -77,7 +78,7 @@ static QLabel* makePanelHeader(const QString& icon, const QString& title, const 
     auto* lbl = new QLabel(icon.isEmpty() ? title : QString("%1  %2").arg(icon, title));
     lbl->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; "
                                "background: %2; padding: 10px 14px; border-bottom: 1px solid %3; "
-                               "font-family: 'Consolas','Courier New',monospace;")
+                               "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(iconColor, ui::colors::BG_RAISED(), ui::colors::BORDER_DIM()));
     return lbl;
 }
@@ -85,7 +86,7 @@ static QLabel* makePanelHeader(const QString& icon, const QString& title, const 
 static QLabel* makeBullet(const QString& text) {
     auto* lbl = new QLabel(QString("■  %1").arg(text));
     lbl->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent; "
-                               "font-family: 'Consolas','Courier New',monospace;")
+                               "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                            .arg(ui::colors::TEXT_SECONDARY()));
     lbl->setWordWrap(true);
     return lbl;
@@ -153,16 +154,29 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         auto* bhl = new QHBoxLayout(body);
         bhl->setContentsMargins(14, 12, 14, 12);
 
+        auto* logo = new QLabel;
+        logo->setPixmap(brand::logo_pixmap(44, QColor(ui::colors::AMBER()), devicePixelRatioF()));
+        logo->setStyleSheet("background: transparent;");
+        bhl->addWidget(logo, 0, Qt::AlignTop);
+        bhl->addSpacing(12);
+
         auto* left = new QVBoxLayout;
         left->setSpacing(4);
-        app_name_ = new QLabel(QStringLiteral("Fincept Terminal"));
-        app_name_->setStyleSheet(QString("color: %1; font-size: 15px; font-weight: bold; background: transparent; "
-                                         "font-family: 'Consolas','Courier New',monospace;")
-                                     .arg(ui::colors::TEXT_PRIMARY()));
+        app_name_ = new QLabel(brand::product_name());
+        app_name_->setStyleSheet(QString("color: %1; font-size: 18px; font-weight: bold; background: transparent; "
+                                         "letter-spacing: 1px; font-family: %2;")
+                                     .arg(ui::colors::TEXT_PRIMARY(), QString::fromLatin1(brand::kWordmarkFamily)));
         left->addWidget(app_name_);
         app_subtitle_ = new QLabel(tr("NATIVE DESKTOP FINANCIAL INTELLIGENCE TERMINAL"));
         app_subtitle_->setStyleSheet(MUTED());
         left->addWidget(app_subtitle_);
+        // Incubator badge (used with Penn Venture Lab's permission).
+        auto* incubator = new QLabel(QString::fromLatin1(brand::kIncubatorLine).toUpper());
+        incubator->setStyleSheet(QString("color: %1; border: 1px solid %2; background: transparent; "
+                                         "padding: 3px 8px; font-size: 11px; font-weight: bold; letter-spacing: 1px;")
+                                     .arg(ui::colors::AMBER(), ui::colors::AMBER_DIM()));
+        left->addSpacing(4);
+        left->addWidget(incubator, 0, Qt::AlignLeft);
         bhl->addLayout(left);
         bhl->addStretch();
 
@@ -171,7 +185,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         right->setAlignment(Qt::AlignRight);
         auto* ver = new QLabel(QStringLiteral("v%1").arg(QApplication::applicationVersion()));
         ver->setStyleSheet(QString("color: %1; font-size: 18px; font-weight: bold; background: transparent; "
-                                   "font-family: 'Consolas','Courier New',monospace;")
+                                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                .arg(ui::colors::AMBER()));
         ver->setAlignment(Qt::AlignRight);
         right->addWidget(ver);
@@ -207,7 +221,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         update_status_->setAlignment(Qt::AlignRight);
         update_status_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; "
                                               "background: transparent; "
-                                              "font-family: 'Consolas','Courier New',monospace;")
+                                              "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                           .arg(ui::colors::AMBER()));
         update_status_->hide();
         right->addWidget(update_status_);
@@ -219,11 +233,11 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         pvl->addWidget(body);
 
         // Footer bar
-        copyright_ = new QLabel(tr("© 2024-2026 Fincept Corporation. All rights reserved."));
+        copyright_ = new QLabel(tr("%1 is based on FinceptTerminal. © 2024-2026 Fincept Corporation. Licensed under AGPL-3.0.").arg(brand::product_name()));
         copyright_->setStyleSheet(
             QString("color: %1; font-size: 11px; background: %2; "
                     "padding: 6px 14px; border-top: 1px solid %3; "
-                    "font-family: 'Consolas','Courier New',monospace;")
+                    "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                 .arg(ui::colors::TEXT_TERTIARY(), ui::colors::BG_RAISED(), ui::colors::BORDER_DIM()));
         pvl->addWidget(copyright_);
 
@@ -266,7 +280,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
                                        QStringLiteral("https://www.gnu.org/licenses/agpl-3.0.html"),
                                        QString("color: %1; font-size: 11px; background: transparent; "
                                                "padding: 6px 14px; border-top: 1px solid %2; "
-                                               "font-family: 'Consolas','Courier New',monospace;")
+                                               "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                            .arg(ui::colors::CYAN(), ui::colors::BORDER_DIM()));
             pvl->addWidget(foot);
 
@@ -278,10 +292,11 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         // commercial, institutional and academic use is served by Enterprise instead.
         {
             auto* panel = makePanel();
+            panel->setVisible(brand::show_upstream_promos());
             auto* pvl = new QVBoxLayout(panel);
             pvl->setContentsMargins(0, 0, 0, 0);
             pvl->setSpacing(0);
-            enterprise_header_ = makePanelHeader("★", tr("FINCEPT TERMINAL ENTERPRISE"), ui::colors::AMBER);
+            enterprise_header_ = makePanelHeader("★", tr("ENTERPRISE EDITION"), ui::colors::AMBER);
             pvl->addWidget(enterprise_header_);
 
             auto* body = new QWidget(this);
@@ -322,7 +337,7 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
                                        ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("about")),
                                        QString("color: %1; font-size: 11px; background: transparent; "
                                                "padding: 6px 14px; border-top: 1px solid %2; "
-                                               "font-family: 'Consolas','Courier New',monospace;")
+                                               "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                            .arg(ui::colors::CYAN(), ui::colors::BORDER_DIM()));
             pvl->addWidget(foot);
 
@@ -385,13 +400,13 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         copy_info_btn_->setCursor(Qt::PointingHandCursor);
         copy_info_btn_->setToolTip(tr("Copy version and OS details to the clipboard for bug reports"));
         connect(copy_info_btn_, &QPushButton::clicked, this, [this]() {
-            const QString info = QStringLiteral("Fincept Terminal v%1\nQt: %2 (built with %3)\nOS: %4 (%5 %6)\n"
+            const QString info = QStringLiteral("%10 v%1\nQt: %2 (built with %3)\nOS: %4 (%5 %6)\n"
                                                 "CPU architecture: %7\nBuild ABI: %8\nLocale: %9")
                                      .arg(QApplication::applicationVersion(), QString::fromLatin1(qVersion()),
                                           QStringLiteral(QT_VERSION_STR), QSysInfo::prettyProductName(),
                                           QSysInfo::kernelType(), QSysInfo::kernelVersion(),
                                           QSysInfo::currentCpuArchitecture(), QSysInfo::buildAbi(),
-                                          QLocale::system().name());
+                                          QLocale::system().name(), brand::product_name());
             if (auto* cb = QGuiApplication::clipboard())
                 cb->setText(info);
             copy_info_btn_->setText(tr("Copied"));
@@ -461,13 +476,14 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
         // exist in the repository — those two buttons opened GitHub 404 pages.
         // Replaced with documents that are actually checked in.
         const Link links[] = {
-            {tr("GitHub Repository"), "https://github.com/Fincept-Corporation/FinceptTerminal"},
-            {tr("License (AGPL-3.0)"), "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/LICENSE"},
-            {tr("Fincept Enterprise"), ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("about"))},
-            {tr("Documentation"), "https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs"},
-            {tr("Contributing Guide"),
-             "https://github.com/Fincept-Corporation/FinceptTerminal/blob/main/docs/CONTRIBUTING.md"},
-            {tr("Official Website"), "https://fincept.in"},
+            // Source of this build (AGPL-3.0), its licence, and the upstream
+            // project it is based on.
+            {tr("Source Code"), QString::fromLatin1(brand::kSourceUrl)},
+            {tr("License (AGPL-3.0)"), QString::fromLatin1(brand::kLicenseUrl)},
+            {tr("Upstream Project"), QString::fromLatin1(brand::kUpstreamUrl)},
+            {tr("Documentation"), QString::fromLatin1(brand::kDocsUrl)},
+            {tr("Report an Issue"), QString::fromLatin1(brand::kIssuesUrl)},
+            {tr("Releases"), QString::fromLatin1(brand::kSourceUrl) + QStringLiteral("/releases")},
         };
 
         for (int i = 0; i < 6; ++i) {
@@ -505,11 +521,13 @@ AboutScreen::AboutScreen(QWidget* parent) : QWidget(parent) {
             QString label;
             QString email;
         };
+        const QString contact_email = QString::fromLatin1(brand::kContactEmail);
+        panel->setVisible(!contact_email.isEmpty()); // no address configured: Resources links the issue tracker
         const Contact contacts[] = {
-            {tr("GENERAL"), "support@fincept.in"},
-            {tr("COMMERCIAL"), "support@fincept.in"},
-            {tr("SECURITY"), "support@fincept.in"},
-            {tr("LEGAL"), "support@fincept.in"},
+            {tr("GENERAL"), contact_email},
+            {tr("COMMERCIAL"), contact_email},
+            {tr("SECURITY"), contact_email},
+            {tr("LEGAL"), contact_email},
         };
 
         for (int i = 0; i < 4; ++i) {
@@ -564,7 +582,7 @@ void AboutScreen::retranslateUi() {
     if (check_btn_)
         check_btn_->setText(check_in_progress_ ? tr("Checking…") : tr("Check for Updates"));
     if (copyright_)
-        copyright_->setText(tr("© 2024-2026 Fincept Corporation. All rights reserved."));
+        copyright_->setText(tr("%1 is based on FinceptTerminal. © 2024-2026 Fincept Corporation. Licensed under AGPL-3.0.").arg(brand::product_name()));
 
     // Open source license — bullet 0 is the SPDX identifier (untranslated).
     setPanelHeaderText(oss_header_, "", tr("OPEN SOURCE LICENSE"));
@@ -575,7 +593,7 @@ void AboutScreen::retranslateUi() {
     }
 
     // Enterprise (separate closed-source product)
-    setPanelHeaderText(enterprise_header_, "★", tr("FINCEPT TERMINAL ENTERPRISE"));
+    setPanelHeaderText(enterprise_header_, "★", tr("ENTERPRISE EDITION"));
     if (enterprise_bullets_.size() == 4) {
         setBulletText(enterprise_bullets_[0], tr("41 modules · private & proprietary datasets"));
         setBulletText(enterprise_bullets_[1], tr("Multi-agent research · AI credits included"));
@@ -611,12 +629,12 @@ void AboutScreen::retranslateUi() {
     // Resources
     setPanelHeaderText(resources_header_, "", tr("RESOURCES"));
     if (resource_btns_.size() == 6) {
-        resource_btns_[0]->setText(tr("GitHub Repository"));
+        resource_btns_[0]->setText(tr("Source Code"));
         resource_btns_[1]->setText(tr("License (AGPL-3.0)"));
-        resource_btns_[2]->setText(tr("Fincept Enterprise"));
+        resource_btns_[2]->setText(tr("Upstream Project"));
         resource_btns_[3]->setText(tr("Documentation"));
-        resource_btns_[4]->setText(tr("Contributing Guide"));
-        resource_btns_[5]->setText(tr("Official Website"));
+        resource_btns_[4]->setText(tr("Report an Issue"));
+        resource_btns_[5]->setText(tr("Releases"));
     }
 
     // Contact

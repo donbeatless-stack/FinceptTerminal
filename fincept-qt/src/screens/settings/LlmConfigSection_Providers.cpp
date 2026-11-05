@@ -570,9 +570,9 @@ void LlmConfigSection::populate_form(const QString& provider) {
                     // away a meaningful slice of the secret in a field that is
                     // always visible (placeholders ignore Password echo mode).
                     api_key_edit_->setPlaceholderText(
-                        tr("Linked to your Fincept account: ••••%1").arg(stored.right(4)));
+                        tr("Linked to your cloud account: ••••%1").arg(stored.right(4)));
                 } else {
-                    api_key_edit_->setPlaceholderText(tr("Login to your Fincept account to enable"));
+                    api_key_edit_->setPlaceholderText(tr("Login to your cloud account to enable"));
                 }
                 api_key_edit_->setEnabled(false);
                 // Fincept is a managed service — hide model/base_url/fetch
@@ -615,9 +615,9 @@ void LlmConfigSection::populate_form(const QString& provider) {
     if (is_fincept) {
         const QString stored = fincept::auth::AuthManager::instance().fincept_api_key();
         if (!stored.isEmpty())
-            api_key_edit_->setPlaceholderText(tr("Linked to your Fincept account: ••••%1").arg(stored.right(4)));
+            api_key_edit_->setPlaceholderText(tr("Linked to your cloud account: ••••%1").arg(stored.right(4)));
         else
-            api_key_edit_->setPlaceholderText(tr("Login to your Fincept account to enable"));
+            api_key_edit_->setPlaceholderText(tr("Login to your cloud account to enable"));
         model_combo_->setVisible(false);
         fetch_btn_->setVisible(false);
         base_url_edit_->setVisible(false);
@@ -745,7 +745,7 @@ void LlmConfigSection::on_delete_provider() {
     QString provider = provider_list_->item(row)->data(Qt::UserRole).toString();
 
     if (provider.toLower() == "fincept") {
-        show_status(tr("Cannot remove built-in Fincept provider"), true);
+        show_status(tr("Cannot remove built-in Cloud LLM provider"), true);
         return;
     }
 
@@ -789,9 +789,9 @@ void LlmConfigSection::on_test_connection() {
         // Fincept is a managed service — verify API key exists (session → SecureStorage)
         const QString stored = fincept::auth::AuthManager::instance().fincept_api_key();
         if (!stored.isEmpty())
-            show_status(tr("Fincept connected — API key active"), false);
+            show_status(tr("Cloud LLM connected — API key active"), false);
         else
-            show_status(tr("Not connected — login to your Fincept account first"), true);
+            show_status(tr("Not connected — login to your cloud account first"), true);
         return;
     }
 
@@ -833,7 +833,7 @@ void LlmConfigSection::on_fetch_models() {
     }
 
     if (provider == "fincept") {
-        show_status(tr("Fincept manages models automatically"), false);
+        show_status(tr("The cloud service manages models automatically"), false);
         return;
     }
 

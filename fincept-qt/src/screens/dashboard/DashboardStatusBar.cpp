@@ -300,11 +300,11 @@ void DashboardStatusBar::on_health(const QVariant& v) {
     const QString when = last_health_checked_ms_ > 0
                              ? QDateTime::fromMSecsSinceEpoch(last_health_checked_ms_).toString("HH:mm:ss")
                              : QString();
-    const QString tip = ok ? tr("Fincept API %1 reachable — round trip %2 ms (checked %3)")
+    const QString tip = ok ? tr("Cloud API %1 reachable — round trip %2 ms (checked %3)")
                                  .arg(o.value("endpoint").toString())
                                  .arg(last_latency_ms_)
                                  .arg(when)
-                           : tr("Fincept API %1 unreachable: %2 (checked %3)")
+                           : tr("Cloud API %1 unreachable: %2 (checked %3)")
                                  .arg(o.value("endpoint").toString(), last_health_error_, when);
     latency_label_->setToolTip(tip);
     feeds_label_->setToolTip(tip);
@@ -414,7 +414,7 @@ void DashboardStatusBar::retranslateUi() {
         layout_caption_lbl_->setText(tr("LAYOUT:"));
     if (feeds_caption_lbl_) {
         feeds_caption_lbl_->setText(tr("API:"));
-        feeds_caption_lbl_->setToolTip(tr("Fincept API health — probed every 30 s while the dashboard is visible"));
+        feeds_caption_lbl_->setToolTip(tr("Cloud API health — probed every 30 s while the dashboard is visible"));
     }
     if (ready_lbl_)
         ready_lbl_->setText(QString::fromUtf8("● ") + tr("READY"));

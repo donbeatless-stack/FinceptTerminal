@@ -28,7 +28,7 @@ static QString pin_input_style() {
                    "  background: %1; color: %2;"
                    "  border: 1px solid %3;"
                    "  font-size: 24px; letter-spacing: 12px;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "  selection-background-color: %4; selection-color: %5;"
                    "}"
                    "QLineEdit:focus { border: 1px solid %6; }")
@@ -38,10 +38,10 @@ static QString pin_input_style() {
 
 static QString btn_primary() {
     return QString("QPushButton {"
-                   "  background: rgba(217,119,6,0.1); color: %1;"
+                   "  background: rgba(45,212,191,0.1); color: %1;"
                    "  border: 1px solid %2;"
                    "  padding: 0 16px; font-size: 14px; font-weight: 700;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "}"
                    "QPushButton:hover { background: %1; color: %3; }"
                    "QPushButton:disabled { color: %4; background: %5; border-color: %6; }")
@@ -54,7 +54,7 @@ static QString btn_danger() {
                    "  background: rgba(220,38,38,0.1); color: %1;"
                    "  border: 1px solid #7f1d1d;"
                    "  padding: 0 16px; font-size: 14px; font-weight: 700;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "}"
                    "QPushButton:hover { background: %1; color: %2; }"
                    "QPushButton:disabled { color: %3; background: %4; border-color: %5; }")
@@ -65,13 +65,13 @@ static QString btn_danger() {
 static QString label_style() {
     return QString("color: %1; font-size: 13px; font-weight: 700;"
                    "background: transparent; letter-spacing: 0.5px;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_SECONDARY());
 }
 
 static QString muted_style() {
     return QString("color: %1; font-size: 13px; background: transparent;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_TERTIARY());
 }
 
@@ -79,7 +79,7 @@ static QString error_style() {
     return QString("color: %1; font-size: 13px;"
                    "background: rgba(220,38,38,0.08);"
                    "border: 1px solid #7f1d1d; padding: 6px 8px;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::NEGATIVE());
 }
 
@@ -233,7 +233,7 @@ void LockScreen::build_setup_page() {
     setup_title_ = new QLabel;
     setup_title_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 700;"
                                         "background: transparent; letter-spacing: 1px;"
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(ui::colors::AMBER()));
     hl->addWidget(setup_title_);
     hl->addStretch();
@@ -241,7 +241,7 @@ void LockScreen::build_setup_page() {
     setup_badge_ = new QLabel;
     setup_badge_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 700;"
                                         "background: transparent; letter-spacing: 0.5px;"
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(ui::colors::NEGATIVE()));
     hl->addWidget(setup_badge_);
     vl->addWidget(header);
@@ -254,7 +254,7 @@ void LockScreen::build_setup_page() {
     setup_info_ = new QLabel;
     setup_info_->setWordWrap(true);
     setup_info_->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;"
-                                       "font-family: 'Consolas','Courier New',monospace;")
+                                       "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                    .arg(ui::colors::TEXT_DIM()));
     vl->addWidget(setup_info_);
 
@@ -305,7 +305,7 @@ void LockScreen::build_setup_page() {
     setup_note_ = new QLabel;
     setup_note_->setWordWrap(true);
     setup_note_->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;"
-                                       "font-family: 'Consolas','Courier New',monospace;")
+                                       "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                    .arg(ui::colors::TEXT_DIM()));
     setup_note_->setAlignment(Qt::AlignCenter);
     vl->addWidget(setup_note_);
@@ -345,7 +345,7 @@ void LockScreen::build_unlock_page() {
     unlock_title_ = new QLabel;
     unlock_title_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 700;"
                                          "background: transparent; letter-spacing: 1px;"
-                                         "font-family: 'Consolas','Courier New',monospace;")
+                                         "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                      .arg(ui::colors::AMBER()));
     hl->addWidget(unlock_title_);
     hl->addStretch();
@@ -353,7 +353,7 @@ void LockScreen::build_unlock_page() {
     unlock_badge_ = new QLabel;
     unlock_badge_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 700;"
                                          "background: transparent; letter-spacing: 0.5px;"
-                                         "font-family: 'Consolas','Courier New',monospace;")
+                                         "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                      .arg(ui::colors::POSITIVE()));
     hl->addWidget(unlock_badge_);
     vl->addWidget(header);
@@ -383,7 +383,7 @@ void LockScreen::build_unlock_page() {
     unlock_lockout_label_->setStyleSheet(QString("color: %1; font-size: 12px;"
                                                  "background: rgba(202,138,4,0.08);"
                                                  "border: 1px solid #713f12; padding: 6px 8px;"
-                                                 "font-family: 'Consolas','Courier New',monospace;")
+                                                 "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                              .arg(ui::colors::WARNING()));
     unlock_lockout_label_->hide();
     vl->addWidget(unlock_lockout_label_);
@@ -396,7 +396,7 @@ void LockScreen::build_unlock_page() {
 
     unlock_attempts_ = new QLabel;
     unlock_attempts_->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;"
-                                            "font-family: 'Consolas','Courier New',monospace;")
+                                            "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                         .arg(ui::colors::TEXT_DIM()));
     unlock_attempts_->setAlignment(Qt::AlignCenter);
     unlock_attempts_->hide();
@@ -417,7 +417,7 @@ void LockScreen::build_unlock_page() {
     unlock_forgot_btn_->setCursor(Qt::PointingHandCursor);
     unlock_forgot_btn_->setStyleSheet(QString("QPushButton{color:%1; background:transparent; border:none;"
                                               "font-size:12px; text-decoration:underline;"
-                                              "font-family:'Consolas','Courier New',monospace;}"
+                                              "font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                                               "QPushButton:hover{color:%2;}")
                                           .arg(ui::colors::TEXT_DIM(), ui::colors::AMBER()));
     connect(unlock_forgot_btn_, &QPushButton::clicked, this, [this]() { emit reauth_requested(); });
@@ -458,7 +458,7 @@ void LockScreen::build_lockout_page() {
     lockout_title_ = new QLabel;
     lockout_title_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 700;"
                                           "background: transparent; letter-spacing: 1px;"
-                                          "font-family: 'Consolas','Courier New',monospace;")
+                                          "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                       .arg(ui::colors::NEGATIVE()));
     hl->addWidget(lockout_title_);
     hl->addStretch();
@@ -466,7 +466,7 @@ void LockScreen::build_lockout_page() {
     lockout_badge_ = new QLabel;
     lockout_badge_->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 700;"
                                           "background: transparent; letter-spacing: 0.5px;"
-                                          "font-family: 'Consolas','Courier New',monospace;")
+                                          "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                       .arg(ui::colors::NEGATIVE()));
     hl->addWidget(lockout_badge_);
     vl->addWidget(header);
@@ -474,7 +474,7 @@ void LockScreen::build_lockout_page() {
     lockout_msg_ = new QLabel;
     lockout_msg_->setWordWrap(true);
     lockout_msg_->setStyleSheet(QString("color: %1; font-size: 14px; background: transparent;"
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(ui::colors::TEXT_SECONDARY()));
     vl->addWidget(lockout_msg_);
 

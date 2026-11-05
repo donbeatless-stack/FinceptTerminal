@@ -27,7 +27,7 @@ static QString input_style() {
                    "  background: %1; color: %2;"
                    "  border: 1px solid %3;"
                    "  padding: 4px 8px; font-size: 14px;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "  selection-background-color: %4; selection-color: %5;"
                    "}"
                    "QLineEdit:focus { border: 1px solid %6; }"
@@ -38,10 +38,10 @@ static QString input_style() {
 
 static QString btn_primary() {
     return QString("QPushButton {"
-                   "  background: rgba(217,119,6,0.1); color: %1;"
+                   "  background: rgba(45,212,191,0.1); color: %1;"
                    "  border: 1px solid %2;"
                    "  padding: 0 16px; font-size: 13px; font-weight: 700;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "}"
                    "QPushButton:hover { background: %1; color: %3; }"
                    "QPushButton:disabled { color: %4; background: %5; border-color: %6; }")
@@ -53,7 +53,7 @@ static QString link_style() {
     return QString("QPushButton {"
                    "  color: %1; background: transparent; border: none;"
                    "  font-size: 12px; font-weight: 400;"
-                   "  font-family: 'Consolas','Courier New',monospace;"
+                   "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                    "}"
                    "QPushButton:hover { color: %2; }")
         .arg(ui::colors::TEXT_SECONDARY(), ui::colors::TEXT_PRIMARY());
@@ -62,25 +62,25 @@ static QString link_style() {
 static QString label_style() {
     return QString("color: %1; font-size: 12px; font-weight: 700;"
                    "background: transparent; letter-spacing: 0.5px;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_SECONDARY());
 }
 
 static QString muted_style() {
     return QString("color: %1; font-size: 12px; background: transparent;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_TERTIARY());
 }
 
 static QString check_off() {
     return QString("color: %1; font-size: 11px; background: transparent;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_DIM());
 }
 
 static QString check_on() {
     return QString("color: %1; font-size: 11px; background: transparent;"
-                   "font-family: 'Consolas','Courier New',monospace;")
+                   "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::POSITIVE());
 }
 
@@ -237,7 +237,7 @@ void RegisterScreen::build_form_page() {
     auto* back = new QPushButton(QStringLiteral("<"));
     back->setFixedSize(24, 24);
     back->setStyleSheet(QString("QPushButton { color: %1; background: transparent; border: none;"
-                                "  font-size: 16px; font-family: 'Consolas','Courier New',monospace; }"
+                                "  font-size: 16px; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                                 "QPushButton:hover { color: %2; }")
                             .arg(ui::colors::TEXT_SECONDARY(), ui::colors::TEXT_PRIMARY()));
     connect(back, &QPushButton::clicked, this, &RegisterScreen::navigate_login);
@@ -246,7 +246,7 @@ void RegisterScreen::build_form_page() {
     form_title_ = new QLabel;
     form_title_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 700;"
                                        "background: transparent; letter-spacing: 1px;"
-                                       "font-family: 'Consolas','Courier New',monospace;")
+                                       "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                    .arg(ui::colors::AMBER()));
     hl->addWidget(form_title_);
     hl->addStretch();
@@ -344,7 +344,7 @@ void RegisterScreen::build_form_page() {
     error_label_->setStyleSheet(QString("color: %1; font-size: 12px;"
                                         "background: rgba(220,38,38,0.08);"
                                         "border: 1px solid #7f1d1d; padding: 4px 8px;"
-                                        "font-family: 'Consolas','Courier New',monospace;")
+                                        "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                     .arg(ui::colors::NEGATIVE()));
     error_label_->hide();
     vl->addWidget(error_label_);
@@ -373,7 +373,7 @@ void RegisterScreen::build_form_page() {
     signin_btn_ = new QPushButton;
     signin_btn_->setStyleSheet(QString("QPushButton { color: %1; background: transparent; border: none;"
                                        "  font-size: 12px; font-weight: 700;"
-                                       "  font-family: 'Consolas','Courier New',monospace; }"
+                                       "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }"
                                        "QPushButton:hover { color: %2; }")
                                    .arg(ui::colors::AMBER(), ui::colors::TEXT_PRIMARY()));
     connect(signin_btn_, &QPushButton::clicked, this, &RegisterScreen::navigate_login);
@@ -444,7 +444,7 @@ void RegisterScreen::build_otp_page() {
     otp_title_ = new QLabel;
     otp_title_->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 700;"
                                       "background: transparent; letter-spacing: 1px;"
-                                      "font-family: 'Consolas','Courier New',monospace;")
+                                      "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                   .arg(ui::colors::AMBER()));
     hl->addWidget(otp_title_);
     hl->addStretch();
@@ -467,7 +467,7 @@ void RegisterScreen::build_otp_page() {
                                       "  background: %1; color: %2;"
                                       "  border: 1px solid %3;"
                                       "  padding: 6px 10px; font-size: 15px;"
-                                      "  font-family: 'Consolas','Courier New',monospace;"
+                                      "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                                       "  selection-background-color: %4; selection-color: %5;"
                                       "}"
                                       "QLineEdit:focus { border: 1px solid %6; }")
@@ -480,7 +480,7 @@ void RegisterScreen::build_otp_page() {
     otp_error_->setStyleSheet(QString("color: %1; font-size: 12px;"
                                       "background: rgba(220,38,38,0.08);"
                                       "border: 1px solid #7f1d1d; padding: 4px 8px;"
-                                      "font-family: 'Consolas','Courier New',monospace;")
+                                      "font-family: 'Cascadia Mono','Consolas','Courier New',monospace;")
                                   .arg(ui::colors::NEGATIVE()));
     otp_error_->hide();
     vl->addWidget(otp_error_);

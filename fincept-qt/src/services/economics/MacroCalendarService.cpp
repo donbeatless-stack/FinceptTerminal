@@ -97,11 +97,11 @@ void MacroCalendarService::refresh(const QStringList& topics) {
                 // Consumers show this text: make the common failures actionable instead of "HTTP_402".
                 QString msg = QString::fromStdString(err);
                 if (status == 401 || status == 403)
-                    msg = QStringLiteral("Sign in to Fincept to load the macro calendar (HTTP %1)").arg(status);
+                    msg = QStringLiteral("Sign in to your cloud account to load the macro calendar (HTTP %1)").arg(status);
                 else if (status == 402)
-                    msg = QStringLiteral("Out of Fincept credits — the macro calendar needs ~1 credit per refresh");
+                    msg = QStringLiteral("Out of cloud credits — the macro calendar needs ~1 credit per refresh");
                 else if (status == 0)
-                    msg = QStringLiteral("Fincept API unreachable — %1").arg(HttpClient::message_from_error(err));
+                    msg = QStringLiteral("Cloud API unreachable — %1").arg(HttpClient::message_from_error(err));
                 LOG_WARN("MacroCalendarService", msg);
                 hub.publish_error(QString::fromLatin1(kTopic), msg);
                 return;

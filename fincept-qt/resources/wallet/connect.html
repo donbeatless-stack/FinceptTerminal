@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* http://localhost:*; img-src 'self' data:;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fincept — Connect Wallet</title>
+  <title>Keystone Terminal — Connect Wallet</title>
   <link rel="icon" href="data:,">
   <style>
     :root {
@@ -21,9 +21,9 @@
       --text-secondary: #999999;
       --text-tertiary: #707070;
       --text-dim: #555555;
-      --accent: #d97706;
-      --accent-dim: #78350f;
-      --accent-bg: rgba(217, 119, 6, 0.08);
+      --accent: #2dd4bf;
+      --accent-dim: #115e59;
+      --accent-bg: rgba(45, 212, 191, 0.08);
       --positive: #10b981;
       --negative: #ef4444;
       --info: #3b82f6;
@@ -198,14 +198,14 @@
 <body>
   <main class="panel">
     <div class="header">
-      <span class="brand">Fincept Terminal</span>
+      <span class="brand">Keystone Terminal</span>
       <span class="sep">/</span>
       <span class="route">Crypto Center</span>
     </div>
     <div class="body">
       <h1>Connect your Solana wallet</h1>
       <p class="lede">
-        Fincept Terminal will read your wallet's public address and balances only.
+        Keystone Terminal will read your wallet's public address and balances only.
         Your private keys never leave your wallet.
       </p>
 
@@ -387,7 +387,7 @@
 
         statusWorking("Please sign the verification message in your wallet…");
         var message = new TextEncoder().encode(
-          "Fincept Terminal wallet-connect challenge. Nonce: " + NONCE_HEX);
+          "Keystone Terminal wallet-connect challenge. Nonce: " + NONCE_HEX);
         logToTerminal("info", "calling signMessage (" + message.length + " bytes)");
         var signed = await provider.signMessage(message, "utf8");
         logToTerminal("info", "signMessage resolved; type=" +

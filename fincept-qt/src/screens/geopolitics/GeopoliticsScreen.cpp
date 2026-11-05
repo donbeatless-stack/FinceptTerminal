@@ -538,7 +538,7 @@ QWidget* GeopoliticsScreen::build_status_bar() {
     // Styled by the root sheet (#geoCredits[state=...]).
     credits_label_ = new QLabel(tr("CREDITS: —"), bar);
     credits_label_->setObjectName("geoCredits");
-    credits_label_->setToolTip(tr("Fincept API credit balance after the last events request"));
+    credits_label_->setToolTip(tr("Cloud API credit balance after the last events request"));
     hl->addWidget(credits_label_);
 
     plans_btn_ = new QPushButton(tr("PLANS"), bar);
@@ -719,7 +719,7 @@ void GeopoliticsScreen::update_credits(double remaining, double used) {
     credits_label_->setText(tr("CREDITS: %1").arg(auth::format_credits(remaining)));
     credits_label_->setToolTip(used > 0 ? tr("Balance after the last request (it used %1 credits)")
                                               .arg(auth::format_credits(used))
-                                        : tr("Fincept API credit balance"));
+                                        : tr("Cloud API credit balance"));
     credits_label_->setProperty("state", QString::fromLatin1(state));
     credits_label_->style()->unpolish(credits_label_);
     credits_label_->style()->polish(credits_label_);

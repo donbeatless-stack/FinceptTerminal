@@ -163,14 +163,14 @@ void TierPanel::apply_theme() {
                                       "  font-weight:600; letter-spacing:1.2px; background:transparent; }"
                                       "QWidget#tierBody { background:%1; }"
                                       "QFrame#tierRow { background:%8; border:1px solid %3; }"
-                                      "QFrame#tierRowCurrent { background:rgba(217,119,6,0.10); border:1px solid %9; }"
+                                      "QFrame#tierRowCurrent { background:rgba(45,212,191,0.10); border:1px solid %9; }"
                                       "QLabel#tierRowLabel { color:%4; font-family:%5; font-size:11px;"
                                       "  font-weight:700; letter-spacing:1.4px; background:transparent; }"
                                       "QLabel#tierRowThreshold { color:%7; font-family:%5; font-size:11px;"
                                       "  background:transparent; }"
                                       "QLabel#tierRowUnlocks { color:%6; font-family:%5; font-size:11px;"
                                       "  background:transparent; }"
-                                      "QLabel#tierRowChipAchieved { color:%4; background:rgba(217,119,6,0.10);"
+                                      "QLabel#tierRowChipAchieved { color:%4; background:rgba(45,212,191,0.10);"
                                       "  border:1px solid %9; font-family:%5; font-size:9px; font-weight:700;"
                                       "  letter-spacing:1.2px; padding:2px 6px; }"
                                       "QLabel#tierRowChipLocked { color:%6; background:transparent;"
@@ -192,7 +192,7 @@ void TierPanel::apply_theme() {
                                 TEXT_TERTIARY(),            // %6
                                 TEXT_PRIMARY(),             // %7
                                 BG_RAISED(),                // %8
-                                QStringLiteral("#78350f")); // %9 darker amber
+                                QStringLiteral("#115e59")); // %9 darker accent
     setStyleSheet(ss);
 }
 

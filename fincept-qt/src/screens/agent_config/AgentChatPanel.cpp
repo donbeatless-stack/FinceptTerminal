@@ -33,7 +33,7 @@ namespace fnt = fincept::ui::fonts;
 
 static QString bubble_style(const QString& role) {
     if (role == "user")
-        return "background:rgba(120,53,15,0.45);border:1px solid rgba(217,119,6,0.28);"
+        return "background:rgba(17,94,89,0.45);border:1px solid rgba(45,212,191,0.28);"
                "border-radius:6px;padding:10px 14px;";
     if (role == "system")
         return QString("background:%1;border:1px solid %2;"

@@ -191,10 +191,10 @@ FinceptMacroPanel::FinceptMacroPanel(QWidget* parent)
 void FinceptMacroPanel::activate() {
     if (fmpd::is_ceic_view(current_view()) && ceic_country_combo_ && ceic_country_combo_->count() == 0)
         load_ceic_countries();
-    show_empty(tr("Fincept Macro — central-bank rates, sovereign CDS, bond spreads, credit ratings,\n"
+    show_empty(tr("Cloud Macro — central-bank rates, sovereign CDS, bond spreads, credit ratings,\n"
                   "inverted curves, yield forecasts, country bond summaries, the macro calendar and CEIC series.\n\n"
                   "Pick a VIEW (and optional filters), then press FETCH.\n"
-                  "Each request uses Fincept credits (shown next to REFRESH); repeats inside the reuse window are free."));
+                  "Each request uses cloud credits (shown next to REFRESH); repeats inside the reuse window are free."));
 }
 
 void FinceptMacroPanel::build_controls(QHBoxLayout* thl) {
@@ -212,7 +212,7 @@ void FinceptMacroPanel::build_controls(QHBoxLayout* thl) {
     }
     view_combo_->setFixedHeight(26);
     view_combo_->setMinimumWidth(190);
-    view_combo_->setAccessibleName(tr("Fincept Macro view"));
+    view_combo_->setAccessibleName(tr("Cloud Macro view"));
     connect(view_combo_, &QComboBox::currentIndexChanged, this, [this]() {
         update_controls_for_view();
         update_credit_hint();
@@ -367,7 +367,7 @@ void FinceptMacroPanel::update_credit_hint() {
         text = tr("≈%1 credit/request (+0.5 per country/indicator list, once a day) · reused %2")
                    .arg(fmpd::credits_text(cost), reuse);
     credit_lbl_->setText(text);
-    credit_lbl_->setToolTip(tr("Fincept bills each live request in credits. Repeating the same query within %1 is "
+    credit_lbl_->setToolTip(tr("The cloud API bills each live request in credits. Repeating the same query within %1 is "
                                "answered from the local cache and costs nothing; REFRESH always asks the server.")
                                 .arg(reuse));
     refresh_btn_->setToolTip(
@@ -469,8 +469,8 @@ void FinceptMacroPanel::run_query(bool force) {
 
     pending_view_ = view;
     pending_request_id_ = QStringLiteral("fm_%1_%2").arg(view).arg(++request_seq_);
-    show_loading(force ? tr("Refreshing %1 from Fincept…").arg(tr(def->label))
-                       : tr("Fetching %1 from Fincept…").arg(tr(def->label)));
+    show_loading(force ? tr("Refreshing %1 from the cloud API…").arg(tr(def->label))
+                       : tr("Fetching %1 from the cloud API…").arg(tr(def->label)));
     services::FinceptMacroService::instance().fetch(pending_request_id_, QString::fromLatin1(def->endpoint), params,
                                                     force);
 }
@@ -568,24 +568,24 @@ void FinceptMacroPanel::show_failure(const services::FinceptMacroResult& r) {
     using Status = services::FinceptMacroResult::Status;
     switch (r.status) {
         case Status::Unauthorized:
-            show_error(tr("Sign-in required: the Fincept API rejected this session (HTTP %1).\n"
+            show_error(tr("Sign-in required: the cloud API rejected this session (HTTP %1).\n"
                           "Sign in again (your session may have expired), then retry.")
                            .arg(r.http_status));
             return;
         case Status::NoCredits:
-            show_error_with_action(tr("Out of Fincept credits — this request costs about %1 credit(s).\n"
+            show_error_with_action(tr("Out of cloud credits — this request costs about %1 credit(s).\n"
                                       "Recharge or upgrade your plan, then retry.")
                                        .arg(fmpd::credits_text(services::FinceptMacroService::credit_cost(r.endpoint))),
                                    tr("VIEW PLANS"), [this]() { ui::billing::open_plans(this); });
             return;
         case Status::Offline:
-            show_error(tr("Cannot reach the Fincept API — %1\nCheck your connection, then retry.").arg(r.error));
+            show_error(tr("Cannot reach the cloud API — %1\nCheck your connection, then retry.").arg(r.error));
             return;
         case Status::Error:
         case Status::Ok:
             break;
     }
-    show_error(tr("Fincept API error: %1").arg(r.error.isEmpty() ? tr("unknown failure") : r.error));
+    show_error(tr("Cloud API error: %1").arg(r.error.isEmpty() ? tr("unknown failure") : r.error));
 }
 
 void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) {
@@ -609,7 +609,7 @@ void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) 
     QString title = tr(def->label);
     QStringList banners;
 
-    const QString wgb_source = tr("WorldGovernmentBonds via Fincept");
+    const QString wgb_source = tr("WorldGovernmentBonds via cloud API");
     auto num = [](const QJsonObject& o, const char* key) { return o.value(QLatin1String(key)); };
 
     if (view == QLatin1String("cb_rates")) {
@@ -731,7 +731,7 @@ void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) 
                                     {cols[10], imp_text},
                                     {cols[11], o.value(QStringLiteral("category"))}});
         }
-        meta.source = tr("Trading Economics calendar via Fincept");
+        meta.source = tr("Trading Economics calendar via cloud API");
         meta.note = tr("Times as published by the source calendar");
         const int total = r.payload.value(QStringLiteral("total_count")).toInt(static_cast<int>(r.rows.size()));
         if (total > r.rows.size())
@@ -749,7 +749,7 @@ void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) 
                                     {cols[5], o.value(QStringLiteral("slug"))},
                                     {cols[6], o.value(QStringLiteral("series_id"))}});
         }
-        meta.source = tr("CEIC via Fincept");
+        meta.source = tr("CEIC via cloud API");
         title = tr("CEIC catalogue — %1").arg(ceic_country_combo_->currentText());
         const int total = r.payload.value(QStringLiteral("total_count")).toInt(static_cast<int>(r.rows.size()));
         if (total > r.rows.size())
@@ -759,7 +759,7 @@ void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) 
     } else if (view == QLatin1String("ceic")) {
         const QString country = ceic_country_combo_->currentData().toString();
         const QString indicator = ceic_indicator_combo_->currentData().toString();
-        meta.source = tr("CEIC via Fincept");
+        meta.source = tr("CEIC via cloud API");
         if (indicator.isEmpty()) {
             // latest_only: one row per series — a cross-section of the country's latest readings.
             cols = {tr("Indicator"), tr("Period"), tr("Value"), tr("Series ID")};
@@ -832,7 +832,7 @@ void FinceptMacroPanel::show_view_result(const services::FinceptMacroResult& r) 
         banners.prepend(r.status == Status::Offline
                             ? tr("OFFLINE — the live request failed (%1). Showing the copy retrieved %2.")
                                   .arg(r.error, when)
-                            : tr("FINCEPT API ERROR — %1. Showing the copy retrieved %2.").arg(r.error, when));
+                            : tr("CLOUD API ERROR — %1. Showing the copy retrieved %2.").arg(r.error, when));
     }
     set_banner(banners.join(QStringLiteral("   ·   ")));
     LOG_INFO("FinceptMacroPanel", QString("Displayed %1 row(s) for %2%3")

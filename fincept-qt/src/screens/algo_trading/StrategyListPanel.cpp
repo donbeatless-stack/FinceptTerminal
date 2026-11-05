@@ -45,7 +45,7 @@ QString row_button_qss() {
     };
     return rule("slRowEdit", colors::CYAN(), QStringLiteral("rgba(34,211,238,0.1)")) +
            rule("slRowBacktest", colors::POSITIVE(), QStringLiteral("rgba(22,163,74,0.1)")) +
-           rule("slRowDeploy", colors::AMBER(), QStringLiteral("rgba(217,119,6,0.1)")) +
+           rule("slRowDeploy", colors::AMBER(), QStringLiteral("rgba(45,212,191,0.1)")) +
            rule("slRowDelete", colors::NEGATIVE(), QStringLiteral("rgba(220,38,38,0.1)"));
 }
 

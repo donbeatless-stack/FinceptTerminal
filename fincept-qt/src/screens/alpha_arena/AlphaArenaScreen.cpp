@@ -84,16 +84,16 @@ QWidget* AlphaArenaScreen::build_header() {
     // selector-less sheet cascaded its border-bottom onto every label in it).
     hdr->setStyleSheet(
         "QWidget#aaHeader{background:#111111;border-bottom:1px solid #222222;}"
-        "QLabel#aaTitle{color:#d97706;font-weight:700;font-size:12px;letter-spacing:1px;}"
+        "QLabel#aaTitle{color:#2dd4bf;font-weight:700;font-size:12px;letter-spacing:1px;}"
         "QLabel#aaBadge{background:#1a1a1a;color:#808080;padding:1px 7px;font-weight:700;font-size:10px;}"
         "QLabel#aaBadge[tone=\"running\"]{background:#0A3A14;color:#16a34a;}"
         "QLabel#aaBadge[tone=\"paper\"]{color:#16a34a;}"
         "QLabel#aaBadge[tone=\"live\"]{background:#5C1F1F;color:#FFD;}"
-        "QLabel#aaMono{color:#e5e5e5;font-size:11px;font-family:'Consolas','Courier New',monospace;}"
-        "QLabel#aaMonoDim{color:#808080;font-size:11px;font-family:'Consolas','Courier New',monospace;}"
+        "QLabel#aaMono{color:#e5e5e5;font-size:11px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
+        "QLabel#aaMonoDim{color:#808080;font-size:11px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
         "QPushButton#aaKill{background:#dc2626;color:#FFF;font-weight:700;}"
         "QPushButton#aaKill:disabled{background:#3a1414;color:#808080;}"
-        "QPushButton#aaNew{background:#d97706;color:#000;font-weight:700;}");
+        "QPushButton#aaNew{background:#2dd4bf;color:#000;font-weight:700;}");
     auto* h = new QHBoxLayout(hdr);
     h->setContentsMargins(10, 0, 10, 0);
     h->setSpacing(8);
@@ -164,7 +164,7 @@ QWidget* AlphaArenaScreen::build_ticker_strip() {
     ticker_ = new QLabel(QStringLiteral("--"));
     ticker_->setTextFormat(Qt::RichText);
     ticker_->setStyleSheet("color:#777;font-size:11px;border:none;"
-                           "font-family:'Consolas','Courier New',monospace;");
+                           "font-family:'Cascadia Mono','Consolas','Courier New',monospace;");
     h->addWidget(ticker_, 1);
 
     auto* cad = new QLabel(tr("CADENCE"));
@@ -177,13 +177,13 @@ QWidget* AlphaArenaScreen::build_ticker_strip() {
     cadence_spin_->setFixedHeight(18);
     cadence_spin_->setToolTip(tr("Round cadence (60–3600 seconds)"));
     cadence_spin_->setStyleSheet("QSpinBox{background:#141414;color:#DDD;border:1px solid #2A2A2A;font-size:11px;"
-                                 " padding:0 2px;font-family:'Consolas','Courier New',monospace;}");
+                                 " padding:0 2px;font-family:'Cascadia Mono','Consolas','Courier New',monospace;}");
     h->addWidget(cadence_spin_);
     auto* apply = new QPushButton(QStringLiteral("✓"));
     apply->setToolTip(tr("Apply cadence to the running competition"));
     apply->setFixedSize(20, 18);
     apply->setCursor(Qt::PointingHandCursor);
-    apply->setStyleSheet("QPushButton{background:#222;color:#FF8800;border:1px solid #2A2A2A;"
+    apply->setStyleSheet("QPushButton{background:#222;color:#2dd4bf;border:1px solid #2A2A2A;"
                          "font-weight:700;padding:0;}QPushButton:hover{background:#2A2A2A;}");
     connect(apply, &QPushButton::clicked, this, [this]() {
         if (auto r = ArenaEngine::instance().set_cadence(cadence_spin_->value()); r.is_err())
@@ -199,14 +199,14 @@ QWidget* AlphaArenaScreen::build_empty_state() {
     v->addStretch(2);
     auto* big = new QLabel(tr("ALPHA ARENA"));
     big->setAlignment(Qt::AlignCenter);
-    big->setStyleSheet("color:#FF8800;font-size:28px;font-weight:800;");
+    big->setStyleSheet("color:#2dd4bf;font-size:28px;font-weight:800;");
     auto* sub = new QLabel(tr("Pit LLMs against each other in a live crypto trading competition.\n"
                               "Real Hyperliquid market data · paper money · any provider, or free with Ollama."));
     sub->setAlignment(Qt::AlignCenter);
     sub->setStyleSheet("color:#999;font-size:13px;");
     auto* cta = new QPushButton(tr("+  NEW COMPETITION"));
     cta->setFixedSize(260, 44);
-    cta->setStyleSheet("background:#FF8800;color:#000;font-weight:800;font-size:14px;");
+    cta->setStyleSheet("background:#2dd4bf;color:#000;font-weight:800;font-size:14px;");
     connect(cta, &QPushButton::clicked, this, &AlphaArenaScreen::on_new_competition);
     v->addWidget(big);
     v->addWidget(sub);

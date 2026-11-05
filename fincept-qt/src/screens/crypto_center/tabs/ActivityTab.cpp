@@ -175,7 +175,7 @@ void ActivityTab::apply_theme() {
                        "  font-family:%4; font-size:10px; font-weight:700; letter-spacing:1.2px;"
                        "  padding:0 12px; }"
                        "QPushButton#activityTabChip:hover { color:%5; border-color:%6; }"
-                       "QPushButton#activityTabChip:checked { background:rgba(217,119,6,0.12); color:%7;"
+                       "QPushButton#activityTabChip:checked { background:rgba(45,212,191,0.12); color:%7;"
                        "  border-color:%7; }"
 
                        "QTableWidget#activityTabTable { background:%1; color:%5; gridline-color:%3;"

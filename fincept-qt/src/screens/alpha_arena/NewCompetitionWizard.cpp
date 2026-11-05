@@ -88,7 +88,7 @@ void NewCompetitionWizard::build_step1() {
     auto* page = new QWidget;
     auto* v = new QVBoxLayout(page);
     auto* title = new QLabel(tr("1 · Pick the competing models"));
-    title->setStyleSheet("color:#FF8800;font-weight:700;font-size:14px;");
+    title->setStyleSheet("color:#2dd4bf;font-weight:700;font-size:14px;");
     v->addWidget(title);
     auto* panes = new QHBoxLayout;
     provider_list_ = new QListWidget;
@@ -105,7 +105,7 @@ void NewCompetitionWizard::build_step1() {
     v->addWidget(selection_summary_);
     model_hint_ = new QLabel(tr("Pick a provider on the left, then check its models — selections "
                                 "from several providers combine. Greyed entries need an API key in "
-                                "Settings → LLM Configuration. Ollama and Fincept work without one."));
+                                "Settings → LLM Configuration. Ollama and Cloud LLM work without one."));
     model_hint_->setWordWrap(true);
     model_hint_->setStyleSheet("color:#888;");
     v->addWidget(model_hint_);
@@ -248,7 +248,7 @@ void NewCompetitionWizard::build_step2() {
     auto* page = new QWidget;
     auto* v = new QVBoxLayout(page);
     auto* title = new QLabel(tr("2 · Arena settings"));
-    title->setStyleSheet("color:#FF8800;font-weight:700;font-size:14px;");
+    title->setStyleSheet("color:#2dd4bf;font-weight:700;font-size:14px;");
     v->addWidget(title);
     auto* grid = new QGridLayout;
     int row = 0;

@@ -180,7 +180,7 @@ void CandleCanvas::rebuild_cache() {
     for (int i = 0; i < count; i += label_step) {
         const auto& c = candles_[start + i];
         QDateTime dt = QDateTime::fromSecsSinceEpoch(c.timestamp);
-        QString label = span_sec > 365LL * 86400 ? dt.toString("MMM yy") : dt.toString("dd MMM");
+        QString label = span_sec > 365LL * 86400 ? dt.toString("MMM yy") : dt.toString("MMM d");
 
         int lx = static_cast<int>((i + 0.5) * slot_w);
         int tw = fm.horizontalAdvance(label);

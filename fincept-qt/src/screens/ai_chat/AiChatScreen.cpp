@@ -130,7 +130,7 @@ void AiChatScreen::refresh_theme() {
     if (attach_btn_)
         attach_btn_->setStyleSheet(QString("QPushButton{background:transparent;color:%1;border:1px solid %2;"
                                            "border-radius:0px;font-size:20px;font-weight:700;}"
-                                           "QPushButton:hover{background:rgba(217,119,6,0.15);border-color:%3;}")
+                                           "QPushButton:hover{background:rgba(45,212,191,0.15);border-color:%3;}")
                                        .arg(col::TEXT_PRIMARY(), col::BORDER_MED(), col::AMBER()));
 
     // Header bar elements
@@ -258,7 +258,7 @@ void AiChatScreen::retranslateUi() {
     }
     // Input area
     if (input_box_)
-        input_box_->setPlaceholderText(tr("Message Fincept AI...  (Enter to send · Shift+Enter for a new line)"));
+        input_box_->setPlaceholderText(tr("Message Keystone AI...  (Enter to send · Shift+Enter for a new line)"));
     if (attach_btn_)
         attach_btn_->setToolTip(tr("Attach a file to this message"));
     if (load_earlier_btn_ && load_earlier_btn_->isVisible())

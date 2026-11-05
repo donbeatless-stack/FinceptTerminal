@@ -126,8 +126,8 @@ QString save_btn_style() {
 QString run_btn_style() {
     return QString("QPushButton{background:transparent;color:%1;border:1px solid %1;border-radius:2px;"
                    "padding:7px 16px;font-weight:700;font-size:%2px;font-family:%3;letter-spacing:1px;}"
-                   "QPushButton:hover{background:rgba(217,119,6,0.12);}"
-                   "QPushButton:pressed{background:rgba(217,119,6,0.22);}"
+                   "QPushButton:hover{background:rgba(45,212,191,0.12);}"
+                   "QPushButton:pressed{background:rgba(45,212,191,0.22);}"
                    "QPushButton:disabled{color:%4;border-color:%4;}")
         .arg(ui::colors::AMBER())
         .arg(ui::fonts::SMALL)

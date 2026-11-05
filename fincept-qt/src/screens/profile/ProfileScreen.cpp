@@ -5,6 +5,7 @@
 #include "core/currency/Currency.h"
 #include "core/logging/Logger.h"
 #include "ui/theme/Theme.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QApplication>
@@ -674,11 +675,10 @@ QWidget* ProfileScreen::build_support() {
         connect(b, &QPushButton::clicked, this, [url]() { QDesktopServices::openUrl(QUrl(url)); });
         lrl->addWidget(b);
     };
-    // DOCS / FAQ are localisable; GITHUB / DISCORD are brand names — left raw.
-    make_link_btn(tr("DOCS"), "https://github.com/Fincept-Corporation/FinceptTerminal/tree/main/docs");
-    make_link_btn(QStringLiteral("GITHUB"), "https://github.com/Fincept-Corporation/FinceptTerminal");
-    make_link_btn(QStringLiteral("DISCORD"), "https://discord.gg/ae87a8ygbN");
-    make_link_btn(tr("FAQ"), "https://github.com/Fincept-Corporation/FinceptTerminal/wiki");
+    // DOCS / ISSUES are localisable; GITHUB is a brand name — left raw.
+    make_link_btn(tr("DOCS"), QString::fromLatin1(brand::kDocsUrl));
+    make_link_btn(QStringLiteral("GITHUB"), QString::fromLatin1(brand::kSourceUrl));
+    make_link_btn(tr("ISSUES"), QString::fromLatin1(brand::kIssuesUrl));
     lrl->addStretch();
     lvl->addLayout(lrl);
     vl->addWidget(lp);
@@ -726,7 +726,7 @@ void ProfileScreen::refresh_all() {
         ui::enterprise::set_cta_style(btn, paid ? ui::enterprise::CtaStyle::Outline : ui::enterprise::CtaStyle::Primary);
     }
     for (auto* hint : findChildren<QLabel*>(QStringLiteral("profilePlanHint")))
-        hint->setText(paid ? tr("See plans and credits, or compare with Fincept Terminal Enterprise for teams.")
+        hint->setText(paid ? tr("See plans, credits and billing history.")
                            : tr("Pro — $10/month: monthly credits, higher limits, every cloud analytics module and "
                                 "priority support."));
 }
@@ -1079,7 +1079,7 @@ void ProfileScreen::show_delete_account_dialog() {
     // First confirmation
     auto first =
         QMessageBox::warning(this, tr("Delete Account"),
-                             tr("This will permanently delete your Fincept account (%1) and all associated data.\n\n"
+                             tr("This will permanently delete your cloud account (%1) and all associated data.\n\n"
                                 "This action CANNOT be undone. Are you sure?")
                                  .arg(email),
                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No);

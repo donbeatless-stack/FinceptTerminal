@@ -125,7 +125,7 @@ void Surface3DWidget::paintEvent(QPaintEvent*) {
     painter.fillRect(rect(), QColor(8, 8, 8));
 
     if (!supported_) {
-        painter.setPen(QColor(217, 119, 6));
+        painter.setPen(QColor(45, 212, 191));
         painter.setFont(QFont("Consolas", 13, QFont::Bold));
         painter.drawText(QRect(0, H / 2 - 28, W, 24), Qt::AlignCenter, tr("3D NOT APPLICABLE"));
         painter.setPen(QColor(140, 140, 140));
@@ -275,7 +275,7 @@ void Surface3DWidget::paintEvent(QPaintEvent*) {
     QFont label_font("Consolas", 8);
     label_font.setBold(true);
     painter.setFont(label_font);
-    painter.setPen(QColor(217, 119, 6)); // AMBER
+    painter.setPen(QColor(45, 212, 191)); // AMBER
 
     auto draw_label = [&](Vec3 pos, const QString& text) {
         QPointF tp = proj(pos);

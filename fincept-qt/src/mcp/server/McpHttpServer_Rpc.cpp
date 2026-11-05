@@ -49,7 +49,7 @@ QString sanitize_client_text(const QString& raw, int max_chars) {
 
 QString server_instructions(bool has_tool_invoke) {
     QStringList lines;
-    lines << QStringLiteral("Fincept Terminal is the user's running financial terminal: live quotes, price history, "
+    lines << QStringLiteral("Keystone Terminal is the user's running financial terminal: live quotes, price history, "
                             "fundamentals, news, SEC filings, macro data, portfolios, paper trading, analytics and "
                             "workflows.");
     lines << QStringLiteral("- Discover: tool_list(query=\"what you need\") searches the whole catalogue (~900 tools); "
@@ -276,7 +276,7 @@ QJsonObject McpHttpServer::Impl::handle_initialize(const QJsonValue& id, const Q
         {QStringLiteral("capabilities"),
          QJsonObject{{QStringLiteral("tools"), QJsonObject{{QStringLiteral("listChanged"), false}}}}},
         {QStringLiteral("serverInfo"), QJsonObject{{QStringLiteral("name"), QStringLiteral("fincept-terminal")},
-                                                   {QStringLiteral("title"), QStringLiteral("Fincept Terminal")},
+                                                   {QStringLiteral("title"), QStringLiteral("Keystone Terminal")},
                                                    {QStringLiteral("version"), QCoreApplication::applicationVersion()}}},
         {QStringLiteral("instructions"), server_instructions(cat->has_tool_invoke)},
     };

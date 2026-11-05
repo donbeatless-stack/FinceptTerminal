@@ -233,7 +233,7 @@ QWidget* QuantModulePanel::build_rd_agent_tab(QComboBox* llm_combo) {
     // running. Plain action + a status query instead.
     auto* mcp_btn = new QPushButton(tr("START MCP TOOLS"), status_bar);
     mcp_btn->setCursor(Qt::PointingHandCursor);
-    mcp_btn->setToolTip(tr("Start the Fincept MCP tool server.\n"
+    mcp_btn->setToolTip(tr("Start the Keystone MCP tool server.\n"
                            "Gives RD-Agent loops access to market data,\n"
                            "financial news and economics tools.\n"
                            "The server keeps running until the terminal exits."));

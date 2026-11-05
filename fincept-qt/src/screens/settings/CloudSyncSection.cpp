@@ -103,11 +103,11 @@ void CloudSyncSection::build_ui() {
     vl->setContentsMargins(16, 16, 16, 16);
     vl->setSpacing(8);
 
-    title_ = new QLabel(tr("Fincept Cloud Sync"));
+    title_ = new QLabel(tr("Cloud Sync"));
     title_->setStyleSheet(section_title_ss());
     vl->addWidget(title_);
 
-    blurb_ = new QLabel(tr("Mirror your data to your Fincept account. Your local copy stays the working "
+    blurb_ = new QLabel(tr("Mirror your data to your cloud account. Your local copy stays the working "
                            "copy — sync runs in the background, on this device and across your devices."));
     blurb_->setWordWrap(true);
     blurb_->setStyleSheet(label_ss());
@@ -259,9 +259,9 @@ void CloudSyncSection::changeEvent(QEvent* event) {
 
 void CloudSyncSection::retranslateUi() {
     if (title_)
-        title_->setText(tr("Fincept Cloud Sync"));
+        title_->setText(tr("Cloud Sync"));
     if (blurb_)
-        blurb_->setText(tr("Mirror your data to your Fincept account. Your local copy stays the working "
+        blurb_->setText(tr("Mirror your data to your cloud account. Your local copy stays the working "
                            "copy — sync runs in the background, on this device and across your devices."));
     if (credits_banner_)
         credits_banner_->setText(cloud_credits_banner_html());

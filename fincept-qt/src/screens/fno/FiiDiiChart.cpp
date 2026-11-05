@@ -23,7 +23,7 @@ QString short_date(const QString& iso) {
     QDate d = QDate::fromString(iso, "yyyy-MM-dd");
     if (!d.isValid())
         return iso;
-    return d.toString("dd-MMM");
+    return d.toString("MMM d");
 }
 
 QColor with_alpha(const QString& hex, int alpha) {

@@ -95,7 +95,7 @@ void CrosshairChartView::update_crosshair(const QPoint& widget_pos) {
 
     // Format tooltip text
     const QDateTime dt = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(snap_pt.x()));
-    const QString date_str = dt.toString("dd MMM yyyy");
+    const QString date_str = dt.toString("MMM d, yyyy");
     const QString val_str = QString("%1 %2").arg(currency_, QString::number(snap_pt.y(), 'f', 2));
     tooltip_->setText(date_str + "\n" + val_str);
     tooltip_->adjustSize();
@@ -547,7 +547,7 @@ void PortfolioPerfChart::update_chart() {
     else if (current_period_ == "ALL" || current_period_ == "5Y" || current_period_ == "1Y")
         x_axis->setFormat("MMM yy");
     else
-        x_axis->setFormat("dd MMM");
+        x_axis->setFormat("MMM d");
     x_axis->setTickCount(5);
     x_axis->setLabelsColor(QColor(ui::colors::TEXT_TERTIARY()));
     x_axis->setGridLineVisible(false);

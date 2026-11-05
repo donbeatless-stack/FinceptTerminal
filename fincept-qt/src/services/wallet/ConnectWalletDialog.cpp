@@ -104,7 +104,7 @@ void ConnectWalletDialog::closeEvent(QCloseEvent* e) {
 
 void ConnectWalletDialog::start_handshake() {
     nonce_hex_ = make_random_nonce();
-    expected_message_ = QByteArrayLiteral("Fincept Terminal wallet-connect challenge. Nonce: ") + nonce_hex_;
+    expected_message_ = QByteArrayLiteral("Keystone Terminal wallet-connect challenge. Nonce: ") + nonce_hex_;
 
     bridge_ = new LocalWalletBridge(this);
     connect(bridge_, &LocalWalletBridge::connect_payload, this, &ConnectWalletDialog::on_payload);

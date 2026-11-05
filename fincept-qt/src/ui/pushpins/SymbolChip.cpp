@@ -85,7 +85,7 @@ void SymbolChip::paintEvent(QPaintEvent*) {
     QPainterPath path;
     path.addRoundedRect(r, r.height() / 2.0, r.height() / 2.0);
     p.fillPath(path, QColor("#1f2937"));
-    p.setPen(QColor("#d97706"));
+    p.setPen(QColor("#2dd4bf"));
     p.drawPath(path);
 
     p.setPen(QColor("#f3f4f6"));

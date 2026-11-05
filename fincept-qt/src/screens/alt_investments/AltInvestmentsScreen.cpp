@@ -47,7 +47,7 @@ static const QString kStyle =
                    "  text-align: left; font-size: 13px; padding: 9px 14px; }"
                    "#altCatBtn:hover { color: %4; background: %12; }"
                    "#altCatBtn[active=\"true\"] { color: %3; font-weight: 700;"
-                   "  background: rgba(217,119,6,0.08); border-left: 3px solid %3; padding-left: 11px; }"
+                   "  background: rgba(45,212,191,0.08); border-left: 3px solid %3; padding-left: 11px; }"
 
                    "#altCenterPanel { background: %1; }"
                    "#altCenterTitleBar { background: %2; border-bottom: 1px solid %8; }"
@@ -77,7 +77,7 @@ static const QString kStyle =
 
                    "#altAnalyzeBtn { background: %3; color: %1; border: none; padding: 7px 20px;"
                    "  font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }"
-                   "#altAnalyzeBtn:hover    { background: #FF8800; }"
+                   "#altAnalyzeBtn:hover    { background: #5eead4; }"
                    "#altAnalyzeBtn:disabled { background: %10; color: %11; }"
 
                    "#altRightPanel { background: %7; border-left: 1px solid %8; }"

@@ -8,7 +8,7 @@ namespace { // forward-declare default theme for constructor use
 static fincept::screens::ReportTheme default_canvas_theme() {
     return {"Light Professional",
             "#1a1a1a",
-            "#d97706",
+            "#0f766e",
             "#ffffff",
             "#333333",
             "#f0f0f0",
@@ -149,7 +149,7 @@ static QString render_chart_to_file(const QString& chart_type, const QString& ti
             slice->setLabelFont(lf);
         }
         // Colour slices with accent + variations
-        const QStringList palette = {"#d97706", "#3b82f6", "#16a34a", "#dc2626",
+        const QStringList palette = {"#0f766e", "#3b82f6", "#16a34a", "#dc2626",
                                      "#7c3aed", "#0891b2", "#ea580c", "#65a30d"};
         for (int i = 0; i < series->slices().size(); ++i) {
             series->slices()[i]->setColor(QColor(palette[i % palette.size()]));

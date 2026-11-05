@@ -2,6 +2,7 @@
 
 #include "auth/AuthManager.h"
 #include "ui/pushpins/PushpinBar.h"
+#include "ui/theme/Brand.h"
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/widgets/EnterprisePromo.h"
@@ -79,10 +80,14 @@ ToolBar::ToolBar(QWidget* parent) : QWidget(parent) {
     };
 
     sep();
-    // FINCEPT / TERMINAL are brand marks — set raw, never translated.
-    fincept_label_ = mk(QStringLiteral("FINCEPT "));
+    // Logo + KEYSTONE / TERMINAL wordmark — brand marks, set raw, never translated.
+    logo_label_ = mk({});
+    logo_label_->setFixedSize(18, 18);
+    hl->addWidget(logo_label_);
+    hl->addSpacing(6);
+    fincept_label_ = mk(QString::fromLatin1(brand::kWordmarkPrimary) + QLatin1Char(' '));
     hl->addWidget(fincept_label_);
-    branding_label_ = mk(QStringLiteral("TERMINAL"));
+    branding_label_ = mk(QString::fromLatin1(brand::kWordmarkSecondary));
     hl->addWidget(branding_label_);
     subtitle_label_ = mk({});
     hl->addWidget(subtitle_label_);
@@ -133,6 +138,7 @@ ToolBar::ToolBar(QWidget* parent) : QWidget(parent) {
     upgrade_btn_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     connect(upgrade_btn_, &QPushButton::clicked, this, &ToolBar::upgrade_clicked);
     hl->addWidget(upgrade_btn_);
+    upgrade_btn_->setVisible(brand::show_upstream_promos());
     sep();
 
     chat_mode_btn_ = new QPushButton;
@@ -195,7 +201,7 @@ void ToolBar::retranslateUi() {
         plan_btn_->setToolTip(tr("Plans & pricing — Pro is $10/month"));
     if (upgrade_btn_) {
         upgrade_btn_->setText(tr("ENTERPRISE"));
-        upgrade_btn_->setToolTip(tr("Fincept Terminal Enterprise — the private edition for firms"));
+        upgrade_btn_->setToolTip(tr("Enterprise edition — the private edition for firms"));
     }
     if (chat_mode_btn_) {
         // Keep the ⬡ glyph (U+2B21) as a visual icon; only the label after it
@@ -244,8 +250,18 @@ void ToolBar::refresh_theme() {
         if (l)
             l->setStyleSheet(QString("color:%1;%2background:transparent;").arg(c, b ? "font-weight:700;" : ""));
     };
-    lbl(fincept_label_, colors::AMBER(), true);
-    lbl(branding_label_, colors::TEXT_PRIMARY(), true);
+    // Wordmark: KEYSTONE bright and bold, TERMINAL muted, in the brand face.
+    auto wordmark = [](QLabel* l, const QString& c, int weight) {
+        if (l)
+            l->setStyleSheet(QString("color:%1;background:transparent;font-family:%2;font-weight:%3;"
+                                     "letter-spacing:2px;")
+                                 .arg(c, QString::fromLatin1(brand::kWordmarkFamily))
+                                 .arg(weight));
+    };
+    wordmark(fincept_label_, colors::TEXT_PRIMARY(), 700);
+    wordmark(branding_label_, colors::TEXT_SECONDARY(), 400);
+    if (logo_label_)
+        logo_label_->setPixmap(brand::logo_pixmap(18, QColor(colors::AMBER()), devicePixelRatioF()));
     lbl(subtitle_label_, colors::TEXT_SECONDARY());
     lbl(live_dot_, colors::POSITIVE());
     lbl(live_label_, colors::POSITIVE(), true);
@@ -322,7 +338,8 @@ void ToolBar::apply_responsive_layout(int w) {
 
 void ToolBar::update_clock() {
     auto dt = QDateTime::currentDateTime();
-    clock_label_->setText(dt.toString("dd MMM yy").toUpper() + " " + dt.toString("HH:mm:ss"));
+    // US style: "NOV 5, 2026 10:42:07 AM".
+    clock_label_->setText(dt.toString("MMM d, yyyy").toUpper() + " " + dt.toString("h:mm:ss AP"));
 }
 
 void ToolBar::refresh_user_display() {
@@ -552,7 +569,7 @@ QMenu* ToolBar::build_view_menu() {
 QMenu* ToolBar::build_help_menu() {
     auto* m = new QMenu(tr("Help"), this);
     m->setStyleSheet(popup_ss());
-    m->addAction(tr("About Fincept"), this, [this]() { emit navigate_to("about"); });
+    m->addAction(tr("About %1").arg(brand::product_name()), this, [this]() { emit navigate_to("about"); });
     m->addAction(tr("Help Center"), this, [this]() { emit navigate_to("help"); });
     m->addSeparator();
     m->addAction(tr("Contact Us"), this, [this]() { emit navigate_to("contact"); });
@@ -561,12 +578,14 @@ QMenu* ToolBar::build_help_menu() {
     m->addAction(tr("Trademarks"), this, [this]() { emit navigate_to("trademarks"); });
     m->addSeparator();
     m->addAction(tr("Plans && Pricing…"), this, [this]() { emit plan_clicked(); });
-    m->addAction(tr("Fincept Terminal Enterprise…"), this,
-                 [this]() { UpgradeDialog::show_now(window(), QStringLiteral("help-menu")); });
-    m->addAction(tr("Compare Editions"), this, []() {
-        enterprise::open_url(enterprise::url_with_ref(enterprise::comparison_url(), QStringLiteral("help-menu")));
-    });
-    m->addAction(tr("Book an Enterprise Demo"), this, []() { enterprise::open_url(enterprise::demo_url()); });
+    if (brand::show_upstream_promos()) {
+        m->addAction(tr("Enterprise Edition…"), this,
+                     [this]() { UpgradeDialog::show_now(window(), QStringLiteral("help-menu")); });
+        m->addAction(tr("Compare Editions"), this, []() {
+            enterprise::open_url(enterprise::url_with_ref(enterprise::comparison_url(), QStringLiteral("help-menu")));
+        });
+        m->addAction(tr("Book an Enterprise Demo"), this, []() { enterprise::open_url(enterprise::demo_url()); });
+    }
     m->addSeparator();
     m->addAction(tr("Check for Updates"), this, [this]() { emit action_triggered("check_updates"); });
     m->addSeparator();

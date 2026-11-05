@@ -25,7 +25,7 @@ using namespace fincept::ui;
 using namespace fincept::relmap;
 
 static inline QString MF() {
-    return QStringLiteral("font-family:'Consolas','Courier New',monospace;");
+    return QStringLiteral("font-family:'Cascadia Mono','Consolas','Courier New',monospace;");
 }
 
 static constexpr int kSearchDebounceMs = 300;
@@ -205,7 +205,7 @@ void RelationshipMapScreen::build_ui() {
     search_btn_->setCursor(Qt::PointingHandCursor);
     search_btn_->setFixedHeight(28);
     search_btn_->setStyleSheet(
-        QString("QPushButton { background: rgba(217,119,6,0.15); color: %1; border: 1px solid %3; "
+        QString("QPushButton { background: rgba(45,212,191,0.15); color: %1; border: 1px solid %3; "
                 "padding: 0 14px; font-size: 11px; font-weight: 700; %2 }"
                 "QPushButton:hover { background: %1; color: %4; }")
             .arg(colors::AMBER(), MF(), colors::AMBER_DIM(), colors::BG_BASE()));
@@ -258,7 +258,7 @@ void RelationshipMapScreen::build_ui() {
         QString("QPushButton { background: transparent; color: %1; border: 1px solid %2; "
                 "padding: 0 10px; font-size: 10px; %3 }"
                 "QPushButton:hover { color: %5; } "
-                "QPushButton:checked { background: rgba(217,119,6,0.1); color: %4; border-color: %6; }")
+                "QPushButton:checked { background: rgba(45,212,191,0.1); color: %4; border-color: %6; }")
             .arg(colors::TEXT_SECONDARY(), colors::BORDER_DIM(), MF(), colors::AMBER(), colors::TEXT_PRIMARY(),
                  colors::AMBER_DIM()));
     connect(filter_btn_, &QPushButton::toggled, this, [this](bool checked) { filter_panel_->setVisible(checked); });
@@ -339,7 +339,7 @@ void RelationshipMapScreen::build_ui() {
 
     shl->addStretch();
 
-    status_brand_ = new QLabel(tr("FINCEPT TERMINAL"));
+    status_brand_ = new QLabel(tr("KEYSTONE TERMINAL"));
     status_brand_->setStyleSheet(QString("color: %1; font-size: 9px; font-weight: 700; %2").arg(colors::AMBER(), MF()));
     shl->addWidget(status_brand_);
 
@@ -862,7 +862,7 @@ void RelationshipMapScreen::on_node_selected(const QString& label, const QString
                     auto* btn = new QPushButton(text);
                     btn->setCursor(Qt::PointingHandCursor);
                     btn->setStyleSheet(
-                        QString("QPushButton { background: rgba(217,119,6,0.15); color: %1; border: 1px solid %3; "
+                        QString("QPushButton { background: rgba(45,212,191,0.15); color: %1; border: 1px solid %3; "
                                 "padding: 5px 8px; font-size: 10px; font-weight: 700; %2 }"
                                 "QPushButton:hover { background: %1; color: %4; }")
                             .arg(colors::AMBER(), MF(), colors::AMBER_DIM(), colors::BG_BASE()));
@@ -957,7 +957,7 @@ void RelationshipMapScreen::retranslateUi() {
         status_nodes_->setText(tr("READY"));
     }
     if (status_brand_)
-        status_brand_->setText(tr("FINCEPT TERMINAL"));
+        status_brand_->setText(tr("KEYSTONE TERMINAL"));
     // Legend entry captions come from category_label() — re-apply directly.
     for (const auto& entry : legend_entries_)
         if (entry.first)

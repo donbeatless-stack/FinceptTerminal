@@ -211,9 +211,9 @@ void DBnomicsScreen::build_ui() {
     toggle_hl->setContentsMargins(8, 0, 8, 0);
     toggle_hl->setSpacing(4);
 
-    auto btn_style_checked = QString("QPushButton { background:rgba(217,119,6,0.15); color:%1; border:1px solid %2;"
+    auto btn_style_checked = QString("QPushButton { background:rgba(45,212,191,0.15); color:%1; border:1px solid %2;"
                                      " font-family:%3; font-size:12px; font-weight:700; padding:0 12px; height:26px; }"
-                                     "QPushButton:hover { background:rgba(217,119,6,0.25); }")
+                                     "QPushButton:hover { background:rgba(45,212,191,0.25); }")
                                  .arg(ui::colors::AMBER())
                                  .arg(ui::colors::AMBER_DIM())
                                  .arg(ui::fonts::DATA_FAMILY);
@@ -423,11 +423,11 @@ QWidget* DBnomicsScreen::build_toolbar() {
     hl->addWidget(toolbar_title_);
     hl->addStretch();
 
-    const QString btn_style = QString("QPushButton { background:rgba(217,119,6,0.1); color:%1;"
+    const QString btn_style = QString("QPushButton { background:rgba(45,212,191,0.1); color:%1;"
                                       " border:1px solid %2; font-family:%3; font-size:12px; font-weight:600;"
                                       " padding:0 10px; height:28px; }"
-                                      "QPushButton:hover { background:rgba(217,119,6,0.2); }"
-                                      "QPushButton:pressed { background:rgba(217,119,6,0.3); }")
+                                      "QPushButton:hover { background:rgba(45,212,191,0.2); }"
+                                      "QPushButton:pressed { background:rgba(45,212,191,0.3); }")
                                   .arg(ui::colors::AMBER())
                                   .arg(ui::colors::AMBER_DIM())
                                   .arg(ui::fonts::DATA_FAMILY);

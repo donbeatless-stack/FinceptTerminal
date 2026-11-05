@@ -400,7 +400,7 @@ void UpdateService::process_verified_manifest(const QByteArray& body) {
         LOG_INFO("UpdateService",
                  QString("Already up to date — local=%1, remote=%2").arg(local_version, remote_version));
         if (!silent_) {
-            QMessageBox::information(dialog_parent(), QStringLiteral("Fincept Terminal"),
+            QMessageBox::information(dialog_parent(), QStringLiteral("Keystone Terminal"),
                                      tr("You're running the latest version (%1).").arg(local_version));
         }
         finish_check(false);
@@ -412,7 +412,7 @@ void UpdateService::process_verified_manifest(const QByteArray& body) {
 
     // Prompt the user. Include changelog if present. Always offer a "view release
     // notes" escape hatch via open-url so users can read more before installing.
-    QString prompt = tr("A new version of Fincept Terminal is available.\n\n"
+    QString prompt = tr("A new version of Keystone Terminal is available.\n\n"
                         "Current version: %1\nLatest version:  %2\n\n")
                          .arg(local_version, remote_version);
     if (!changelog.isEmpty()) {
@@ -652,7 +652,7 @@ void UpdateService::finish_check(bool update_found) {
 }
 
 void UpdateService::show_error(const QString& text) {
-    QMessageBox::warning(dialog_parent(), QStringLiteral("Fincept Terminal"), text);
+    QMessageBox::warning(dialog_parent(), QStringLiteral("Keystone Terminal"), text);
 }
 
 } // namespace fincept::services

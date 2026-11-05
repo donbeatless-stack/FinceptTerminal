@@ -17,12 +17,12 @@ namespace fincept::trading::auth {
 namespace {
 constexpr const char* kResponseHtml =
     "<!doctype html><html><head><meta charset='utf-8'>"
-    "<title>Fincept - Broker login</title>"
+    "<title>Keystone Terminal - Broker login</title>"
     "<style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;"
     "display:flex;align-items:center;justify-content:center;height:100vh;margin:0}"
-    "div{text-align:center}h1{color:#d97706;font-size:20px}p{color:#94a3b8}</style>"
+    "div{text-align:center}h1{color:#2dd4bf;font-size:20px}p{color:#94a3b8}</style>"
     "</head><body><div><h1>Login captured</h1>"
-    "<p>You can close this tab and return to Fincept Terminal.</p></div></body></html>";
+    "<p>You can close this tab and return to Keystone Terminal.</p></div></body></html>";
 
 // 128 bits of CSPRNG output, hex-encoded. QRandomGenerator::system() is the
 // OS entropy source — the non-system generator is seeded deterministically and

@@ -70,7 +70,7 @@ void CryptoCenterScreen::build_ui() {
     hl->setContentsMargins(14, 0, 14, 0);
     hl->setSpacing(8);
 
-    header_brand_ = new QLabel(QStringLiteral("FINCEPT"));
+    header_brand_ = new QLabel(QStringLiteral("KEYSTONE"));
     header_brand_->setObjectName(QStringLiteral("cryptoCenterBrand"));
     header_separator_ = new QLabel(QStringLiteral("/"));
     header_separator_->setObjectName(QStringLiteral("cryptoCenterSep"));
@@ -298,7 +298,7 @@ void CryptoCenterScreen::apply_theme() {
                            "  background:transparent; }"
 
                            // Primary connect button
-                           "QPushButton#cryptoCenterPrimaryButton { background:rgba(217,119,6,0.10); color:%4;"
+                           "QPushButton#cryptoCenterPrimaryButton { background:rgba(45,212,191,0.10); color:%4;"
                            "  border:1px solid %12; font-family:%5; font-size:12px; font-weight:700;"
                            "  letter-spacing:1.5px; padding:0 16px; }"
                            "QPushButton#cryptoCenterPrimaryButton:hover { background:%4; color:%1; }"
@@ -324,7 +324,7 @@ void CryptoCenterScreen::apply_theme() {
                                 POSITIVE())                 // %9
                            .arg(BG_RAISED(),                // %10
                                 TEXT_SECONDARY(),           // %11
-                                QStringLiteral("#78350f"),  // %12 darker amber
+                                QStringLiteral("#115e59"),  // %12 darker accent
                                 NEGATIVE());                // %13
 
     setStyleSheet(ss);

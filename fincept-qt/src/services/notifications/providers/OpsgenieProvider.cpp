@@ -43,7 +43,7 @@ void OpsgenieProvider::send(const NotificationRequest& req, std::function<void(b
     body["message"] = req.title;
     body["description"] = req.message;
     body["priority"] = priority;
-    body["source"] = "Fincept Terminal";
+    body["source"] = "Keystone Terminal";
 
     HttpClient::instance().post(
         url, body,

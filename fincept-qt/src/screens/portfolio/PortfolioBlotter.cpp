@@ -120,7 +120,7 @@ void PortfolioBlotter::build_ui() {
     table_->setStyleSheet(QString("QTableWidget { background:%1; color:%2; border:none;"
                                   "  font-size:11px; font-family:%3; gridline-color:transparent; }"
                                   "QTableWidget::item { padding:5px 8px; border-bottom:1px solid %4; }"
-                                  "QTableWidget::item:selected { background:rgba(217,119,6,0.10); color:%5; }"
+                                  "QTableWidget::item:selected { background:rgba(45,212,191,0.10); color:%5; }"
                                   "QTableWidget::item:hover { background:%6; }"
                                   "QScrollBar:vertical { width:5px; background:%1; }"
                                   "QScrollBar::handle:vertical { background:%4; min-height:20px; }")
@@ -981,7 +981,7 @@ void PortfolioBlotter::refresh_theme() {
                                   bsz +
                                   "px; font-family:%3; gridline-color:transparent; }"
                                   "QTableWidget::item { padding:5px 8px; border-bottom:1px solid %4; }"
-                                  "QTableWidget::item:selected { background:rgba(217,119,6,0.10); color:%5; }"
+                                  "QTableWidget::item:selected { background:rgba(45,212,191,0.10); color:%5; }"
                                   "QTableWidget::item:hover { background:%6; }"
                                   "QScrollBar:vertical { width:5px; background:%1; }"
                                   "QScrollBar::handle:vertical { background:%4; min-height:20px; }")

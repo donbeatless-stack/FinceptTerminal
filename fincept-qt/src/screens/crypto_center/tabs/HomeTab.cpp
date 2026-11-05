@@ -403,7 +403,7 @@ void HomeTab::apply_theme() {
                        "  font-family:%5; font-size:10px; font-weight:700; letter-spacing:1.2px;"
                        "  padding:0 10px; }"
                        "QPushButton#homeTabToggle:hover { color:%8; border-color:%13; }"
-                       "QPushButton#homeTabToggle:checked { background:rgba(217,119,6,0.12); color:%4;"
+                       "QPushButton#homeTabToggle:checked { background:rgba(45,212,191,0.12); color:%4;"
                        "  border-color:%4; }"
                        "QLabel#homeTabRoadmapBody { color:%7; font-family:%5; font-size:11px;"
                        "  background:transparent; }")

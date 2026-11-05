@@ -92,7 +92,7 @@ static const struct {
     {"wto", "WTO", "#E91E63"},
     {"unesco", "UNESCO", "#00ACC1"},
     {"bea", "BEA", "#E65100"},
-    {"fincept", "Fincept Macro", "#d97706"},
+    {"fincept", "Cloud Macro", "#d97706"},
 };
 
 // ── Panel factory ─────────────────────────────────────────────────────────────

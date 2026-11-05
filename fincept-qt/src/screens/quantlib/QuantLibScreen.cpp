@@ -57,7 +57,7 @@ inline QString kStyle() {
                           "QTreeWidget { background: %1; color: %5; border: none; }"
                           "QTreeWidget::item { padding: 4px 8px; border-bottom: 1px solid %8; }"
                           "QTreeWidget::item:hover { color: %4; background: %12; }"
-                          "QTreeWidget::item:selected { color: %3; background: rgba(217,119,6,0.1); }"
+                          "QTreeWidget::item:selected { color: %3; background: rgba(45,212,191,0.1); }"
 
                           "#qlCenterPanel { background: %1; }"
                           "#qlCenterTitle { color: %4; font-weight: 700; background: transparent; }"

@@ -260,7 +260,7 @@ QWidget* DocsScreen::page_node_editor() {
 
 QWidget* DocsScreen::page_code_editor() {
     return make_page(
-        tr("CODE EDITOR"), tr("Fincept Notebook — Jupyter-style Python notebooks inside the terminal"),
+        tr("CODE EDITOR"), tr("Keystone Notebook — Jupyter-style Python notebooks inside the terminal"),
         {
             {tr("OVERVIEW"), tr("The Code Editor is a notebook: code and markdown cells saved as standard .ipynb "
                                 "files. A LIBRARY of prebuilt finance, economics, trading, portfolio and quant "

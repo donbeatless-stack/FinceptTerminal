@@ -11,7 +11,7 @@ namespace fincept::screens::datasources {
 // inline definition (see DataSourcesScreen::apply_screen_styles).
 inline const QString& screen_stylesheet() {
     static const QString kScreenStylesheet = R"(
-    * { font-family: 'Consolas','Courier New',monospace; }
+    * { font-family: 'Cascadia Mono','Consolas','Courier New',monospace; }
 
     /* ── Root ── */
     #dsScreen { background: %1; }
@@ -86,7 +86,7 @@ inline const QString& screen_stylesheet() {
         font-size: 12px; border-bottom: 1px solid %4;
     }
     #dsCategoryList::item:selected {
-        background: rgba(217,119,6,0.1); color: %5;
+        background: rgba(45,212,191,0.1); color: %5;
         border-left: 2px solid %5;
     }
     #dsCategoryList::item:hover:!selected { background: %9; color: %10; }
@@ -114,7 +114,7 @@ inline const QString& screen_stylesheet() {
     #dsConnectorTable {
         background: %1; border: none; color: %10;
         font-size: 12px; gridline-color: transparent;
-        selection-background-color: rgba(217,119,6,0.1);
+        selection-background-color: rgba(45,212,191,0.1);
         selection-color: %10;
     }
     #dsConnectorTable::item {
@@ -197,7 +197,7 @@ inline const QString& screen_stylesheet() {
     #dsConnectionsTable {
         background: %1; border: none; color: %10;
         font-size: 12px; gridline-color: transparent;
-        selection-background-color: rgba(217,119,6,0.1);
+        selection-background-color: rgba(45,212,191,0.1);
         selection-color: %10;
     }
     #dsConnectionsTable::item {
@@ -220,7 +220,7 @@ inline const QString& screen_stylesheet() {
     #dsBtn:hover:enabled { background: %9; color: %10; border-color: %7; }
     #dsBtn:disabled { color: %8; opacity: 0.4; }
     #dsBtnAccent {
-        background: rgba(217,119,6,0.08); color: %5;
+        background: rgba(45,212,191,0.08); color: %5;
         border: 1px solid %12; padding: 0 10px;
         font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
     }

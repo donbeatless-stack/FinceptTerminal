@@ -445,7 +445,7 @@ QWidget* DashboardScreen::build_enterprise_strip() {
     hl->setContentsMargins(12, 0, 6, 0);
     hl->setSpacing(10);
 
-    auto* head = new QLabel(tr("FINCEPT TERMINAL ENTERPRISE"), strip);
+    auto* head = new QLabel(tr("ENTERPRISE EDITION"), strip);
     head->setObjectName("dashEntStripHead");
     hl->addWidget(head);
 

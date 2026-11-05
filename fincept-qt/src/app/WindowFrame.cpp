@@ -83,6 +83,7 @@
 #include "services/updater/UpdateService.h"
 #include "storage/repositories/SettingsRepository.h"
 #include "trading/instruments/InstrumentService.h"
+#include "ui/theme/Brand.h"
 #include "ui/command/CommandPalette.h"
 #include "ui/command/QuickCommandBar.h"
 #include "ui/components/ComponentBrowserDialog.h"
@@ -247,11 +248,11 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
         Qt::QueuedConnection);
 
     // Show active profile in title bar when using a non-default profile.
-    // "Fincept Terminal" is the product brand and is intentionally not
-    // translated — the bracketed profile name is the only variable part.
+    // The product name is the brand and is intentionally not translated —
+    // the bracketed profile name is the only variable part.
     const QString profile = ProfileManager::instance().active();
-    setWindowTitle(profile == "default" ? QStringLiteral("Fincept Terminal")
-                                        : QStringLiteral("Fincept Terminal [%1]").arg(profile));
+    setWindowTitle(profile == "default" ? brand::product_name()
+                                        : QStringLiteral("%1 [%2]").arg(brand::product_name(), profile));
     // Load icon from the embedded Windows resource (IDI_ICON1 in app.rc).
     // Falls back to the .ico beside the executable on other platforms.
     QIcon app_icon;
@@ -919,7 +920,7 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
                 LOG_WARN("WindowFrame", QString("layout.save failed: %1").arg(QString::fromStdString(r.error())));
         } else if (action == "import_data") {
             QString path = QFileDialog::getOpenFileName(this, tr("Import Layout"), QDir::homePath(),
-                                                        tr("Fincept Layout (*.flayout *.fwsp);;All Files (*)"));
+                                                        tr("Workspace Layout (*.flayout *.fwsp);;All Files (*)"));
             if (!path.isEmpty()) {
                 auto r = LayoutCatalog::instance().import_from(path);
                 if (r.is_err())
@@ -931,7 +932,7 @@ WindowFrame::WindowFrame(int window_id, QWidget* parent, const WindowId& adopted
                 QMessageBox::information(this, tr("Export Layout"), tr("Open or save a layout first, then export it."));
             } else {
                 QString path = QFileDialog::getSaveFileName(this, tr("Export Layout"), QDir::homePath(),
-                                                            tr("Fincept Layout (*.flayout)"));
+                                                            tr("Workspace Layout (*.flayout)"));
                 if (!path.isEmpty()) {
                     auto r = LayoutCatalog::instance().export_to(cur_id, path);
                     if (r.is_err())
@@ -1229,15 +1230,15 @@ void WindowFrame::set_shell_visible(bool visible) {
     if (!visible) {
         // Reset title to plain app name — no screen suffix while on auth screens
         const QString profile = ProfileManager::instance().active();
-        setWindowTitle(profile == "default" ? QStringLiteral("Fincept Terminal")
-                                            : QStringLiteral("Fincept Terminal [%1]").arg(profile));
+        setWindowTitle(profile == "default" ? brand::product_name()
+                                            : QStringLiteral("%1 [%2]").arg(brand::product_name(), profile));
     }
 }
 
 void WindowFrame::update_window_title() {
     // Brand stays in English; only the workspace/screen suffix (translated
     // via DockScreenRouter::title_for_id) responds to language changes.
-    QString title = QStringLiteral("Fincept Terminal");
+    QString title = brand::product_name();
 
     const QString profile = ProfileManager::instance().active();
     if (profile != "default")

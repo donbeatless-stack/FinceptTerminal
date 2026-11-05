@@ -157,7 +157,7 @@ void TreasuryPanel::apply_theme() {
                                       "QLabel#treasuryPill { color:%7; background:%8; border:1px solid %3;"
                                       "  font-family:%5; font-size:9px; font-weight:700; letter-spacing:1.2px;"
                                       "  padding:2px 8px; }"
-                                      "QLabel#treasuryPillDemo { color:%4; background:rgba(217,119,6,0.10);"
+                                      "QLabel#treasuryPillDemo { color:%4; background:rgba(45,212,191,0.10);"
                                       "  border:1px solid %11; font-family:%5; font-size:9px; font-weight:700;"
                                       "  letter-spacing:1.2px; padding:2px 8px; }"
                                       "QWidget#treasuryBody { background:%1; }"
@@ -193,7 +193,7 @@ void TreasuryPanel::apply_theme() {
                            // spare arg shifts every later colour by one and
                            // warns "Argument missing" for the overflow.
                            .arg(BORDER_BRIGHT(),            // %10
-                                QStringLiteral("#78350f")); // %11 darker amber
+                                QStringLiteral("#115e59")); // %11 darker accent
 
     setStyleSheet(ss);
 }

@@ -158,8 +158,8 @@ QString table_btn_styles() {
                    "QPushButton#eqTableBtn[act=\"cover\"]:hover{background:rgba(22,163,74,0.30);}"
                    "QPushButton#eqTableBtn[act=\"cnc\"]{background:rgba(37,99,235,0.15);color:%4;}"
                    "QPushButton#eqTableBtn[act=\"cnc\"]:hover{background:rgba(37,99,235,0.30);}"
-                   "QPushButton#eqTableBtn[act=\"edit\"]{background:rgba(217,119,6,0.15);color:%5;border-color:%6;}"
-                   "QPushButton#eqTableBtn[act=\"edit\"]:hover{background:rgba(217,119,6,0.30);}"
+                   "QPushButton#eqTableBtn[act=\"edit\"]{background:rgba(45,212,191,0.15);color:%5;border-color:%6;}"
+                   "QPushButton#eqTableBtn[act=\"edit\"]:hover{background:rgba(45,212,191,0.30);}"
                    "QPushButton#eqTableBtn[act=\"cancel\"]{background:rgba(220,38,38,0.12);color:%2;border-color:%7;}"
                    "QPushButton#eqTableBtn[act=\"cancel\"]:hover{background:rgba(220,38,38,0.28);}")
         .arg(c::BORDER_MED(), c::NEGATIVE(), c::POSITIVE(), c::INFO(), c::AMBER(), c::AMBER_DIM(), c::NEGATIVE_DIM());
@@ -785,9 +785,9 @@ void EquityBottomPanel::setup_orders_tab() {
     cancel_all_btn_ = new QPushButton(tr("CANCEL ALL ORDERS"));
     cancel_all_btn_->setCursor(Qt::PointingHandCursor);
     cancel_all_btn_->setStyleSheet(
-        QString("QPushButton{background:rgba(217,119,6,0.12);color:%1;border:1px solid %2;"
+        QString("QPushButton{background:rgba(45,212,191,0.12);color:%1;border:1px solid %2;"
                 "padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:0.5px;border-radius:2px;}"
-                "QPushButton:hover{background:rgba(217,119,6,0.25);}")
+                "QPushButton:hover{background:rgba(45,212,191,0.25);}")
             .arg(fincept::ui::colors::AMBER(), fincept::ui::colors::AMBER_DIM()));
     connect(cancel_all_btn_, &QPushButton::clicked, this, [this]() {
         if (account_id_.isEmpty())
@@ -1607,7 +1607,7 @@ void EquityBottomPanel::set_orders(const QVector<trading::BrokerOrderInfo>& orde
 
                 auto* btn_row = new QHBoxLayout;
                 auto* ok_btn = new QPushButton(tr("MODIFY"));
-                ok_btn->setStyleSheet(QString("background: rgba(217,119,6,0.15); color: %1; border: 1px solid %2;")
+                ok_btn->setStyleSheet(QString("background: rgba(45,212,191,0.15); color: %1; border: 1px solid %2;")
                                           .arg(fincept::ui::colors::AMBER())
                                           .arg(fincept::ui::colors::AMBER_DIM()));
                 auto* cancel_btn = new QPushButton(tr("CANCEL"));
@@ -1854,7 +1854,7 @@ void EquityBottomPanel::set_calendar(const QVector<trading::MarketCalendarDay>& 
     for (int i = 0; i < days.size(); ++i) {
         const auto& d = days[i];
         const bool is_today = (d.date == today);
-        const QColor row_color = is_today ? QColor(217, 119, 6, 40) : QColor(0, 0, 0, 0);
+        const QColor row_color = is_today ? QColor(45, 212, 191, 40) : QColor(0, 0, 0, 0);
 
         auto set = [&](int col, const QString& text) {
             auto* item = ensure_item(calendar_table_, i, col);

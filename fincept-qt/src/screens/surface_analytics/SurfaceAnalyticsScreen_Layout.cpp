@@ -40,7 +40,7 @@ namespace fincept::surface {
 
 using namespace fincept::ui;
 
-static const char* MONO = "'Consolas','Courier New',monospace";
+static const char* MONO = "'Cascadia Mono','Consolas','Courier New',monospace";
 
 // ── Category accent colors (muted, functional only) ─────────────────────────
 // R,G,B kept but used as muted accent — no bright blobs
@@ -137,7 +137,7 @@ void SurfaceAnalyticsScreen::setup_ui() {
     demo_banner_->setWordWrap(true);
     demo_banner_->setAlignment(Qt::AlignCenter);
     demo_banner_->setAccessibleName(tr("Synthetic data warning"));
-    demo_banner_->setStyleSheet(QString("background:rgba(217,119,6,0.18); color:%1; border-bottom:1px solid %2;"
+    demo_banner_->setStyleSheet(QString("background:rgba(45,212,191,0.18); color:%1; border-bottom:1px solid %2;"
                                         " font-size:10px; font-weight:bold; letter-spacing:0.4px; padding:5px 8px;")
                                     .arg(colors::AMBER())
                                     .arg(colors::AMBER_DIM()));
@@ -194,11 +194,11 @@ QWidget* SurfaceAnalyticsScreen::build_category_bar() {
         btn->setFixedHeight(32);
 
         if (active) {
-            btn->setStyleSheet(QString("QPushButton { background:#b45309; color:%1;"
+            btn->setStyleSheet(QString("QPushButton { background:#115e59; color:%1;"
                                        " border:none; border-bottom:2px solid %2;"
                                        " padding:0 14px; font-size:11px; font-weight:bold;"
                                        " font-family:%3; }"
-                                       "QPushButton:hover { background:#b45309; }")
+                                       "QPushButton:hover { background:#115e59; }")
                                    .arg(colors::TEXT_PRIMARY())
                                    .arg(cat_hex(i))
                                    .arg(MONO));
@@ -302,7 +302,7 @@ QWidget* SurfaceAnalyticsScreen::build_surface_bar() {
         btn->setFixedHeight(18);
 
         if (active) {
-            btn->setStyleSheet(QString("QPushButton { background:rgba(217,119,6,0.12); border:1px solid %1; color:%2;"
+            btn->setStyleSheet(QString("QPushButton { background:rgba(45,212,191,0.12); border:1px solid %1; color:%2;"
                                        " font-size:11px; font-weight:bold; font-family:%3; padding:0 8px; }"
                                        "QPushButton:hover { background:%2; color:%4; }")
                                    .arg(colors::AMBER_DIM())
@@ -329,7 +329,7 @@ QWidget* SurfaceAnalyticsScreen::build_surface_bar() {
 
 void SurfaceAnalyticsScreen::apply_view_mode_buttons() {
     auto active = [&]() {
-        return QString("QPushButton { background:rgba(217,119,6,0.18); color:%1; "
+        return QString("QPushButton { background:rgba(45,212,191,0.18); color:%1; "
                        "border:1px solid %2; padding:0 10px; font-size:11px; "
                        "font-weight:bold; font-family:%3; }")
             .arg(colors::AMBER())

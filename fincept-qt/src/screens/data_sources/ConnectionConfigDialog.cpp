@@ -101,11 +101,11 @@ QString show_connection_config_dialog(QWidget* parent, const ConnectorConfig& co
                 "QLabel { color:%3; font-size:12px; background:transparent; font-family:'Consolas','Courier "
                 "New',monospace; }"
                 "QLineEdit, QTextEdit, QComboBox { background:%4; border:1px solid %5; color:%2;"
-                "  padding:6px 10px; font-size:13px; font-family:'Consolas','Courier New',monospace; }"
+                "  padding:6px 10px; font-size:13px; font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                 "QLineEdit:focus, QTextEdit:focus, QComboBox:focus { border-color:%6; }"
-                "QCheckBox { color:%2; font-size:13px; font-family:'Consolas','Courier New',monospace; }"
+                "QCheckBox { color:%2; font-size:13px; font-family:'Cascadia Mono','Consolas','Courier New',monospace; }"
                 "QPushButton { padding:7px 18px; font-size:12px; font-weight:700;"
-                "  font-family:'Consolas','Courier New',monospace; }")
+                "  font-family:'Cascadia Mono','Consolas','Courier New',monospace; }")
             .arg(col::BG_SURFACE(), col::TEXT_PRIMARY(), col::TEXT_SECONDARY(), col::BG_BASE(), col::BORDER_DIM(),
                  col::AMBER()));
 
@@ -360,7 +360,7 @@ QString show_connection_config_dialog(QWidget* parent, const ConnectorConfig& co
     save->setDefault(true);
     save->setAutoDefault(true);
     save->setAccessibleName(editing ? QObject::tr("Update connection") : QObject::tr("Save connection"));
-    save->setStyleSheet(QString("QPushButton{background:rgba(217,119,6,0.12);color:%1;border:1px solid %2;}"
+    save->setStyleSheet(QString("QPushButton{background:rgba(45,212,191,0.12);color:%1;border:1px solid %2;}"
                                 "QPushButton:hover{background:%1;color:%3;}")
                             .arg(col::AMBER(), col::AMBER_DIM(), col::BG_BASE()));
     footer_hl->addWidget(save);

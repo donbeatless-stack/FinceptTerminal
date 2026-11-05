@@ -22,26 +22,26 @@
 
 namespace fincept::chat_mode {
 
-static constexpr const char* FONT = "'Consolas','Courier New',monospace";
+static constexpr const char* FONT = "'Cascadia Mono','Consolas','Courier New',monospace";
 
 static QString user_bubble_ss() {
-    return QString("background:rgba(120,53,15,0.35);color:%1;border:1px solid rgba(217,119,6,0.2);"
+    return QString("background:rgba(17,94,89,0.35);color:%1;border:1px solid rgba(45,212,191,0.2);"
                    "border-radius:0px;padding:8px 12px;font-size:14px;"
-                   "font-family:'Consolas','Courier New',monospace;")
+                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::TEXT_PRIMARY());
 }
 
 static QString ai_bubble_ss() {
     return QString("background:%1;color:%2;border:1px solid %3;"
                    "border-radius:0px;padding:8px 12px;font-size:14px;"
-                   "font-family:'Consolas','Courier New',monospace;")
+                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::BG_SURFACE(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM());
 }
 
 static QString error_bubble_ss() {
     return QString("background:rgba(50,12,12,0.7);color:%1;border:1px solid rgba(220,38,38,0.2);"
                    "border-radius:0px;padding:8px 12px;font-size:13px;"
-                   "font-family:'Consolas','Courier New',monospace;")
+                   "font-family:'Cascadia Mono','Consolas','Courier New',monospace;")
         .arg(ui::colors::NEGATIVE());
 }
 
@@ -196,7 +196,7 @@ QWidget* ChatMessagePanel::build_welcome() {
     vl->setSpacing(14);
     vl->setAlignment(Qt::AlignCenter);
 
-    welcome_logo_lbl_ = new QLabel(tr("FINCEPT AGENT"));
+    welcome_logo_lbl_ = new QLabel(tr("KEYSTONE AGENT"));
     welcome_logo_lbl_->setAlignment(Qt::AlignCenter);
     welcome_logo_lbl_->setStyleSheet(QString("color:%1;font-size:20px;font-weight:700;letter-spacing:1px;"
                                              "font-family:%2;background:transparent;")
@@ -291,7 +291,7 @@ QWidget* ChatMessagePanel::build_input_area() {
                                   .arg(ui::colors::BG_RAISED(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM(),
                                        FONT, ui::colors::BORDER_BRIGHT(), ui::colors::BORDER_MED()));
     input_box_->installEventFilter(this);
-    input_box_->setAccessibleName(tr("Message the Fincept agent"));
+    input_box_->setAccessibleName(tr("Message the Keystone agent"));
     input_box_->setAccessibleDescription(
         tr("Type a question. Enter or Ctrl+Enter sends, Shift+Enter inserts a new line."));
     vl->addWidget(input_box_);
@@ -365,7 +365,7 @@ QWidget* ChatMessagePanel::build_input_area() {
         QString("QPushButton{background:%1;color:%2;border:none;"
                 "border-radius:0px;font-size:12px;font-weight:600;padding:0 16px;"
                 "font-family:%3;}"
-                "QPushButton:hover{background:#b45309;}"
+                "QPushButton:hover{background:#14b8a6;}"
                 "QPushButton:disabled{background:%4;color:%5;}")
             .arg(ui::colors::AMBER(), ui::colors::BG_BASE(), FONT, ui::colors::BG_RAISED(), ui::colors::TEXT_DIM()));
     connect(send_btn_, &QPushButton::clicked, this, &ChatMessagePanel::on_send_clicked);
@@ -757,7 +757,7 @@ void ChatMessagePanel::on_insufficient_credits() {
 
     auto* ent = ui::enterprise::make_mention_label(card);
     ui::enterprise::set_mention_text(
-        ent, tr("Teams and firms: Fincept Terminal Enterprise includes AI credits."), tr("See Enterprise ↗"),
+        ent, tr("Teams and firms: Enterprise edition includes AI credits."), tr("See Enterprise ↗"),
         ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("chat")));
     vl->addWidget(ent);
 
@@ -847,7 +847,7 @@ void ChatMessagePanel::retranslateUi() {
 
     // Welcome panel
     if (welcome_logo_lbl_)
-        welcome_logo_lbl_->setText(tr("FINCEPT AGENT"));
+        welcome_logo_lbl_->setText(tr("KEYSTONE AGENT"));
     if (welcome_sub_lbl_)
         welcome_sub_lbl_->setText(tr("AI-powered financial intelligence.\n"
                                      "Markets, equities, portfolio, macro insights."));

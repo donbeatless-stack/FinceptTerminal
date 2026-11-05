@@ -712,7 +712,7 @@ static bool write_snapshots_to_xlsx(QXlsx::Document& xlsx, const QVector<ExcelSh
     Format header_fmt;
     header_fmt.setFontBold(true);
     header_fmt.setFontColor(QColor(Qt::black));
-    header_fmt.setPatternBackgroundColor(QColor(QStringLiteral("#d97706")));
+    header_fmt.setPatternBackgroundColor(QColor(QStringLiteral("#2dd4bf")));
     header_fmt.setHorizontalAlignment(Format::AlignHCenter);
     header_fmt.setBorderStyle(Format::BorderThin);
 

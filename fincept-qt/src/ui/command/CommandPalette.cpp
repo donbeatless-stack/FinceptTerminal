@@ -38,7 +38,7 @@ CommandPalette::CommandPalette(QWidget* parent) : QDialog(parent) {
                   "QListWidget { background: #111827; color: #e5e7eb; border: none; }"
                   "QListWidget::item { padding: 6px 10px; }"
                   "QListWidget::item:hover { background: #1f2937; }"
-                  "QListWidget::item:selected { background: #1f2937; color: #d97706; }");
+                  "QListWidget::item:selected { background: #1f2937; color: #2dd4bf; }");
 
     auto* vl = new QVBoxLayout(this);
     vl->setContentsMargins(8, 8, 8, 8);

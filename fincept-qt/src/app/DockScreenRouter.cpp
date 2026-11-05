@@ -336,7 +336,7 @@ bool DockScreenRouter::eventFilter(QObject* obj, QEvent* event) {
     editor->setStyleSheet("QLineEdit{"
                           "  background:#1a1a1a;"
                           "  color:#ffffff;"
-                          "  border:1px solid #d97706;"
+                          "  border:1px solid #2dd4bf;"
                           "  padding:0 4px;"
                           "  font-size:11px;"
                           "  font-family:'Consolas',monospace;"

@@ -477,7 +477,7 @@ void PortfolioScreen::load_demo_portfolio() {
     });
 
     // Create the demo portfolio (emits portfolio_created synchronously)
-    svc.create_portfolio(tr("Demo Portfolio"), tr("Fincept User"), "USD", tr("Sample portfolio for demonstration"));
+    svc.create_portfolio(tr("Demo Portfolio"), tr("Keystone User"), "USD", tr("Sample portfolio for demonstration"));
 
     // If creation failed nothing was emitted and the one-shot is still armed -
     // it would then fire for the NEXT portfolio the user creates and stuff twelve

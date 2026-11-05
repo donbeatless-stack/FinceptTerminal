@@ -85,7 +85,7 @@ static QString display_session_meta(const ChatSession& s) {
 
 static QString ai_chat_provider_display(const QString& provider, const QString& model) {
     if (provider.compare(QLatin1String("fincept"), Qt::CaseInsensitive) == 0)
-        return QObject::tr("Fincept LLM");
+        return QObject::tr("Cloud LLM");
     if (provider.isEmpty())
         return model;
     return model.isEmpty() ? provider : provider + QStringLiteral(" / ") + model;
@@ -442,7 +442,7 @@ QString AiChatScreen::conversation_markdown() const {
     const QString title = active_session_title_.isEmpty() ? tr("AI Chat") : active_session_title_;
     QString md = QStringLiteral("# ") + title + QStringLiteral("\n\n");
     md += QStringLiteral("_") +
-          tr("Exported from Fincept Terminal · %1").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm")) +
+          tr("Exported from Keystone Terminal · %1").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm")) +
           QStringLiteral("_\n\n");
     for (int i = 0; i < msgs.size(); ++i) {
         const auto& m = msgs[i];

@@ -533,7 +533,7 @@ void MaritimeScreen::on_health_loaded(QJsonObject payload) {
     const qint64 total = d.value("database").toObject().value("total_records").toVariant().toLongLong();
 
     if (source_value_) {
-        const QString label = module.isEmpty() ? tr("FINCEPT MARINE API") : module.toUpper();
+        const QString label = module.isEmpty() ? tr("CLOUD MARINE API") : module.toUpper();
         source_value_->setText(label);
         mt_set_tone(source_value_, status == QStringLiteral("healthy") ? "positive" : "amber");
     }

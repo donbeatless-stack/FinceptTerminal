@@ -35,7 +35,7 @@ struct ReportComponent {
 struct ReportMetadata {
     QString title = "Untitled Report";
     QString author = "Analyst";
-    QString company = "Fincept Corporation";
+    QString company = "Keystone Terminal";
     QString date;
     QString header_left;
     QString header_center;
@@ -65,7 +65,7 @@ namespace themes {
 inline ReportTheme light_professional() {
     return {"Light Professional",
             "#1a1a1a",
-            "#d97706",
+            "#0f766e",
             "#ffffff",
             "#333333",
             "#f0f0f0",
@@ -80,8 +80,8 @@ inline ReportTheme dark_corporate() {
             "#e5e5e5",        "#111111", "#1a1a1a", "#808080", "#444444"};
 }
 inline ReportTheme fincept_terminal() {
-    return {"Fincept Terminal", "#ff8c00", "#ff8c00", "#0a0a0a", "#d4d4d4", "#1a0a00",
-            "#ff8c00",          "#050505", "#0f0f0f", "#888888", "#333300"};
+    return {"Keystone Terminal", "#2dd4bf", "#2dd4bf", "#0b1118", "#dbe3ec", "#0b2624",
+            "#2dd4bf",           "#080d13", "#0e151d", "#8193a6", "#223040"};
 }
 inline ReportTheme midnight_blue() {
     return {"Midnight Blue", "#e2e8f0", "#3b82f6", "#0f172a", "#cbd5e1", "#1e3a5f",
@@ -94,7 +94,8 @@ inline ReportTheme midnight_blue() {
 inline ReportTheme by_name(const QString& name) {
     if (name == "Dark Corporate")
         return dark_corporate();
-    if (name == "Fincept Terminal")
+    // "Fincept Terminal" is the theme's name in reports saved before the rebrand.
+    if (name == "Keystone Terminal" || name == "Fincept Terminal")
         return fincept_terminal();
     if (name == "Midnight Blue")
         return midnight_blue();
@@ -102,7 +103,7 @@ inline ReportTheme by_name(const QString& name) {
 }
 
 inline QStringList all_names() {
-    return {"Light Professional", "Dark Corporate", "Fincept Terminal", "Midnight Blue"};
+    return {"Light Professional", "Dark Corporate", "Keystone Terminal", "Midnight Blue"};
 }
 
 } // namespace themes
@@ -177,7 +178,7 @@ struct ReportDocument {
             QJsonObject m = root["metadata"].toObject();
             out.metadata.title = m.value("title").toString("Untitled Report");
             out.metadata.author = m.value("author").toString("Analyst");
-            out.metadata.company = m.value("company").toString("Fincept Corporation");
+            out.metadata.company = m.value("company").toString("Keystone Terminal");
             out.metadata.date = m.value("date").toString();
             out.metadata.header_left = m.value("header_left").toString();
             out.metadata.header_center = m.value("header_center").toString();

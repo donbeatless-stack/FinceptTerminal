@@ -60,7 +60,7 @@ QWidget* CodeEditorScreen::build_library_page() {
     toolbar->setFixedHeight(34);
     auto* tl = new QHBoxLayout(toolbar);
     tl->setContentsMargins(14, 0, 14, 0);
-    lib_toolbar_lbl_ = new QLabel(tr("FINCEPT NOTEBOOK LIBRARY — curated finance, economics, trading, "
+    lib_toolbar_lbl_ = new QLabel(tr("KEYSTONE NOTEBOOK LIBRARY — curated finance, economics, trading, "
                                      "investing, portfolio & quant notebooks"),
                                   toolbar);
     lib_toolbar_lbl_->setObjectName("nbLibLabel");

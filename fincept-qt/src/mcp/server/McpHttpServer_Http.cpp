@@ -457,7 +457,7 @@ bool McpHttpServer::Impl::reject_early(QTcpSocket* sock) {
                      QJsonObject{{QStringLiteral("error"), QStringLiteral("unauthorized")},
                                  {QStringLiteral("message"),
                                   QStringLiteral("A valid 'Authorization: Bearer <token>' header is required. Copy the "
-                                                 "current token from Fincept Terminal → Agent Workbench → Connect.")}},
+                                                 "current token from Keystone Terminal → Agent Workbench → Connect.")}},
                      {{QByteArrayLiteral("WWW-Authenticate"), challenge}}, /*force_close=*/true);
         return true;
     }

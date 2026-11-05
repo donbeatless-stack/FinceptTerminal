@@ -235,7 +235,7 @@ void PortfolioInsightsPanel::build_ui() {
                                  "  border-bottom:2px solid transparent; padding:8px 0;"
                                  "  font-size:10px; font-weight:700; letter-spacing:1.5px; }"
                                  "QPushButton:checked { color:%2; border-bottom:2px solid %2;"
-                                 "  background:rgba(217,119,6,0.06); }"
+                                 "  background:rgba(45,212,191,0.06); }"
                                  "QPushButton:hover:!checked { color:%3; }")
                              .arg(text2, amber, text1));
         return b;
@@ -292,7 +292,7 @@ QWidget* PortfolioInsightsPanel::build_ai_page() {
         p->setFixedHeight(28);
         p->setStyleSheet(QString("QPushButton { background:%1; color:%2; border:1px solid %3;"
                                  "  padding:0 14px; font-size:10px; font-weight:700; letter-spacing:1px; }"
-                                 "QPushButton:checked { background:rgba(217,119,6,0.15); color:%4;"
+                                 "QPushButton:checked { background:rgba(45,212,191,0.15); color:%4;"
                                  "  border:1px solid %4; }"
                                  "QPushButton:hover:!checked { color:%5; border:1px solid %5; }")
                              .arg(bg, text2, border_dim, amber, text1));
@@ -372,7 +372,7 @@ QWidget* PortfolioInsightsPanel::build_agent_page() {
                                      "  padding:0 10px; font-size:11px; }"
                                      "QComboBox::drop-down { border:none; width:20px; }"
                                      "QComboBox QAbstractItemView { background:%1; color:%2; border:1px solid %3;"
-                                     "  selection-background-color:rgba(217,119,6,0.15); }")
+                                     "  selection-background-color:rgba(45,212,191,0.15); }")
                                  .arg(bg, text1, border_dim));
     connect(agent_cb_, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
         if (!agent_cb_ || !agent_desc_ || !agent_content_)

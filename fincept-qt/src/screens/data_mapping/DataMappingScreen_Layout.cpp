@@ -558,7 +558,7 @@ QWidget* DataMappingScreen::create_cache_panel() {
     // data_mappings table verbatim. Never advertise a control that isn't there.
     auto* sec_box = new QWidget(this);
     sec_box->setStyleSheet(
-        QString("background: rgba(217,119,6,0.05); border: 1px solid %1; padding: 8px;").arg(colors::BORDER_DIM()));
+        QString("background: rgba(45,212,191,0.05); border: 1px solid %1; padding: 8px;").arg(colors::BORDER_DIM()));
     auto* sbl = new QVBoxLayout(sec_box);
     sbl->setSpacing(4);
     encryption_title_ = new QLabel(tr("CREDENTIAL STORAGE"));

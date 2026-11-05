@@ -19,6 +19,7 @@
 #include "core/symbol/SymbolRef.h"
 #include "core/window/WindowRegistry.h"
 #include "screens/launchpad/OnboardingTour.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QApplication>
@@ -979,16 +980,18 @@ void register_builtins() {
         {},
     });
 
-    register_one(ActionDef{
-        "help.enterprise",
-        "Fincept Terminal Enterprise",
-        "Help",
-        {"enterprise", "private edition", "upgrade", "demo", "firm"},
-        QKeySequence{},
-        /*predicate*/ {},
-        &handler_help_enterprise,
-        {},
-    });
+    if (fincept::brand::show_upstream_promos()) {
+        register_one(ActionDef{
+            "help.enterprise",
+            "Enterprise Edition",
+            "Help",
+            {"enterprise", "private edition", "upgrade", "demo", "firm"},
+            QKeySequence{},
+            /*predicate*/ {},
+            &handler_help_enterprise,
+            {},
+        });
+    }
 
     // ── Account-level actions ───────────────────────────────────────────────
 

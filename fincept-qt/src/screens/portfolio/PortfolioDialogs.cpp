@@ -983,7 +983,7 @@ ImportPortfolioDialog::ImportPortfolioDialog(const QVector<portfolio::Portfolio>
         QJsonObject root;
         root["format_version"] = "1.0";
         root["portfolio_name"] = "Demo Portfolio";
-        root["owner"] = "Fincept User";
+        root["owner"] = "Keystone User";
         root["currency"] = "USD";
         root["transactions"] = txns;
 

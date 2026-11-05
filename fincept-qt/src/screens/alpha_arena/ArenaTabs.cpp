@@ -34,7 +34,7 @@ QTableWidget* make_table(const QStringList& headers) {
     t->setSelectionMode(QAbstractItemView::NoSelection);
     t->setShowGrid(false);
     t->setStyleSheet("QTableWidget{background:#0D0D0D;border:none;font-size:11px;"
-                     " font-family:'Consolas','Courier New',monospace;}"
+                     " font-family:'Cascadia Mono','Consolas','Courier New',monospace;}"
                      "QTableWidget::item{padding:0 4px;border-bottom:1px solid #1C1C1C;}"
                      "QHeaderView::section{background:#141414;color:#777;border:none;"
                      " border-bottom:1px solid #2A2A2A;padding:1px 4px;font-size:10px;font-weight:700;}");
@@ -100,7 +100,7 @@ ArenaPanelGrid::ArenaPanelGrid(QWidget* parent) : QWidget(parent) {
     risk_ = make_table({tr("Agent"), tr("Status"), tr("Fails"), tr("Halt reason")});
     audit_ = new QListWidget;
     audit_->setStyleSheet("QListWidget{background:#0D0D0D;color:#999;border:none;font-size:10px;"
-                          " font-family:'Consolas','Courier New',monospace;}");
+                          " font-family:'Cascadia Mono','Consolas','Courier New',monospace;}");
 
     chat_hdr_ = micro_header(tr("MODEL CHAT"));
     positions_hdr_ = micro_header(tr("POSITIONS"));

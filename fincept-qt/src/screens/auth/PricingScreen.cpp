@@ -8,6 +8,7 @@
 #include "ui/theme/Theme.h"
 #include "ui/theme/ThemeManager.h"
 #include "ui/widgets/ConfettiOverlay.h"
+#include "ui/theme/Brand.h"
 #include "ui/widgets/EnterprisePromo.h"
 
 #include <QApplication>
@@ -299,9 +300,7 @@ void PricingScreen::retranslateUi() {
     title_label_->setText(tr("PLANS & PRICING"));
     subtitle_label_->setText(tr("Credits power cloud analytics, AI and data in this terminal. Start free — "
                                 "move to Pro when you need more."));
-    footnote_label_->setText(tr("Checkout runs securely on fincept.in and your plan updates here automatically. "
-                                "Fincept Terminal Enterprise is a separate product with its own accounts and "
-                                "billing."));
+    footnote_label_->setText(tr("Checkout runs securely in your browser and your plan updates here automatically."));
     back_btn_->setText(tr("← BACK TO TERMINAL"));
     retry_btn_->setText(tr("RETRY"));
 }
@@ -429,7 +428,7 @@ void PricingScreen::fetch_plans() {
                                    true);
                 } else {
                     set_status(StatusTone::Error,
-                               offline ? tr("Can't reach Fincept right now. Check your connection and retry.")
+                               offline ? tr("Can't reach the cloud service right now. Check your connection and retry.")
                                        : (r.error.isEmpty() ? tr("Plans could not be loaded.") : r.error),
                                true);
                     rendered_for_.clear();
@@ -485,7 +484,8 @@ void PricingScreen::render_cards() {
     cards_layout_->addStretch(0);
     for (const auto& plan : plans_)
         cards_layout_->addWidget(build_plan_card(plan), 1);
-    cards_layout_->addWidget(build_enterprise_card(), 1);
+    if (brand::show_upstream_promos())
+        cards_layout_->addWidget(build_enterprise_card(), 1);
     cards_layout_->addStretch(0);
 }
 
@@ -684,7 +684,7 @@ QWidget* PricingScreen::build_enterprise_card() {
     vl->addWidget(name);
     vl->addSpacing(6);
 
-    auto* desc = new QLabel(tr("Fincept Terminal Enterprise — the private edition for funds, family offices and "
+    auto* desc = new QLabel(tr("Enterprise edition — the private edition for funds, family offices and "
                                "research desks."),
                             card);
     desc->setObjectName("planDesc");

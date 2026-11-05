@@ -217,11 +217,11 @@ AccountManagementDialog::AccountManagementDialog(QWidget* parent) : QDialog(pare
                           "  padding: 4px 6px; font-size: 12px; }"
                           "QComboBox::drop-down { border: none; }"
                           "QComboBox QAbstractItemView { background: %7; color: %2;"
-                          "  selection-background-color: rgba(217,119,6,0.3); }"
+                          "  selection-background-color: rgba(45,212,191,0.3); }"
                           "QPushButton { padding: 8px 16px; font-weight: 700; font-size: 12px; border-radius: 2px; }"
                           "QListWidget { background: %5; border: 1px solid %6; color: %2; font-size: 12px; }"
                           "QListWidget::item { padding: 6px 8px; }"
-                          "QListWidget::item:selected { background: rgba(217,119,6,0.2); color: %4; }")
+                          "QListWidget::item:selected { background: rgba(45,212,191,0.2); color: %4; }")
                       .arg(colors::BG_SURFACE(), colors::TEXT_PRIMARY(), colors::TEXT_SECONDARY(), colors::AMBER(),
                            colors::BG_BASE(), colors::BORDER_MED(), colors::BG_RAISED()));
     setup_ui();

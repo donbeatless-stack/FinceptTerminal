@@ -72,7 +72,7 @@ static const QString kStyle =
 
                    "#dmCalcBtn { background: %3; color: %1; border: none; padding: 5px 16px; "
                    "  font-size: 9px; font-weight: 700; }"
-                   "#dmCalcBtn:hover { background: #FF8800; }"
+                   "#dmCalcBtn:hover { background: #5eead4; }"
                    "#dmCalcBtn:disabled { background: %10; color: %11; }"
                    "#dmSecondaryBtn { background: %7; color: %5; border: 1px solid %8; "
                    "  padding: 5px 16px; font-size: 9px; font-weight: 700; }"
@@ -91,12 +91,12 @@ static const QString kStyle =
 
                    "QTreeWidget { background: %1; color: %4; border: none; font-size: 11px; }"
                    "QTreeWidget::item { padding: 2px 4px; }"
-                   "QTreeWidget::item:selected { background: rgba(217,119,6,0.1); color: %3; }"
+                   "QTreeWidget::item:selected { background: rgba(45,212,191,0.1); color: %3; }"
 
                    "QListWidget { background: %1; border: none; font-size: 11px; }"
                    "QListWidget::item { color: %5; padding: 6px 10px; border-bottom: 1px solid %8; }"
                    "QListWidget::item:hover { color: %4; background: %12; }"
-                   "QListWidget::item:selected { color: %3; background: rgba(217,119,6,0.1); }"
+                   "QListWidget::item:selected { color: %3; background: rgba(45,212,191,0.1); }"
 
                    "QTextEdit { background: %1; color: %13; border: none; font-size: 11px; }"
 

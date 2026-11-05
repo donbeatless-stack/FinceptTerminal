@@ -132,7 +132,7 @@ QWidget* DataSourcesSection::build_content() {
     open_full->setCursor(Qt::PointingHandCursor);
     open_full->setStyleSheet(
         QString(
-            "QPushButton{background:rgba(217,119,6,0.1);color:%1;border:1px solid %2;font-weight:700;padding:0 10px;}"
+            "QPushButton{background:rgba(45,212,191,0.1);color:%1;border:1px solid %2;font-weight:700;padding:0 10px;}"
             "QPushButton:hover{background:%1;color:%3;}")
             .arg(ui::colors::AMBER(), ui::colors::AMBER_DIM(), ui::colors::BG_BASE()));
     connect(open_full, &QPushButton::clicked, this,

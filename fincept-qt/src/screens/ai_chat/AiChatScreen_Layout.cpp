@@ -91,7 +91,7 @@ void AiChatScreen::build_sidebar() {
     icon->setStyleSheet(QString("color:%1;font-size:22px;").arg(col::TEXT_PRIMARY()));
     hhl->addWidget(icon);
 
-    auto* title = new QLabel("Fincept AI");
+    auto* title = new QLabel("Keystone AI");
     title->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(col::TEXT_PRIMARY()).arg(fnt::BODY));
     hhl->addWidget(title, 1);
 
@@ -136,7 +136,7 @@ void AiChatScreen::build_sidebar() {
     session_list_->setStyleSheet(QString("QListWidget{background:%1;border:none;outline:none;}"
                                          "QListWidget::item{padding:10px 14px;border-bottom:1px solid %2;"
                                          "color:%3;font-size:%4px;}"
-                                         "QListWidget::item:selected{background:rgba(217,119,6,0.10);"
+                                         "QListWidget::item:selected{background:rgba(45,212,191,0.10);"
                                          "border-left:3px solid %5;color:%6;}"
                                          "QListWidget::item:hover:!selected{background:rgba(255,255,255,0.03);}"
                                          "QScrollBar:vertical{background:transparent;width:4px;}"
@@ -554,7 +554,7 @@ QWidget* AiChatScreen::build_welcome() {
     auto* ent = ui::enterprise::make_mention_label(panel);
     ent->setAlignment(Qt::AlignCenter);
     ui::enterprise::set_mention_text(
-        ent, tr("Multi-agent research for firms, AI credits included:"), tr("Fincept Terminal Enterprise ↗"),
+        ent, tr("Multi-agent research for firms, AI credits included:"), tr("Enterprise edition ↗"),
         ui::enterprise::url_with_ref(ui::enterprise::site_url(), QStringLiteral("ai")));
     vl->addWidget(ent);
     return panel;
@@ -570,7 +570,7 @@ QWidget* AiChatScreen::build_input_area() {
     hl->setSpacing(10);
 
     input_box_ = new QPlainTextEdit;
-    input_box_->setPlaceholderText(tr("Message Fincept AI...  (Enter to send · Shift+Enter for a new line)"));
+    input_box_->setPlaceholderText(tr("Message Keystone AI...  (Enter to send · Shift+Enter for a new line)"));
     input_box_->setFixedHeight(44);
     input_box_->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     input_box_->setStyleSheet(QString("QPlainTextEdit{background:%1;color:%2;border:1px solid %3;"
@@ -580,7 +580,7 @@ QWidget* AiChatScreen::build_input_area() {
                                   .arg(fnt::BODY)
                                   .arg(col::AMBER()));
     input_box_->installEventFilter(this);
-    input_box_->setAccessibleName(tr("Message Fincept AI"));
+    input_box_->setAccessibleName(tr("Message Keystone AI"));
     input_box_->setAccessibleDescription(
         tr("Enter sends, Shift+Enter inserts a new line, Esc stops a streaming answer, Ctrl+R regenerates the "
            "last answer, Ctrl+N or Ctrl+K starts a new session."));
@@ -599,8 +599,8 @@ QWidget* AiChatScreen::build_input_area() {
     attach_btn_->setAccessibleName(tr("Attach file"));
     attach_btn_->setStyleSheet(QString("QPushButton{background:transparent;color:%1;border:1px solid %2;"
                                        "border-radius:0px;font-size:20px;font-weight:700;}"
-                                       "QPushButton:hover{background:rgba(217,119,6,0.15);border-color:%1;}"
-                                       "QPushButton[active=\"true\"]{background:rgba(217,119,6,0.2);"
+                                       "QPushButton:hover{background:rgba(45,212,191,0.15);border-color:%1;}"
+                                       "QPushButton[active=\"true\"]{background:rgba(45,212,191,0.2);"
                                        "border-color:%1;color:%1;}")
                                    .arg(col::TEXT_PRIMARY(), col::BORDER_MED()));
     connect(attach_btn_, &QPushButton::clicked, this, &AiChatScreen::on_attach_file);
@@ -610,8 +610,8 @@ QWidget* AiChatScreen::build_input_area() {
     attach_badge_ = new QLabel;
     attach_badge_->setVisible(false);
     attach_badge_->setMaximumWidth(160);
-    attach_badge_->setStyleSheet(QString("color:%1;font-size:10px;background:rgba(217,119,6,0.12);"
-                                         "border:1px solid #78350f;border-radius:0px;padding:2px 6px;%2")
+    attach_badge_->setStyleSheet(QString("color:%1;font-size:10px;background:rgba(45,212,191,0.12);"
+                                         "border:1px solid #115e59;border-radius:0px;padding:2px 6px;%2")
                                      .arg(col::AMBER(), "font-family:'Consolas',monospace;"));
     hl->addWidget(attach_badge_);
 

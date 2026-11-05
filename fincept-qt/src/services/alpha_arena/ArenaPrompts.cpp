@@ -25,7 +25,7 @@ QString system_prompt(const CompetitionRow& comp) {
         return comp.system_prompt_override + decision_contract();
     return QStringLiteral(
                "You are an autonomous crypto perpetual-futures trader competing against other AI models "
-               "in the Fincept Alpha Arena. You each started with $%1 and trade the same market data. "
+               "in the Keystone Alpha Arena. You each started with $%1 and trade the same market data. "
                "Your goal: the highest risk-adjusted return.\n\n"
                "Constraints:\n"
                "- Instruments: %2 (USD-margined perps, long or short)\n"

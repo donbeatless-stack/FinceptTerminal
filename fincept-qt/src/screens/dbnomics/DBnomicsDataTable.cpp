@@ -34,7 +34,7 @@ void DBnomicsDataTable::build_ui() {
     // ── Section header (always visible) ──────────────────────────────────────
     header_label_ = new QLabel(tr("OBSERVATION DATA"), this);
     header_label_->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: 700; "
-                                         "font-family: 'Consolas','Courier New',monospace; "
+                                         "font-family: 'Cascadia Mono','Consolas','Courier New',monospace; "
                                          "padding: 6px 12px; background: %2; "
                                          "border-bottom: 1px solid %3;")
                                      .arg(ui::colors::AMBER())
@@ -69,12 +69,12 @@ void DBnomicsDataTable::build_ui() {
     table_->setShowGrid(true);
     table_->setWordWrap(false);
     table_->setStyleSheet(QString("QTableWidget { background: %1; alternate-background-color: %7;"
-                                  "  color: %2; font-family: 'Consolas','Courier New',monospace; font-size: 12px;"
+                                  "  color: %2; font-family: 'Cascadia Mono','Consolas','Courier New',monospace; font-size: 12px;"
                                   "  border: none; gridline-color: %3; selection-background-color: %4; }"
                                   "QTableWidget::item { padding: 4px 10px; border: none; }"
                                   "QTableWidget::item:selected { background: %4; color: %2; }"
                                   "QHeaderView::section { background: %5; color: %6;"
-                                  "  font-family: 'Consolas','Courier New',monospace;"
+                                  "  font-family: 'Cascadia Mono','Consolas','Courier New',monospace;"
                                   "  font-size: 11px; font-weight: 700; padding: 6px 10px;"
                                   "  border: none; border-bottom: 2px solid %3; border-right: 1px solid %3; }"
                                   "QScrollBar:vertical { background: %1; width: 8px; border: none; }"

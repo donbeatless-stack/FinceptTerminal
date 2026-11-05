@@ -183,7 +183,7 @@ ExchangePresentation ExchangePresentation::for_id(const QString& exchange_id) {
         // Leaderboard extras (which only exist on Polymarket) were shown empty.
         ExchangePresentation p = for_polymarket();
         p.exchange_id = QStringLiteral("fincept");
-        p.display_name = QStringLiteral("Fincept");
+        p.display_name = QStringLiteral("Internal");
         p.currency_symbol = QStringLiteral("FNCPT");
         p.view_names = {QStringLiteral("MARKETS"), QStringLiteral("EVENTS")};
         p.default_view = QStringLiteral("MARKETS");

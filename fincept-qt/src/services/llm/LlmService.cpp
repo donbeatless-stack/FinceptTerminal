@@ -246,7 +246,7 @@ void LlmService::ensure_config() const {
     // Default system prompt — primes the model to actually use tools instead of declining tool-feasible requests.
     if (system_prompt_.trimmed().isEmpty()) {
         system_prompt_ =
-            "You are Fincept AI, the intelligent assistant embedded inside the Fincept Terminal — "
+            "You are Keystone AI, the intelligent assistant embedded inside Keystone Terminal — "
             "a professional desktop financial intelligence application. You have access to tools that "
             "let you interact with the terminal directly: navigate screens, fetch live market data, "
             "manage watchlists, query portfolios, paper-trade, run Python analytics, search SEC Edgar "
@@ -291,7 +291,7 @@ void LlmService::ensure_config() const {
             "  - For charts, pass config={'chart_type':'bar'|'line'|'pie','title':...,'data':'1,2,3',"
             "    'labels':'Q1,Q2,Q3'}.\n"
             "  - Set proper metadata FIRST via report_set_metadata: title (e.g. 'Tesla Equity Research "
-            "    Report'), author (e.g. 'Fincept Research'), company, and date. Don't leave 'Analyst' "
+            "    Report'), author (e.g. 'Keystone Research'), company, and date. Don't leave 'Analyst' "
             "    or 'Untitled Report' defaults.\n"
             "  - Avoid one-line ramblings. Each text component should be a tight paragraph.\n"
             "• Python scripts: ONLY pass script names returned by list_python_scripts. Never invent or "
@@ -539,7 +539,7 @@ QMap<QString, QString> LlmService::get_headers() const {
         if (p == "openrouter") {
             // Attribution for the openrouter.ai/rankings leaderboard.
             h["HTTP-Referer"] = "https://fincept.in";
-            h["X-Title"] = "Fincept Terminal";
+            h["X-Title"] = "Keystone Terminal";
         }
     }
     return h;
@@ -549,7 +549,7 @@ LlmResponse LlmService::do_request(const QString& user_message, const std::vecto
     LlmResponse resp;
 
     if (ProviderCatalog::is_blocked(provider_, base_url_)) {
-        resp.error = "AtlasCloud has been banned by Fincept and cannot be used.";
+        resp.error = "AtlasCloud is not supported and cannot be used.";
         return resp;
     }
 
@@ -935,7 +935,7 @@ LlmResponse LlmService::do_request(const QString& user_message, const std::vecto
             resp.content = extract_openai_message_text(choices[0].toObject()["message"].toObject());
         // success=true with empty content is a soft error.
         if (resp.content.isEmpty()) {
-            resp.error = "Fincept LLM returned an empty response. Please try again.";
+            resp.error = "Cloud LLM returned an empty response. Please try again.";
             LOG_WARN(kLlmSvcTag, "Fincept /research/chat returned empty choices or content");
             return resp;
         }
@@ -1055,7 +1055,7 @@ LlmResponse LlmService::do_streaming_request(const QString& user_message,
 
     LlmResponse resp;
     if (ProviderCatalog::is_blocked(provider_, base_url_)) {
-        resp.error = "AtlasCloud has been banned by Fincept and cannot be used.";
+        resp.error = "AtlasCloud is not supported and cannot be used.";
         on_chunk("", true);
         return resp;
     }

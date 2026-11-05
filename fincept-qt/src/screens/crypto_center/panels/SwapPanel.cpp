@@ -392,7 +392,7 @@ void SwapPanel::apply_theme() {
                        "  font-family:%5; font-size:11px; font-weight:700; letter-spacing:1px;"
                        "  padding:0 14px; }"
                        "QPushButton#swapPanelButton:hover { background:%10; color:%7; border-color:%11; }"
-                       "QPushButton#swapPanelPrimaryButton { background:rgba(217,119,6,0.10); color:%4;"
+                       "QPushButton#swapPanelPrimaryButton { background:rgba(45,212,191,0.10); color:%4;"
                        "  border:1px solid %12; font-family:%5; font-size:12px; font-weight:700;"
                        "  letter-spacing:1.5px; padding:0 18px; }"
                        "QPushButton#swapPanelPrimaryButton:hover { background:%4; color:%1; }"
@@ -409,7 +409,7 @@ void SwapPanel::apply_theme() {
                  NEGATIVE())                 // %9
             .arg(BG_HOVER(),                 // %10
                  BORDER_BRIGHT(),            // %11
-                 QStringLiteral("#78350f")); // %12 darker amber
+                 QStringLiteral("#115e59")); // %12 darker accent
 
     setStyleSheet(ss);
 }

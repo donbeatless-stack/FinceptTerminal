@@ -485,7 +485,7 @@ QWidget* MarketsScreen::build_header_bar() {
     };
 
     // Branding
-    brand_label_ = new QLabel(tr("FINCEPT MARKETS"));
+    brand_label_ = new QLabel(tr("KEYSTONE MARKETS"));
     brand_label_->setStyleSheet(lbl_ss(ui::colors::TEXT_PRIMARY(), true));
     h->addWidget(brand_label_);
 
@@ -885,7 +885,7 @@ void MarketsScreen::changeEvent(QEvent* event) {
 
 void MarketsScreen::retranslateUi() {
     if (brand_label_)
-        brand_label_->setText(tr("FINCEPT MARKETS"));
+        brand_label_->setText(tr("KEYSTONE MARKETS"));
     if (refresh_btn_)
         refresh_btn_->setText(tr("[F5] REFRESH"));
     update_auto_style(); // re-applies localized AUTO: ON/OFF label

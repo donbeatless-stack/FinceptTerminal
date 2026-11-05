@@ -437,7 +437,7 @@ void SecuritySection::build_ui() {
     sec_audit_list_->setFixedHeight(180);
     sec_audit_list_->setStyleSheet(
         QString("QListWidget { background:%1; color:%2; border:1px solid %3;"
-                "font-family:'Consolas','Courier New',monospace; font-size:12px; }"
+                "font-family:'Cascadia Mono','Consolas','Courier New',monospace; font-size:12px; }"
                 "QListWidget::item { padding:2px 6px; }")
             .arg(ui::colors::BG_SURFACE(), ui::colors::TEXT_PRIMARY(), ui::colors::BORDER_DIM()));
     vl->addWidget(sec_audit_list_);

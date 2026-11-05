@@ -73,12 +73,12 @@ QJsonObject tool_entry(const CatalogTool& t) {
     const bool approval = needs_approval(t);
     if (t.destructive && approval)
         description += QStringLiteral(" [Changes terminal state: runs only if the user allowed actions for external "
-                                      "agents, and every call needs their approval in Fincept Terminal.]");
+                                      "agents, and every call needs their approval in Keystone Terminal.]");
     else if (t.destructive)
         description += QStringLiteral(" [Changes terminal state: runs only if the user allowed actions for external "
                                       "agents.]");
     else if (approval)
-        description += QStringLiteral(" [Every call needs the user's approval in Fincept Terminal.]");
+        description += QStringLiteral(" [Every call needs the user's approval in Keystone Terminal.]");
 
     const QJsonObject annotations{
         {QStringLiteral("readOnlyHint"), !t.destructive},
@@ -229,7 +229,7 @@ QJsonObject shape_tool_result(const QString& tool, const ToolResult& tr) {
 const QString& actions_disabled_message() {
     static const QString m = QStringLiteral(
         "This tool changes state in the terminal (orders, files, settings). The user has not allowed external agents "
-        "to run actions. Ask them to enable it in Fincept Terminal → Agent Workbench → Connect, or perform this step "
+        "to run actions. Ask them to enable it in Keystone Terminal → Agent Workbench → Connect, or perform this step "
         "in the terminal.");
     return m;
 }
@@ -345,8 +345,8 @@ CallOutcome run_tool_call(WorkerShared& shared, const CallJob& job) {
             if (!target.error.isEmpty())
                 return refused(target.error, QStringLiteral("→ %1: %2").arg(inner, clip_text(target.error, 60)), false);
             if (target.server_id != QLatin1String(INTERNAL_SERVER_ID))
-                return refused(QStringLiteral("'%1' belongs to the external MCP server '%2' configured in Fincept "
-                                              "Terminal. External agents can only reach Fincept Terminal's built-in "
+                return refused(QStringLiteral("'%1' belongs to the external MCP server '%2' configured in Keystone "
+                                              "Terminal. External agents can only reach Keystone Terminal's built-in "
                                               "tools — connect to that server directly instead.")
                                    .arg(inner, target.server_id),
                                QStringLiteral("→ %1: denied — external server tool").arg(inner), true);
@@ -367,7 +367,7 @@ CallOutcome run_tool_call(WorkerShared& shared, const CallJob& job) {
     bool approved = false;
     if (needs_approval(*gate)) {
         if (!shared.accepting.load())
-            return refused(QStringLiteral("Fincept Terminal's MCP server is stopping; the call was not run."),
+            return refused(QStringLiteral("Keystone Terminal's MCP server is stopping; the call was not run."),
                            label + QStringLiteral("denied — server stopping"), true);
         ToolApprovalRequest req;
         req.client = job.client;
@@ -381,20 +381,20 @@ CallOutcome run_tool_call(WorkerShared& shared, const CallJob& job) {
                 approved = true;
                 break;
             case ToolApprovalVerdict::Denied:
-                return refused(QStringLiteral("Denied by the user in Fincept Terminal"),
+                return refused(QStringLiteral("Denied by the user in Keystone Terminal"),
                                label + QStringLiteral("denied by the user"), true);
             case ToolApprovalVerdict::TimedOut:
                 return refused(
-                    QStringLiteral("Approval timed out — ask the user to approve it in Fincept Terminal and retry"),
+                    QStringLiteral("Approval timed out — ask the user to approve it in Keystone Terminal and retry"),
                     label + QStringLiteral("approval timed out"), true);
             case ToolApprovalVerdict::Unavailable:
-                return refused(QStringLiteral("Fincept Terminal could not ask the user to approve this call (no "
+                return refused(QStringLiteral("Keystone Terminal could not ask the user to approve this call (no "
                                               "terminal window is open), so it was not run. Ask the user to open "
-                                              "Fincept Terminal and retry."),
+                                              "Keystone Terminal and retry."),
                                label + QStringLiteral("denied — no terminal window to ask"), true);
         }
         if (!shared.accepting.load())
-            return refused(QStringLiteral("Fincept Terminal's MCP server stopped; the call was not run."),
+            return refused(QStringLiteral("Keystone Terminal's MCP server stopped; the call was not run."),
                            label + QStringLiteral("denied — server stopped"), true);
     }
 

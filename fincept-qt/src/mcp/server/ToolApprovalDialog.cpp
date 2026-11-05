@@ -210,8 +210,8 @@ void show_next() {
         dlg->raise();
         QApplication::alert(host.parent ? host.parent : static_cast<QWidget*>(dlg));
         ui::DesktopNotifier::instance().notify(
-            ToolApprovalDialog::tr("Approval needed — Fincept Terminal"),
-            ToolApprovalDialog::tr("%1 wants to run \"%2\". Approve or deny it in Fincept Terminal.")
+            ToolApprovalDialog::tr("Approval needed — Keystone Terminal"),
+            ToolApprovalDialog::tr("%1 wants to run \"%2\". Approve or deny it in Keystone Terminal.")
                 .arg(p->request.client, p->request.tool),
             static_cast<int>(ui::ToastService::Severity::Warning));
         LOG_INFO(kTag, QString("Asking the user to approve '%1' requested by '%2'").arg(p->request.tool,
@@ -542,7 +542,7 @@ void ToolApprovalDialog::retranslate_ui() {
     setWindowTitle(tr("Approve external agent request"));
     title_label_->setText(tr("EXTERNAL AGENT REQUEST"));
     status_label_->setText(status_text());
-    lede_label_->setText(tr("An AI agent connected to Fincept Terminal over MCP wants to run a tool that needs "
+    lede_label_->setText(tr("An AI agent connected to Keystone Terminal over MCP wants to run a tool that needs "
                             "your approval. Nothing runs unless you approve it."));
     client_caption_->setText(tr("CLIENT"));
     tool_caption_->setText(tr("TOOL"));

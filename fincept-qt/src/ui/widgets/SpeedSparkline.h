@@ -28,7 +28,7 @@ class SpeedSparkline : public QWidget {
   private:
     QVector<qint64> samples_;
     int capacity_ = 60;
-    QColor line_color_ = QColor("#d97706");
+    QColor line_color_ = QColor("#2dd4bf");
     QColor fill_color_ = QColor(217, 119, 6, 40);
 };
 
