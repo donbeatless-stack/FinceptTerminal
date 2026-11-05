@@ -53,14 +53,16 @@ many TCP clients:
 - **Slow consumers:** per-client conflating queues mean a slow consumer costs bounded memory and never delays anyone else.
 - **Stats:** an HdrHistogram-style latency histogram.
 - **Feed:** Alpaca's real-time stream, through a WebSocket client written for the gateway (RFC 6455 framing, TLS with certificate checks, ping-based liveness, reconnect with backoff, error handling by code), or a synthetic feed for benchmarks. Alpaca allows one stream connection per account, so the gateway holds it and fans it out.
+- **Storage:** minute bars go into PostgreSQL through a connection pool written for the gateway. The pool caps connections (counting ones being opened), never holds its lock across a network round trip, health-checks idle connections and discards broken ones. A writer thread batches upserts, so the feed never waits on the database.
 
 | | |
 | --- | --- |
 | Pipeline latency, ingest → socket, 1 client | 7.4 µs p50 (4.2 µs with busy-poll) |
 | Distributor throughput | 12.9 M deliveries/s on one thread |
 | 5 slow clients among 50 | Fast clients unaffected (p99 336 µs vs 360 µs without); slow ones conflated to 11 % of ticks |
-| Tests | 90: unit, end-to-end over sockets, concurrency, fuzzing, and the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links); clean under AddressSanitizer; 5 deliberately planted bugs all caught |
-| Live check | Alpaca's test stream over TLS 1.3: authenticated and subscribed within a second, trades reached the request port |
+| Connection pool vs connecting per query | 0.084 ms vs 239 ms median with 8 threads; 37,500 vs 33 queries/s (local PostgreSQL 18.6, Windows) |
+| Tests | 109: unit, end-to-end over sockets, concurrency, fuzzing, the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links), the pool, and bar storage against a real PostgreSQL (including a killed server session); clean under AddressSanitizer; 9 deliberately planted bugs all caught |
+| Live check | Alpaca's test stream over TLS 1.3: trades reached the request port, minute bars landed in PostgreSQL about 1.4 s after each minute closed |
 
 Architecture, design trade-offs, the full benchmark matrix and its limits:
 **[gateway/README.md](gateway/README.md)**.

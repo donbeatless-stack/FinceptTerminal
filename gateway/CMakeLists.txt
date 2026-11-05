@@ -32,6 +32,7 @@ endif()
 find_package(asio CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(simdjson CONFIG REQUIRED)
+find_package(PostgreSQL REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 # Strict warnings on our own code only; dependency headers come in as SYSTEM
@@ -57,9 +58,11 @@ add_library(fmdg_core STATIC
     src/ws_codec.cpp
     src/alpaca_protocol.cpp
     src/alpaca_feed.cpp
-    src/tls_roots.cpp)
+    src/tls_roots.cpp
+    src/pg.cpp
+    src/bar_store.cpp)
 target_include_directories(fmdg_core PUBLIC include PRIVATE src)
-target_link_libraries(fmdg_core PUBLIC asio::asio OpenSSL::SSL OpenSSL::Crypto simdjson::simdjson)
+target_link_libraries(fmdg_core PUBLIC asio::asio OpenSSL::SSL OpenSSL::Crypto simdjson::simdjson PostgreSQL::PostgreSQL)
 if(WIN32)
     target_link_libraries(fmdg_core PUBLIC crypt32) # Windows root store for TLS verification
 endif()
@@ -77,6 +80,10 @@ add_executable(fmdg_loadgen tools/loadgen.cpp)
 target_link_libraries(fmdg_loadgen PRIVATE fmdg_core)
 fmdg_warnings(fmdg_loadgen)
 
+add_executable(fmdg_pg_bench tools/pg_bench.cpp)
+target_link_libraries(fmdg_pg_bench PRIVATE fmdg_core)
+fmdg_warnings(fmdg_pg_bench)
+
 enable_testing()
 add_executable(fmdg_tests
     tests/test_spsc_ring.cpp
@@ -88,7 +95,9 @@ add_executable(fmdg_tests
     tests/test_gateway.cpp
     tests/test_ws_codec.cpp
     tests/test_alpaca_protocol.cpp
-    tests/test_alpaca_feed.cpp)
+    tests/test_alpaca_feed.cpp
+    tests/test_pool.cpp
+    tests/test_bar_store.cpp)
 target_link_libraries(fmdg_tests PRIVATE fmdg_core GTest::gtest_main)
 fmdg_warnings(fmdg_tests)
 include(GoogleTest)

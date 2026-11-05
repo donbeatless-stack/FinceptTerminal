@@ -186,9 +186,57 @@ with 50–100 % jitter, and goes back to 1 s once a session has authenticated.
 - First trade 3 s later; over 45 s, 8 trades and 1 minute bar, with no disconnects or errors.
 - `SNAPSHOT FAKEPACA` on the request port returned the latest trade with its exchange timestamp.
 
+## Bar storage and the connection pool
+
+With `--pg`, the minute bars from the Alpaca feed go into PostgreSQL:
+
+```
+feed thread ── add() ──▶ in-memory queue ──▶ writer thread ──▶ Pool<pg::Connection> ──▶ bars_1m
+            (never touches                  (batches of ≤ 1000 bars,
+             the network)                    or whatever waited 1 s)
+```
+
+**`Pool<Conn>`** (`include/fmdg/pool.h`) is generic over the connection type, so its
+rules are tested with fake connections and used with PostgreSQL ones.
+- **The cap:** at most `max_size` connections exist, lent or idle, *including ones being opened right now*. The slot is reserved before the lock is released; otherwise every concurrent borrower of an empty pool sees room and opens its own.
+- **Nothing slow under the lock:** opening, health-checking and closing a connection are network round trips, so they run with the slot reserved and the lock released. One slow connect never stalls a borrower who could take an idle connection.
+- **Leases return themselves:** a `Lease` gives its connection back when it goes out of scope. `discard()` closes it instead, for a caller that saw it break. A lease may outlive its pool; the connection then closes on return.
+- **Health:** a connection idle for `validate_after` (30 s) gets a `SELECT 1` before it is lent. One older than `max_lifetime`, or idle longer than `max_idle`, is closed. Borrowers wait at most `acquire_timeout`, then get `PoolTimeout`.
+- **Wake-ups:** a failed open wakes a waiter, since its reserved slot is free again.
+
+**`BarStore`** (`include/fmdg/bar_store.h`):
+- **One statement per batch:** a multi-row `INSERT ... ON CONFLICT (symbol, start_ts) DO UPDATE`, so Alpaca's late corrections overwrite the bar they correct.
+- **Corrections in the same batch:** a bar and its correction can land in one batch, and `ON CONFLICT` refuses to touch one row twice in a statement, so the batch is first reduced to the last version of each bar.
+- **Values travel as parameters** (`PQexecParams`), never spliced into SQL. The table name is checked against `[a-z_][a-z0-9_]*`.
+- **Failures:** a failed batch stays at the head of the queue and is retried with backoff. A connection that broke (SQLSTATE class 08, or a dead status) is discarded, not handed to the next borrower.
+- **Outages:** while the database is down, bars wait in the queue (up to 500k; overflow drops the oldest and counts it). On shutdown each remaining batch gets one attempt, so a dead database cannot hold the process hostage.
+
+**Why pool: measured.** `tools/pg_bench.cpp` runs the same parameterised round trip
+(`SELECT $1::int + 1`) with a new connection per query and through the pool. Local
+PostgreSQL 18.6, Windows 11, Ryzen 9 8945HX:
+
+| | connect per query | pool | |
+| --- | --- | --- | --- |
+| 1 thread, median latency | 59 ms | 0.047 ms | ~1,200× |
+| 8 threads, median latency | 239 ms | 0.084 ms | ~2,800× |
+| 8 threads, throughput | 33 queries/s | 37,500 queries/s | ~1,100× |
+
+A connection costs TCP setup, the startup exchange, SCRAM authentication, and on Windows
+a new server process (PostgreSQL forks a backend per connection; Windows has no fork, so
+each one is a fresh process start). Concurrent connects then queue on that. On Linux a
+connection is typically a few milliseconds (not measured here), so the ratio would be
+smaller, but connecting per query would still dominate a sub-millisecond query.
+
+**Checked live** (2026-11-04, Alpaca's test stream, local PostgreSQL 18.6). Over 150 s:
+- the feed delivered 24 trades and 2 minute bars;
+- `bars_1m` received the 18:14 and 18:15 bars, each about 1.4 s after its minute ended;
+- 2 batches, no failures, no drops, one pooled connection.
+
+The test stream repeats made-up values, so the two bars carry the same prices.
+
 ## Testing
 
-90 GoogleTest cases (`tests/`):
+109 GoogleTest cases (`tests/`):
 - Unit tests for every component.
 - End-to-end tests over real loopback sockets: subscribe/snapshot/live ordering, unsubscribe, heartbeats, every error path, the symbol and client limits, shutdown, port conflicts, fan-out, the request port.
 - Concurrency tests: two-thread ring and queue stress, concurrent interning, sleep/wake transitions, re-subscribe racing publish, and slow-client isolation with a conservation check (`deliveries == ticks_out + conflated`).
@@ -203,9 +251,36 @@ with 50–100 % jitter, and goes back to 1 s once a session has authenticated.
   - a dead link only pings reveal
   - a quiet link that answered pings keep up
   - a server-initiated close (echoed)
+- `Pool` with fake connections that count how many are alive, opening and shared:
+  - reuse
+  - the cap under 16 contending threads
+  - concurrent opens on an empty pool
+  - timeouts and hand-off to a waiter
+  - discard, a failed open (and the waiter it must wake), a slow open beside idle borrowers
+  - health checks, lifetime and idle limits
+  - a lease that outlives its pool
+- `BarStore` and `pg::Connection` against a real PostgreSQL. They run when `FMDG_TEST_PG` holds a connection string, and are skipped otherwise:
+  - parameters stay values
+  - corrections win, also within one batch
+  - batching, and the flush timer
+  - a server session killed under a pooled connection (discarded, batch retried)
+  - an unreachable database (bars kept, overflow counted, shutdown not held up)
 
 They run clean under Release, Debug (MSVC checked iterators) and AddressSanitizer. The
 original 58 survived 30 back-to-back repetitions; the 32 feed tests, 20.
+
+**Mutation testing, pool.** Four bugs planted one at a time, each caught on every run:
+
+| # | Bug planted | Caught by |
+| --- | --- | --- |
+| P1 | A failed open does not wake waiters | `AFailedOpenWakesAWaiter` |
+| P2 | The connection is opened with the lock held | `ASlowOpenDoesNotBlockBorrowersOfIdleConnections` |
+| P3 | The slot is reserved only after the open succeeds | `ConcurrentOpensRespectMaxSize` |
+| P4 | Idle connections are never health-checked | `AnIdleConnectionIsCheckedAndReplacedIfDead` |
+
+P2 and P3 first went uncaught. The slow-open test timed only the borrow, while the
+mutant's wait sat in the return before it. And with instant fake opens, the
+reservation race window was too small to hit. Both tests were fixed until the mutants failed.
 
 **Mutation testing.** To check that the concurrency tests can actually fail, each
 mechanism was broken on purpose and the suite re-run:
@@ -314,12 +389,23 @@ The Alpaca feed reads `APCA_API_KEY_ID` and `APCA_API_SECRET_KEY` from the envir
 or from a file given with `--alpaca-credentials FILE` containing those two `NAME=value`
 lines. Keep that file outside the repository.
 
+To store minute bars, add a libpq connection string with `--pg`. Keep the password out of
+it: point `passfile=` at a [pgpass](https://www.postgresql.org/docs/current/libpq-pgpass.html)
+file. The table is created on first use.
+
+```bat
+build\win\fmdg.exe --feed alpaca --alpaca-symbols AAPL,MSFT ^
+    --pg "host=localhost dbname=fmdg user=fmdg passfile=C:/path/pgpass.conf"
+build\win\fmdg_pg_bench.exe --conninfo "..." --threads 8   :: pool vs connect-per-query
+```
+
 On the request port, any line-based client works, for example `PING`, `SNAPSHOT SYM0000 SYM0001` or `STATS`.
 
 ## Limitations and next steps
 
 - **Linux:** a `linux` preset is included, but only the Windows build has been compiled and tested so far. CI on both is the next step.
-- **Real feed:** Alpaca trades flow in; quotes are not ingested (a `Tick` carries one price), and minute bars are counted but not stored yet. Next: bars into PostgreSQL through a connection pool, history queries on the request port, and the terminal as a client.
+- **Real feed:** Alpaca trades flow in, and minute bars are stored with `--pg`; quotes are not ingested (a `Tick` carries one price). The free plan streams at most 30 symbols, so a larger universe needs its history backfilled through Alpaca's REST API. Next: that backfill, history queries on the request port served through the pool, and the terminal as a client.
+- **Pool fairness:** waiters wake through a condition variable, which is not FIFO; under sustained overload one waiter can lose to newer arrivals until its timeout. A ticket queue would fix that if it ever shows up in practice.
 - **Per-client queue:** it uses a mutex and `std::unordered_map`. Dense symbol ids would allow a flat array, but that costs memory per client in proportion to the largest id subscribed.
 - **Fan-out at scale:** over TCP, every client costs a `send` syscall per write, which is why exchanges distribute over UDP multicast and latency-critical consumers use kernel bypass. That is a different architecture, not a tuning change.
 - **Not built:** authentication and TLS on the gateway's own ports (the upstream Alpaca link is TLS), and per-symbol sequence numbers (today's are gateway-wide, so a client can't detect conflation gaps per symbol).

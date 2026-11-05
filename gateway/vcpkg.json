@@ -4,6 +4,7 @@
   "dependencies": [
     "asio",
     "gtest",
+    "libpq",
     "openssl",
     "simdjson"
   ]

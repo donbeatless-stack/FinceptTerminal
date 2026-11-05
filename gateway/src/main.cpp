@@ -2,6 +2,7 @@
 // feed or by Alpaca's real-time stream, printing a stats line every few seconds
 // until Ctrl-C.
 #include "fmdg/alpaca_feed.h"
+#include "fmdg/bar_store.h"
 #include "fmdg/gateway.h"
 #include "fmdg/synthetic_feed.h"
 
@@ -52,7 +53,11 @@ void usage() {
         "  --alpaca-credentials F file with APCA_API_KEY_ID=... and APCA_API_SECRET_KEY=...\n"
         "                         lines; without it, those environment variables are read\n"
         "  --alpaca-no-bars       subscribe to trades only\n"
-        "  --ca-file PEM          trust these roots instead of the system's");
+        "  --ca-file PEM          trust these roots instead of the system's\n"
+        "minute bars into PostgreSQL (alpaca feed only):\n"
+        "  --pg CONNINFO          libpq connection string; keep the password out of it, e.g.\n"
+        "                         \"host=localhost dbname=fmdg user=fmdg passfile=C:/path/pgpass.conf\"\n"
+        "  --pg-table NAME        table for the bars          (default bars_1m)");
 }
 
 double us(std::int64_t ns) {
@@ -120,7 +125,7 @@ std::vector<std::string> split_symbols(const std::string& list) {
     return out;
 }
 
-void log_line(const std::string& line) {
+void log_line(const char* source, const std::string& line) {
     const std::time_t t = std::time(nullptr);
     std::tm tm{};
 #ifdef _WIN32
@@ -130,7 +135,7 @@ void log_line(const std::string& line) {
 #endif
     char stamp[16];
     std::strftime(stamp, sizeof stamp, "%H:%M:%S", &tm);
-    std::printf("%s alpaca: %s\n", stamp, line.c_str());
+    std::printf("%s %s: %s\n", stamp, source, line.c_str());
     std::fflush(stdout);
 }
 
@@ -144,6 +149,8 @@ int main(int argc, char** argv) {
     std::string alpaca_stream = "iex";
     std::string alpaca_symbols;
     std::string credentials_file;
+    std::string pg_conninfo;
+    std::string pg_table = "bars_1m";
     double stats_interval = 5;
     double duration = 0;
 
@@ -187,6 +194,10 @@ int main(int argc, char** argv) {
                 alpaca_config.bars = false;
             else if (arg == "--ca-file")
                 alpaca_config.ca_file = value();
+            else if (arg == "--pg")
+                pg_conninfo = value();
+            else if (arg == "--pg-table")
+                pg_table = value();
             else if (arg == "--stats-interval")
                 stats_interval = std::stod(value());
             else if (arg == "--duration")
@@ -240,7 +251,11 @@ int main(int argc, char** argv) {
         if (alpaca_stream == "iex" && alpaca_config.symbols.size() > 30)
             std::fprintf(stderr, "fmdg: warning: the free plan streams at most 30 symbols; Alpaca answers more "
                                  "with error 405\n");
-        alpaca_config.log = log_line;
+        alpaca_config.log = [](const std::string& line) { log_line("alpaca", line); };
+    }
+    if (!pg_conninfo.empty() && !use_alpaca) {
+        std::fprintf(stderr, "fmdg: --pg stores Alpaca minute bars; it needs --feed alpaca\n");
+        return 2;
     }
 
     fmdg::Gateway gateway(config);
@@ -252,6 +267,25 @@ int main(int argc, char** argv) {
     }
     std::printf("fmdg: push port %u, request port %u, %d io threads%s\n", gateway.push_port(),
                 gateway.request_port(), config.io_threads, config.busy_poll ? ", busy-poll" : "");
+
+    // The store first, so the feed can hand it bars from its first message on.
+    std::unique_ptr<fmdg::BarStore> store;
+    if (!pg_conninfo.empty()) {
+        fmdg::BarStoreConfig sc;
+        sc.conninfo = pg_conninfo;
+        sc.table = pg_table;
+        sc.log = [](const std::string& line) { log_line("store", line); };
+        try {
+            store = std::make_unique<fmdg::BarStore>(sc);
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "fmdg: %s\n", e.what());
+            gateway.stop();
+            return 2;
+        }
+        store->start();
+        alpaca_config.on_bar = [s = store.get()](const fmdg::alpaca::Bar& b) { s->add(b); };
+        std::printf("fmdg: minute bars -> PostgreSQL table %s\n", pg_table.c_str());
+    }
 
     // Exactly one producer may call Gateway::ingest().
     std::unique_ptr<fmdg::SyntheticFeed> synthetic;
@@ -306,6 +340,15 @@ int main(int argc, char** argv) {
                         static_cast<unsigned long long>(a.server_errors + a.malformed),
                         a.last_error.empty() ? "" : "  last error: ", a.last_error.c_str());
         }
+        if (store) {
+            const fmdg::BarStoreStats b = store->stats();
+            std::printf("  store: bars=%llu written=%llu batches=%llu queued=%zu failed=%llu dropped=%llu "
+                        "pool open=%zu idle=%zu%s%s\n",
+                        static_cast<unsigned long long>(b.received), static_cast<unsigned long long>(b.written),
+                        static_cast<unsigned long long>(b.batches), b.queued,
+                        static_cast<unsigned long long>(b.failed_batches), static_cast<unsigned long long>(b.dropped),
+                        b.pool.open, b.pool.idle, b.last_error.empty() ? "" : "  last error: ", b.last_error.c_str());
+        }
         std::fflush(stdout);
         prev = s;
         last_print = now;
@@ -316,6 +359,8 @@ int main(int argc, char** argv) {
         synthetic->stop();
     if (alpaca)
         alpaca->stop();
+    if (store)
+        store->stop(); // after the feed: no more bars can arrive; writes what is queued
     gateway.stop();
     std::puts("fmdg: stopped");
     return 0;
