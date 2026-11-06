@@ -1,4 +1,4 @@
-# Fincept Terminal — Architecture
+# Keystone Terminal — Architecture
 
 **Status:** Living document. Reflects the codebase as of 2026-05 and the target state we are converging on.
 **Audience:** Contributors (C++ and Python), maintainers, and AI assistants modifying the codebase.
@@ -10,7 +10,7 @@
 
 ## 1. What this codebase is
 
-Fincept Terminal v4 is a native C++20/Qt6 desktop application — a Bloomberg-style multi-window financial workstation with embedded Python analytics, multi-broker trading, AI agents, and an in-process data plane.
+Keystone Terminal (v4 codebase) is a native C++20/Qt6 desktop application — a Bloomberg-style multi-window financial workstation with embedded Python analytics, multi-broker trading, AI agents, and an in-process data plane.
 
 | Dimension | Scale |
 |-----------|-------|
@@ -194,7 +194,7 @@ fincept-qt/
 - `workspace/` — workspace-level persistence (multi-window layouts).
 
 #### `auth/`
-- `AuthManager` — login state, JWT, guest mode. **`AuthManager::session()` is the canonical source of fincept credentials**; `SettingsRepository` is a fallback persistence copy. Never cache credentials elsewhere.
+- `AuthManager` — login state, JWT, guest mode. **`AuthManager::session()` is the canonical source of cloud-account credentials**; `SettingsRepository` is a fallback persistence copy. Never cache credentials elsewhere.
 - `AuthApi`, `UserApi` — server-side calls.
 - `SessionGuard` — auto-logout on 401.
 - `lock/` — app-lock screen.
@@ -285,17 +285,17 @@ The data plane normalizes this: services publish to DataHub regardless of how th
 - `Result<T>` for synchronous fallible operations (DB queries, parsing).
 - Signals for async failure (`xxx_failed(QString message)`).
 - DataHub serves **last-known-good** on producer failure; retries with backoff per `TopicPolicy`.
-- `SessionGuard` auto-logs out on HTTP 401 from fincept servers; broker 401s are handled per adapter.
+- `SessionGuard` auto-logs out on HTTP 401 from the cloud API; broker 401s are handled per adapter.
 - Logging via `LOG_ERROR("tag", "msg with " + context)`. No exceptions across module boundaries.
 
 ### 6.4 Security
 
 | Surface | Mechanism |
 |---|---|
-| Credentials (broker tokens, API keys, fincept session) | `SecureStorage` — SQLite + AES-256-GCM. Key derived from `machineUniqueId`. Requires `Database` open. |
-| Fincept session token | `AuthManager::session()` is canonical; `SettingsRepository` is fallback only. |
+| Credentials (broker tokens, API keys, cloud session) | `SecureStorage` — SQLite + AES-256-GCM. Key derived from `machineUniqueId`. Requires `Database` open. |
+| Cloud session token | `AuthManager::session()` is canonical; `SettingsRepository` is fallback only. |
 | TLS | Qt6's OS-trust-store path for all HTTPS. |
-| 401 handling | `SessionGuard` auto-logout for fincept; per-adapter token-refresh for brokers. |
+| 401 handling | `SessionGuard` auto-logout for the cloud API; per-adapter token-refresh for brokers. |
 | Python env injection | 22 known API keys whitelisted; all other `*_API_KEY`/`*_SECRET`/`*_PASSWORD`/`*_TOKEN` env vars stripped from subprocess env to prevent leakage via `/proc/<pid>/environ`. |
 | Storage on disk | SQLite DB on disk; encryption key derived locally. **Not** at-rest encrypted by the OS unless the user encrypts their disk. |
 | Source secrets | None in repo. Env vars / `SecureStorage` only. |
@@ -442,7 +442,7 @@ These are the surfaces external contributors and AI assistants should treat as s
 - **Caching in a screen via `QHash`.** Use `CacheManager` via DataHub. A `QHash<QString, ...>` field in a screen is permitted only if it's (a) a live-feed dispatch table cleared on hide, or (b) a view/index over data already owned by DataHub.
 - **`qApp->setStyleSheet(...)` from inside a widget's own event handler.** Wayland will crash. Coalesce theme changes and dispatch via `Qt::QueuedConnection`.
 - **Calling `SecureStorage` before `Database::open()`.** SecureStorage depends on the DB.
-- **Caching fincept credentials.** Always read live from `AuthManager::session()`; `SettingsRepository` is fallback.
+- **Caching cloud-account credentials.** Always read live from `AuthManager::session()`; `SettingsRepository` is fallback.
 - **Synchronous DB query on the UI thread.** Marshal it.
 - **Adding a new singleton.** Use the dependency container being introduced.
 
@@ -495,11 +495,9 @@ These are the deltas between current and target state. Each has a phase in [`REF
 
 ## 12. Contact and process
 
-- **Issues:** https://github.com/Fincept-Corporation/FinceptTerminal/issues
+- **Issues:** https://github.com/donbeatless-stack/KeystoneTerminal/issues
 - **Contributing:** see `CONTRIBUTING.md`, `CPP_CONTRIBUTOR_GUIDE.md`, `PYTHON_CONTRIBUTOR_GUIDE.md`.
 - **Architecture decisions:** add an ADR under `docs/adr/` when reversing or refining a section here.
-- **Discord:** https://discord.gg/ae87a8ygbN
-- **Email:** support@fincept.in
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We pledge to make participation in the Fincept Terminal community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity.
+We pledge to make participation in the Keystone Terminal community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity.
 
 We pledge to act in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
@@ -85,7 +85,7 @@ Community leaders will take appropriate action for violations:
 
 ## Reporting
 
-**Report unacceptable behavior to:** support@fincept.in
+**Report unacceptable behavior to:** the project maintainers, privately, through the contact details on their GitHub profiles
 
 Include:
 - Your contact information
@@ -103,7 +103,7 @@ Include:
 
 ## Appeals
 
-Appeal within 14 days by emailing support@fincept.in with:
+Appeal within 14 days by writing to the project maintainers with:
 - Full details of the incident
 - Reason for appeal
 - Additional context or evidence
@@ -127,9 +127,7 @@ Adapted from [Contributor Covenant](https://www.contributor-covenant.org), versi
 
 ## Contact
 
-- **Email:** support@fincept.in
-- **GitHub Issues:** https://github.com/Fincept-Corporation/FinceptTerminal/issues
-- **GitHub Discussions:** https://github.com/Fincept-Corporation/FinceptTerminal/discussions
+- **GitHub Issues:** https://github.com/donbeatless-stack/KeystoneTerminal/issues
 
 ---
 

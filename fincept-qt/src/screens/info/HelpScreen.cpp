@@ -502,8 +502,8 @@ QWidget* HelpScreen::build_page() {
         };
         // Channels of this build: its source repository and issue tracker.
         const Contact contacts[] = {
-            {"", tr("Source Code"), "github.com/donbeatless-stack/FinceptTerminal", brand::kSourceUrl},
-            {"", tr("Issue Tracker"), "github.com/donbeatless-stack/FinceptTerminal/issues", brand::kIssuesUrl},
+            {"", tr("Source Code"), "github.com/donbeatless-stack/KeystoneTerminal", brand::kSourceUrl},
+            {"", tr("Issue Tracker"), "github.com/donbeatless-stack/KeystoneTerminal/issues", brand::kIssuesUrl},
         };
 
         int ci = 0;

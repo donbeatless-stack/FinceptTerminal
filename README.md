@@ -2,14 +2,31 @@
 
 <img src="docs/images/keystone-banner.png" alt="Keystone Terminal" width="100%"/>
 
-**Research, analytics and trading in one native desktop terminal.**
+### Research, analytics and trading in one native desktop terminal
 
-Incubated at Penn Venture Lab
+**Incubated at Penn Venture Lab**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-2dd4bf)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](https://isocpp.org/)
 [![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-111a24)](#build-from-source)
+
+[Overview](#overview) · [Screenshots](#screenshots) · [Features](#features) · [Engineering](#engineering-highlights) · [Build](#build-from-source) · [License](#license)
+
+</div>
+
+## Overview
+
+Keystone Terminal is a desktop workstation for equity, crypto and macro research. It puts market
+data, company research, charting, backtesting, AI-assisted analysis and paper or live trading
+through your own broker into one native application: C++20 and Qt 6, embedded Python 3.11
+analytics, one binary, no browser runtime.
+
+It is built for analysts, research desks and students who want institutional-style tools on their
+own machine, with their own data keys and their own models.
+
+## Screenshots
 
 <table>
   <tr>
@@ -17,20 +34,22 @@ Incubated at Penn Venture Lab
     <td align="center" width="50%"><a href="docs/images/keystone-markets.png"><img src="docs/images/keystone-markets.png" width="100%"/></a><br/><sub><b>Markets</b></sub></td>
   </tr>
   <tr>
+    <td align="center" width="50%"><a href="docs/images/keystone-equity-research.png"><img src="docs/images/keystone-equity-research.png" width="100%"/></a><br/><sub><b>Equity Research</b></sub></td>
+    <td align="center" width="50%"><a href="docs/images/keystone-crypto.png"><img src="docs/images/keystone-crypto.png" width="100%"/></a><br/><sub><b>Crypto Trading</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><a href="docs/images/keystone-news.png"><img src="docs/images/keystone-news.png" width="100%"/></a><br/><sub><b>News</b></sub></td>
     <td align="center" width="50%"><a href="docs/images/keystone-ai-chat.png"><img src="docs/images/keystone-ai-chat.png" width="100%"/></a><br/><sub><b>AI Chat</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><a href="docs/images/keystone-node-editor.png"><img src="docs/images/keystone-node-editor.png" width="100%"/></a><br/><sub><b>Node Editor</b></sub></td>
     <td align="center" width="50%"><a href="docs/images/keystone-about.png"><img src="docs/images/keystone-about.png" width="100%"/></a><br/><sub><b>About</b></sub></td>
   </tr>
 </table>
 
-</div>
+## Features
 
-Keystone Terminal is a native C++20 desktop terminal for financial research: a Qt 6 interface,
-embedded Python 3.11 analytics, one binary, no Electron. It is based on
-[FinceptTerminal](https://github.com/Fincept-Corporation/FinceptTerminal) by Fincept Corporation
-and, like it, licensed under AGPL-3.0. The complete source of this build is in this repository.
-
-## What's in it
-
+- **Markets and research:** indices, FX, commodities, bonds, ETFs and crypto; company research with financials, filings, peers, valuation and sentiment
 - **Analytics:** DCF, portfolio optimisation, VaR/Sharpe, derivatives pricing, fixed income, alternatives, plus an 18-module QuantLib suite
 - **AI:** 37 trader/investor, economic and geopolitics agents; bring your own key (OpenAI, Anthropic, Gemini, Groq, DeepSeek, OpenRouter, Ollama)
 - **Data:** 100+ connectors: FRED, IMF, World Bank, DBnomics, AkShare, Polygon, Kraken, Yahoo Finance, government APIs
@@ -38,13 +57,12 @@ and, like it, licensed under AGPL-3.0. The complete source of this build is in t
 - **Automation:** visual node editor, MCP tools, AI Quant Lab (ML, factor discovery, RL)
 - **Global intelligence:** maritime tracking, geopolitical analysis, relationship mapping
 
-## What this build adds
+## Engineering highlights
 
-This fork of [Fincept-Corporation/FinceptTerminal](https://github.com/Fincept-Corporation/FinceptTerminal)
-adds three pieces of work: streaming strategy evaluation in the terminal's algo engine,
+Three pieces of engineering work stand out: streaming strategy evaluation in the algo engine,
 a standalone market-data gateway, and a Python worker pool for the AI Quant Lab.
 
-## Streaming strategy evaluation
+### Streaming strategy evaluation
 
 This part reworks how strategy conditions are evaluated in the C++ algo engine: indicators are
 kept as incremental state instead of being recomputed from scratch on every bar.
@@ -61,7 +79,7 @@ arithmetic allows), with mutation tests, characterisation tests written before t
 refactor, and per-bar verdict checksums. Design, numbers and how to reproduce them:
 **[docs/STREAMING_EVALUATION.md](docs/STREAMING_EVALUATION.md)**.
 
-### Checked against a live broker feed
+#### Checked against a live broker feed
 
 The realtime scanner was then run in the app against the Alpaca paper account's IEX feed
 ("Price Above EMA 20", 15-minute bars, six symbols), with each match's EMA(20) recomputed
@@ -69,7 +87,7 @@ independently from Yahoo data. The live run caught what simulated feeds could no
 Alpaca history requests returned only the **oldest** 500 bars of the range
 (`limit=500&sort=asc`, `next_page_token` ignored), so indicators warmed on history that
 ended a month earlier. Fixed in
-[`ac3a2306`](https://github.com/donbeatless-stack/FinceptTerminal/commit/ac3a2306), then re-run:
+[`ac3a2306`](https://github.com/donbeatless-stack/KeystoneTerminal/commit/ac3a2306), then re-run:
 
 | EMA(20) minus the independent value | Before the fix | After |
 | --- | --- | --- |
@@ -84,7 +102,7 @@ ended a month earlier. Fixed in
 The remaining 0.05–0.23 % is the data source: Alpaca's free feed carries IEX trades only.
 Details: [Live check against a broker feed](docs/STREAMING_EVALUATION.md#live-check-against-a-broker-feed).
 
-## Market-data gateway (`gateway/`)
+### Market-data gateway (`gateway/`)
 
 A standalone C++20 service (Asio; IOCP on Windows) that fans one market-data feed out to
 many TCP clients:
@@ -111,7 +129,7 @@ many TCP clients:
 Architecture, design trade-offs, the full benchmark matrix and its limits:
 **[gateway/README.md](gateway/README.md)**.
 
-## Python worker pool for the AI Quant Lab
+### Python worker pool for the AI Quant Lab
 
 The terminal ran every AI Quant Lab call as a new Python process, so each one paid for
 the interpreter and its imports (qlib, PyTorch, statsmodels, scipy) before doing any
@@ -137,15 +155,20 @@ Design, measurements and limits: **[docs/PYTHON_WORKER_POOL.md](docs/PYTHON_WORK
 
 ## Build from source
 
-Linux/macOS: clone this repository and run `./setup.sh`. Windows and manual builds, the pinned
-toolchain (CMake 3.27.7, Ninja 1.11.1, Qt 6.8.3, Python 3.11.9) and troubleshooting are in
-**[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
+```bash
+git clone https://github.com/donbeatless-stack/KeystoneTerminal.git
+cd KeystoneTerminal
+./setup.sh    # Linux / macOS
+```
+
+Windows and manual builds, the pinned toolchain (CMake 3.27.7, Ninja 1.11.1, Qt 6.8.3,
+Python 3.11.9) and troubleshooting are in **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)**.
 
 ## Contributing
 
-[Contributing guide](docs/CONTRIBUTING.md) · [C++ guide](docs/CPP_CONTRIBUTOR_GUIDE.md) ·
-[Python guide](docs/PYTHON_CONTRIBUTOR_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Report a bug](https://github.com/donbeatless-stack/FinceptTerminal/issues)
+[Getting started](docs/GETTING_STARTED.md) · [Contributing guide](docs/CONTRIBUTING.md) ·
+[C++ guide](docs/CPP_CONTRIBUTOR_GUIDE.md) · [Python guide](docs/PYTHON_CONTRIBUTOR_GUIDE.md) ·
+[Architecture](docs/ARCHITECTURE.md) · [Report a bug](https://github.com/donbeatless-stack/KeystoneTerminal/issues)
 
 ## License
 
@@ -153,6 +176,5 @@ toolchain (CMake 3.27.7, Ninja 1.11.1, Qt 6.8.3, Python 3.11.9) and troubleshoot
 distribute a modified build, or run one as a service that other people reach, you must make its
 complete source available under the same licence.
 
-Keystone Terminal is based on FinceptTerminal, © 2025–2026 Fincept Corporation. "Fincept",
-"Fincept Terminal" and the Fincept logo are trademarks of Fincept Corporation. The Penn Venture
-Lab name is used with permission.
+Keystone Terminal builds on the open-source FinceptTerminal project, © 2025–2026 Fincept
+Corporation, used under AGPL-3.0. The Penn Venture Lab name is used with permission.

@@ -1,18 +1,15 @@
-# Getting Started with Fincept Terminal Development
+# Getting Started with Keystone Terminal Development
 ## Your Complete Onboarding Guide
 
-Welcome to Fincept Terminal! This guide will get you from zero to your first contribution.
+Welcome to Keystone Terminal! This guide will get you from zero to your first contribution.
 
 ---
 
-## What is Fincept Terminal?
+## What is Keystone Terminal?
 
-Fincept Terminal is a native C++20 desktop terminal for financial research — Qt6 UI, embedded Python 3.11 analytics, one binary.
+Keystone Terminal is a native C++20 desktop terminal for financial research — Qt6 UI, embedded Python 3.11 analytics, one binary.
 
-It ships in **two editions on one data core**:
-
-- **Open source** (this repository) — AGPL-3.0, free for learning, personal use and academic research. Ships one release a month. **This guide covers building it.**
-- **[Enterprise](https://fincept.in/enterprise)** — the private, closed-source build for funds, family offices and research desks: 41 modules, proprietary datasets, multi-agent research, SSO and an SLA — current prices at [fincept.in/pricing](https://fincept.in/pricing). It is a separate product and is not built from this repository.
+It is open source under AGPL-3.0. **This guide covers building it.**
 
 ### The Big Picture
 
@@ -26,8 +23,6 @@ It ships in **two editions on one data core**:
 - AI-powered analysis — bring your own LLM key
 - Native C++ performance — no browser/JS overhead
 - Built by the community, for the community
-
-Contributions land in the open-source edition. Private datasets, point-in-time history, included AI credits and live execution are [Enterprise](https://fincept.in/enterprise) features.
 
 ### Technology Decisions (and Why)
 
@@ -103,8 +98,8 @@ sudo apt install -y \
 ### Step 5 — Clone and Configure
 
 ```bash
-git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal/fincept-qt
+git clone https://github.com/donbeatless-stack/KeystoneTerminal.git
+cd KeystoneTerminal/fincept-qt
 ```
 
 **Tell CMake where Qt is** (pick one method):
@@ -175,7 +170,7 @@ Once the app opens:
 ### Project Structure
 
 ```
-FinceptTerminal/
+KeystoneTerminal/
 │
 ├── fincept-qt/                     ← Main application (you'll work here)
 │   ├── src/                        ← C++ source code
@@ -360,14 +355,11 @@ Almost always **RAM exhaustion**, not a broken toolchain:
 
 | Channel | Link |
 |---------|------|
-| GitHub Issues | https://github.com/Fincept-Corporation/FinceptTerminal/issues |
-| GitHub Discussions | https://github.com/Fincept-Corporation/FinceptTerminal/discussions |
-| Discord | https://discord.gg/ae87a8ygbN |
-| Email | support@fincept.in |
+| GitHub Issues | https://github.com/donbeatless-stack/KeystoneTerminal/issues |
 
 ---
 
 **Ready to contribute?**
-- Pick an issue: https://github.com/Fincept-Corporation/FinceptTerminal/issues
+- Pick an issue: https://github.com/donbeatless-stack/KeystoneTerminal/issues
 - Read the C++ guide: [fincept-qt/CONTRIBUTING.md](../fincept-qt/CONTRIBUTING.md)
 - Read the Python guide: [PYTHON_CONTRIBUTOR_GUIDE.md](./PYTHON_CONTRIBUTOR_GUIDE.md)

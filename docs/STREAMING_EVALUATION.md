@@ -1,6 +1,6 @@
 # Streaming strategy evaluation
 
-Strategy conditions in Fincept Terminal ("close crosses above EMA(20)") used to be
+Strategy conditions in Keystone Terminal ("close crosses above EMA(20)") used to be
 evaluated by recomputing every indicator from scratch on every bar. This fork
 replaces that with incremental (streaming) state: backtest condition evaluation is
 **39–97× faster**, a realtime 500-symbol scan sweep is **10–19× faster**, and a

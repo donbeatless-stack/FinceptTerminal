@@ -22,11 +22,11 @@ inline constexpr const char* kWordmarkSecondary = "TERMINAL";
 inline constexpr const char* kIncubatorLine = "Incubated at Penn Venture Lab";
 
 /// Links of this build (AGPL-3.0: users can get its source) and of upstream.
-inline constexpr const char* kSourceUrl = "https://github.com/donbeatless-stack/FinceptTerminal";
-inline constexpr const char* kIssuesUrl = "https://github.com/donbeatless-stack/FinceptTerminal/issues";
-inline constexpr const char* kNewIssueUrl = "https://github.com/donbeatless-stack/FinceptTerminal/issues/new";
-inline constexpr const char* kDocsUrl = "https://github.com/donbeatless-stack/FinceptTerminal/tree/main/docs";
-inline constexpr const char* kLicenseUrl = "https://github.com/donbeatless-stack/FinceptTerminal/blob/main/LICENSE";
+inline constexpr const char* kSourceUrl = "https://github.com/donbeatless-stack/KeystoneTerminal";
+inline constexpr const char* kIssuesUrl = "https://github.com/donbeatless-stack/KeystoneTerminal/issues";
+inline constexpr const char* kNewIssueUrl = "https://github.com/donbeatless-stack/KeystoneTerminal/issues/new";
+inline constexpr const char* kDocsUrl = "https://github.com/donbeatless-stack/KeystoneTerminal/tree/main/docs";
+inline constexpr const char* kLicenseUrl = "https://github.com/donbeatless-stack/KeystoneTerminal/blob/main/LICENSE";
 inline constexpr const char* kUpstreamUrl = "https://github.com/Fincept-Corporation/FinceptTerminal";
 
 /// Contact address shown on About / Contact. Empty: those screens point to

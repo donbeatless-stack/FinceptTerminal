@@ -1,4 +1,4 @@
-# fmdg: Fincept market-data gateway
+# fmdg: the Keystone Terminal market-data gateway
 
 A standalone C++20 service that takes in one market-data feed and fans it out to
 many TCP clients, built around the cases that break naive fan-out servers: slow

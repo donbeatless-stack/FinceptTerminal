@@ -1,6 +1,6 @@
-# Contributing to Fincept Terminal
+# Contributing to Keystone Terminal
 
-Fincept Terminal is an open-source native C++20/Qt6 financial intelligence platform with 50+ screens, embedded Python analytics, and 100+ data connectors. This guide is the canonical **how-to** for contributors — build, architecture, conventions.
+Keystone Terminal is an open-source native C++20/Qt6 financial intelligence platform with 50+ screens, embedded Python analytics, and 100+ data connectors. This guide is the canonical **how-to** for contributors — build, architecture, conventions.
 
 > **Before you open a PR**, also read the contribution **policy**: [`.github/CONTRIBUTING.md`](../.github/CONTRIBUTING.md). Policy defines which PRs are accepted (linked approved issue, minimum scope, no auto-formatter churn, etc.); this file covers how to build and where code lives.
 
@@ -71,8 +71,8 @@ Optional (speeds up rebuilds): **ccache 4.13.4** on Windows is auto-detected.
 ### Fastest — automated setup script
 
 ```bash
-git clone https://github.com/Fincept-Corporation/FinceptTerminal.git
-cd FinceptTerminal
+git clone https://github.com/donbeatless-stack/KeystoneTerminal.git
+cd KeystoneTerminal
 ./setup.sh      # Linux / macOS — installs toolchain + Qt via aqtinstall, then builds
 ```
 
@@ -125,7 +125,7 @@ cmake --build build/win-release
 ### Repository layout
 
 ```
-finceptTerminal/
+KeystoneTerminal/
 ├── fincept-qt/                 # Main C++ application (all development happens here)
 │   ├── src/                    # C++ source
 │   ├── scripts/                # Embedded Python analytics (4000+ files)
@@ -258,14 +258,11 @@ Review process, scope gate, and close-on-sight list are in [`.github/CONTRIBUTIN
 
 | Channel      | Link                                                                          |
 |--------------|-------------------------------------------------------------------------------|
-| Issues       | [GitHub Issues](https://github.com/Fincept-Corporation/FinceptTerminal/issues) |
-| Discussions  | [GitHub Discussions](https://github.com/Fincept-Corporation/FinceptTerminal/discussions) |
-| Discord      | [discord.gg/ae87a8ygbN](https://discord.gg/ae87a8ygbN)                         |
-| Email        | support@fincept.in                                                             |
+| Issues       | [GitHub Issues](https://github.com/donbeatless-stack/KeystoneTerminal/issues) |
 
 Good first issues carry the `good-first-issue` label — those are the right starting point for new contributors.
 
 ---
 
-**Repository:** https://github.com/Fincept-Corporation/FinceptTerminal
+**Repository:** https://github.com/donbeatless-stack/KeystoneTerminal
 **License:** AGPL-3.0-or-later
