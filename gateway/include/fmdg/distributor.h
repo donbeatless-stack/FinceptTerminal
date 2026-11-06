@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -65,6 +66,16 @@ class Distributor {
     /// Removes `sub` from every symbol (a disconnect).
     void remove(const Subscriber* sub);
 
+    /// `listener` is called whenever the set of symbols with at least one
+    /// subscriber changes (a symbol gains its first or loses its last one), on
+    /// the thread that changed it, after the subscription lock is released. It
+    /// must not block or call back into the distributor: an upstream feed posts
+    /// itself a note and reads demanded() later. Any thread; nullptr removes it,
+    /// and once this returns the old listener is not running and won't run again.
+    void set_demand_listener(std::function<void()> listener);
+    /// The symbols that have at least one subscriber now.
+    std::vector<SymbolId> demanded() const;
+
     std::optional<Tick> last(SymbolId id) const;
     std::uint64_t ticks_in() const { return ticks_in_.load(std::memory_order_relaxed); }
     /// Ticks handed to subscribers, live and snapshot: every one is then either
@@ -82,6 +93,11 @@ class Distributor {
     mutable std::shared_mutex subs_mu_;
     std::vector<std::vector<std::shared_ptr<Subscriber>>> subs_;          ///< by SymbolId
     std::unordered_map<const Subscriber*, std::vector<SymbolId>> by_sub_; ///< for remove()
+
+    void notify_demand();
+    /// Held while the listener runs, so set_demand_listener() can wait it out.
+    std::mutex listener_mu_;
+    std::function<void()> listener_;
 
     mutable std::mutex last_mu_;
     std::vector<Tick> last_;

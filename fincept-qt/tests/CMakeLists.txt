@@ -181,6 +181,15 @@ fincept_add_test(tst_gateway_history
     tst_gateway_history.cpp
     "${PROJECT_SOURCE_DIR}/src/algo_engine/GatewayHistory.cpp")
 
+# src/trading/gateway/GatewayFeed*.{h,cpp}: the client of the market-data gateway's
+# push port, codec as pure functions and the client against a fake gateway on
+# loopback. Links Qt6::Network: the socket is the seam under test.
+fincept_add_test(tst_gateway_feed
+    tst_gateway_feed.cpp
+    "${PROJECT_SOURCE_DIR}/src/trading/gateway/GatewayFeed.cpp"
+    "${PROJECT_SOURCE_DIR}/src/trading/gateway/GatewayFeedProtocol.cpp")
+target_link_libraries(tst_gateway_feed PRIVATE Qt6::Network)
+
 # src/python/PythonProcessPool.{h,cpp} with scripts/fincept_worker.py, against a real
 # interpreter (FINCEPT_TEST_PYTHON, else python3/python on PATH; skipped if none):
 # fresh-process semantics per call, timeouts, crashes, recycling, Unavailable.
@@ -257,5 +266,5 @@ set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tes
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
                "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
                "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging, tst_gateway_history, "
-               "tst_python_process_pool "
+               "tst_gateway_feed, tst_python_process_pool "
                "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan, bench_python_pool)")

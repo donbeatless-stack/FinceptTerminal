@@ -69,6 +69,20 @@ TEST(AlpacaOutgoing, SubscribeListsTradesAndOptionallyBars) {
 
 // ── incoming ─────────────────────────────────────────────────────────────────
 
+TEST(AlpacaOutgoing, UnsubscribeMirrorsSubscribe) {
+    EXPECT_EQ(unsubscribe_message({"AAPL"}, false), R"({"action":"unsubscribe","trades":["AAPL"]})");
+    EXPECT_EQ(unsubscribe_message({"SPY"}, true),
+              R"({"action":"unsubscribe","trades":["SPY"],"bars":["SPY"],"updatedBars":["SPY"]})");
+}
+
+TEST(AlpacaOutgoing, OnlyStockSymbolsArePassedOnFromClients) {
+    for (const char* ok : {"A", "AAPL", "BRK.B", "SPY", "X1", "ABCDEFGHIJKLMNOP"})
+        EXPECT_TRUE(streamable_symbol(ok)) << ok;
+    // "*" would subscribe to every trade on the feed.
+    for (const char* bad : {"", "*", "aapl", "1ABC", ".B", "AA PL", "AAPL*", "BTC/USD", "ABCDEFGHIJKLMNOPQ", "\"x\""})
+        EXPECT_FALSE(streamable_symbol(bad)) << bad;
+}
+
 TEST(AlpacaIncoming, ControlMessages) {
     MessageParser p;
     Batch b;

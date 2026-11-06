@@ -205,3 +205,33 @@ TEST(Distributor, ResubscribeRacingPublishNeverGoesBackwards) {
             ++backwards;
     EXPECT_EQ(backwards, 0u);
 }
+
+TEST(Distributor, DemandChangesOnlyWithAFirstOrLastSubscriber) {
+    Distributor d(64);
+    int calls = 0;
+    d.set_demand_listener([&] { ++calls; });
+    auto a = std::make_shared<Recorder>();
+    auto b = std::make_shared<Recorder>();
+
+    d.subscribe(a, {1, 2});
+    EXPECT_EQ(calls, 1);
+    EXPECT_EQ(d.demanded(), (std::vector<SymbolId>{1, 2}));
+    d.subscribe(b, {2}); // 2 already had a subscriber: no change
+    d.subscribe(a, {1}); // a duplicate: no change
+    EXPECT_EQ(calls, 1);
+    d.unsubscribe(a.get(), {2}); // b still follows 2
+    EXPECT_EQ(calls, 1);
+    d.unsubscribe(b.get(), {7}); // never subscribed: no change
+    EXPECT_EQ(calls, 1);
+    d.unsubscribe(a.get(), {1}); // 1 has nobody left
+    EXPECT_EQ(calls, 2);
+    EXPECT_EQ(d.demanded(), (std::vector<SymbolId>{2}));
+    d.remove(b.get()); // a disconnect takes 2's last subscriber
+    EXPECT_EQ(calls, 3);
+    EXPECT_TRUE(d.demanded().empty());
+
+    d.set_demand_listener(nullptr);
+    d.subscribe(a, {3});
+    EXPECT_EQ(calls, 3);
+    EXPECT_EQ(d.demanded(), (std::vector<SymbolId>{3}));
+}

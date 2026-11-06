@@ -16,7 +16,9 @@
 #include <cstdlib>
 #include <ctime>
 #include <exception>
+#include <format>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <set>
 #include <string>
@@ -52,7 +54,11 @@ void usage() {
         "alpaca feed (trades become ticks; minute bars are counted):\n"
         "  --alpaca-stream NAME   iex | sip | delayed_sip | test (default iex; test streams\n"
         "                         the made-up FAKEPACA around the clock)\n"
-        "  --alpaca-symbols LIST  comma-separated, e.g. AAPL,MSFT (the free plan allows 30)\n"
+        "  --alpaca-symbols LIST  always streamed, comma-separated, e.g. AAPL,MSFT\n"
+        "                         (may be left out: clients' symbols are streamed on demand)\n"
+        "  --alpaca-no-demand     stream only --alpaca-symbols, not what push clients subscribe to\n"
+        "  --alpaca-max-symbols N upstream cap, --alpaca-symbols included (default 30 on iex,\n"
+        "                         the free plan's limit; otherwise none)\n"
         "  --alpaca-credentials F file with APCA_API_KEY_ID=... and APCA_API_SECRET_KEY=...\n"
         "                         lines; without it, those environment variables are read\n"
         "  --alpaca-no-bars       subscribe to trades only\n"
@@ -186,6 +192,7 @@ int main(int argc, char** argv) {
     std::string feed_kind = "synthetic";
     std::string alpaca_stream = "iex";
     std::string alpaca_symbols;
+    long long alpaca_max_symbols = -1; ///< -1: the stream's default
     std::string credentials_file;
     std::string pg_conninfo;
     std::string pg_table = "bars_1m";
@@ -233,6 +240,10 @@ int main(int argc, char** argv) {
                 credentials_file = value();
             else if (arg == "--alpaca-no-bars")
                 alpaca_config.bars = false;
+            else if (arg == "--alpaca-no-demand")
+                alpaca_config.on_demand = false;
+            else if (arg == "--alpaca-max-symbols")
+                alpaca_max_symbols = std::stoll(value());
             else if (arg == "--ca-file")
                 alpaca_config.ca_file = value();
             else if (arg == "--pg")
@@ -304,10 +315,14 @@ int main(int argc, char** argv) {
         alpaca_config.path = "/v2/" + alpaca_stream;
         alpaca_config.symbols = split_symbols(alpaca_symbols.empty() && alpaca_stream == "test" ? "FAKEPACA"
                                                                                                 : alpaca_symbols);
-        if (alpaca_config.symbols.empty()) {
-            std::fprintf(stderr, "fmdg: --alpaca-symbols is required (e.g. AAPL,MSFT)\n");
+        if (alpaca_config.symbols.empty() && !alpaca_config.on_demand) {
+            std::fprintf(stderr, "fmdg: --alpaca-no-demand needs --alpaca-symbols (e.g. AAPL,MSFT)\n");
             return 2;
         }
+        if (alpaca_max_symbols >= 0)
+            alpaca_config.max_symbols = static_cast<std::size_t>(alpaca_max_symbols);
+        else
+            alpaca_config.max_symbols = alpaca_stream == "iex" ? 30 : 0;
         alpaca_config.key = api_key;
         alpaca_config.secret = api_secret;
         if (alpaca_stream == "iex" && alpaca_config.symbols.size() > 30)
@@ -387,6 +402,24 @@ int main(int argc, char** argv) {
                                            [&sync] { return sync ? sync->complete_to() : std::int64_t{0}; },
                                            std::move(synced)));
     }
+    // Constructed before the gateway starts, so FEED can be registered; started after.
+    std::unique_ptr<fmdg::AlpacaFeed> alpaca;
+    if (use_alpaca) {
+        try {
+            alpaca = std::make_unique<fmdg::AlpacaFeed>(gateway, alpaca_config);
+        } catch (const std::exception& e) { // e.g. an unreadable --ca-file
+            std::fprintf(stderr, "fmdg: %s\n", e.what());
+            return 1;
+        }
+    }
+    // FEED: what this gateway streams, so a client (the terminal) can tell a live
+    // feed from a history-only gateway before it relies on the push port.
+    const std::string feed_name =
+        use_alpaca ? "alpaca" : (feed_kind == "synthetic" && feed_config.symbols > 0 ? "synthetic" : "none");
+    gateway.add_command("FEED", [a = alpaca.get(), feed_name](std::string_view,
+                                                              std::function<void(std::string)> reply) {
+        reply(a ? a->status_line() : "FEED " + feed_name + "\n");
+    });
     try {
         gateway.start();
     } catch (const std::system_error& e) {
@@ -400,18 +433,14 @@ int main(int argc, char** argv) {
 
     // Exactly one producer may call Gateway::ingest().
     std::unique_ptr<fmdg::SyntheticFeed> synthetic;
-    std::unique_ptr<fmdg::AlpacaFeed> alpaca;
-    if (use_alpaca) {
-        try {
-            alpaca = std::make_unique<fmdg::AlpacaFeed>(gateway, alpaca_config);
-        } catch (const std::exception& e) { // e.g. an unreadable --ca-file
-            std::fprintf(stderr, "fmdg: %s\n", e.what());
-            gateway.stop();
-            return 1;
-        }
+    if (alpaca) {
         alpaca->start();
-        std::printf("fmdg: alpaca feed, %s stream, %zu symbol(s)%s\n", alpaca_stream.c_str(),
-                    alpaca_config.symbols.size(), alpaca_config.bars ? ", trades + minute bars" : ", trades");
+        const std::string demand =
+            alpaca_config.on_demand ? std::format(", plus what clients subscribe to (cap {})", alpaca_config.max_symbols)
+                                    : std::string();
+        std::printf("fmdg: alpaca feed, %s stream, %zu symbol(s)%s%s\n", alpaca_stream.c_str(),
+                    alpaca_config.symbols.size(), alpaca_config.bars ? ", trades + minute bars" : ", trades",
+                    demand.c_str());
     } else if (feed_kind == "synthetic" && feed_config.symbols > 0) {
         synthetic = std::make_unique<fmdg::SyntheticFeed>(gateway, feed_config);
         synthetic->start();
@@ -449,8 +478,9 @@ int main(int argc, char** argv) {
                     us(s.latency_p999_ns), us(s.latency_max_ns));
         if (alpaca) {
             const fmdg::AlpacaFeedStats a = alpaca->stats();
-            std::printf("  alpaca %s: trades=%llu bars=%llu messages=%llu disconnects=%llu errors=%llu%s%s\n",
-                        a.state.c_str(), static_cast<unsigned long long>(a.trades),
+            std::printf("  alpaca %s: upstream=%zu skipped=%zu trades=%llu bars=%llu messages=%llu "
+                        "disconnects=%llu errors=%llu%s%s\n",
+                        a.state.c_str(), a.upstream, a.skipped, static_cast<unsigned long long>(a.trades),
                         static_cast<unsigned long long>(a.bars), static_cast<unsigned long long>(a.messages),
                         static_cast<unsigned long long>(a.disconnects),
                         static_cast<unsigned long long>(a.server_errors + a.malformed),

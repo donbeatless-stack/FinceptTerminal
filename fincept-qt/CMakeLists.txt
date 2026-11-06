@@ -1229,6 +1229,8 @@ set(TRADING_SOURCES
     # Global brokers
     src/trading/brokers/alpaca/AlpacaBroker.cpp
     src/trading/brokers/alpaca/AlpacaWebSocket.cpp
+    src/trading/gateway/GatewayFeed.cpp
+    src/trading/gateway/GatewayFeedProtocol.cpp
     src/trading/brokers/ibkr/IBKRBroker.cpp
     src/trading/brokers/tradier/TradierBroker.cpp
     src/trading/brokers/saxo/SaxoBankBroker.cpp
@@ -2685,6 +2687,8 @@ set_source_files_properties(
     src/trading/brokers/icicidirect/IciciDirectBroker.cpp
     src/trading/brokers/alpaca/AlpacaBroker.cpp
     src/trading/brokers/alpaca/AlpacaWebSocket.cpp
+    src/trading/gateway/GatewayFeed.cpp
+    src/trading/gateway/GatewayFeedProtocol.cpp
     src/trading/brokers/ibkr/IBKRBroker.cpp
     src/trading/brokers/tradier/TradierBroker.cpp
     src/trading/brokers/saxo/SaxoBankBroker.cpp

@@ -117,12 +117,14 @@ void Distributor::process(const Tick& t) {
 void Distributor::subscribe(const std::shared_ptr<Subscriber>& sub, const std::vector<SymbolId>& ids) {
     std::unique_lock lock(subs_mu_);
     auto& mine = by_sub_[sub.get()];
+    bool first_subscriber = false;
     for (const SymbolId id : ids) {
         if (id >= subs_.size())
             subs_.resize(static_cast<std::size_t>(id) + 1);
         auto& list = subs_[id];
         if (std::find(list.begin(), list.end(), sub) != list.end())
             continue;
+        first_subscriber |= list.empty();
         list.push_back(sub);
         mine.push_back(id);
     }
@@ -136,6 +138,9 @@ void Distributor::subscribe(const std::shared_ptr<Subscriber>& sub, const std::v
             ++snapshots;
         }
     deliveries_.fetch_add(snapshots, std::memory_order_relaxed);
+    lock.unlock();
+    if (first_subscriber)
+        notify_demand();
 }
 
 void Distributor::unsubscribe(const Subscriber* sub, const std::vector<SymbolId>& ids) {
@@ -143,11 +148,15 @@ void Distributor::unsubscribe(const Subscriber* sub, const std::vector<SymbolId>
     const auto mine = by_sub_.find(sub);
     if (mine == by_sub_.end())
         return;
+    bool last_subscriber = false;
     for (const SymbolId id : ids) {
-        if (id < subs_.size())
-            std::erase_if(subs_[id], [sub](const auto& p) { return p.get() == sub; });
+        if (id < subs_.size() && std::erase_if(subs_[id], [sub](const auto& p) { return p.get() == sub; }) > 0)
+            last_subscriber |= subs_[id].empty();
         std::erase(mine->second, id);
     }
+    lock.unlock();
+    if (last_subscriber)
+        notify_demand();
 }
 
 void Distributor::remove(const Subscriber* sub) {
@@ -155,10 +164,34 @@ void Distributor::remove(const Subscriber* sub) {
     const auto mine = by_sub_.find(sub);
     if (mine == by_sub_.end())
         return;
+    bool last_subscriber = false;
     for (const SymbolId id : mine->second)
-        if (id < subs_.size())
-            std::erase_if(subs_[id], [sub](const auto& p) { return p.get() == sub; });
+        if (id < subs_.size() && std::erase_if(subs_[id], [sub](const auto& p) { return p.get() == sub; }) > 0)
+            last_subscriber |= subs_[id].empty();
     by_sub_.erase(mine);
+    lock.unlock();
+    if (last_subscriber)
+        notify_demand();
+}
+
+void Distributor::set_demand_listener(std::function<void()> listener) {
+    std::lock_guard lock(listener_mu_);
+    listener_ = std::move(listener);
+}
+
+void Distributor::notify_demand() {
+    std::lock_guard lock(listener_mu_);
+    if (listener_)
+        listener_();
+}
+
+std::vector<SymbolId> Distributor::demanded() const {
+    std::shared_lock lock(subs_mu_);
+    std::vector<SymbolId> out;
+    for (std::size_t id = 0; id < subs_.size(); ++id)
+        if (!subs_[id].empty())
+            out.push_back(static_cast<SymbolId>(id));
+    return out;
 }
 
 std::optional<Tick> Distributor::last(SymbolId id) const {

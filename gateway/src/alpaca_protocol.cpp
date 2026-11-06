@@ -160,8 +160,12 @@ std::string auth_message(std::string_view key, std::string_view secret) {
     return m;
 }
 
-std::string subscribe_message(const std::vector<std::string>& symbols, bool bars) {
-    std::string m = R"({"action":"subscribe","trades":)";
+namespace {
+
+std::string channel_message(std::string_view action, const std::vector<std::string>& symbols, bool bars) {
+    std::string m = R"({"action":")";
+    m += action;
+    m += R"(","trades":)";
     append_symbol_array(m, symbols);
     if (bars) {
         m += R"(,"bars":)";
@@ -171,6 +175,25 @@ std::string subscribe_message(const std::vector<std::string>& symbols, bool bars
     }
     m += '}';
     return m;
+}
+
+} // namespace
+
+std::string subscribe_message(const std::vector<std::string>& symbols, bool bars) {
+    return channel_message("subscribe", symbols, bars);
+}
+
+std::string unsubscribe_message(const std::vector<std::string>& symbols, bool bars) {
+    return channel_message("unsubscribe", symbols, bars);
+}
+
+bool streamable_symbol(std::string_view s) {
+    if (s.empty() || s.size() > 16 || s.front() < 'A' || s.front() > 'Z')
+        return false;
+    for (const char c : s)
+        if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.'))
+            return false;
+    return true;
 }
 
 std::string rfc3339(std::int64_t unix_seconds) {

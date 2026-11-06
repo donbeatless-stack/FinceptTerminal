@@ -277,6 +277,18 @@ GatewayStats Gateway::stats() const {
     return impl_->stats();
 }
 
+void Gateway::set_demand_listener(std::function<void()> listener) {
+    impl_->distributor.set_demand_listener(std::move(listener));
+}
+
+std::vector<std::string> Gateway::demanded_symbols() const {
+    std::vector<std::string> out;
+    for (const SymbolId id : impl_->distributor.demanded())
+        if (std::string name = impl_->symbols.name(id); !name.empty())
+            out.push_back(std::move(name));
+    return out;
+}
+
 std::string Gateway::handle_command(std::string_view line) {
     return impl_->handle_command(line);
 }

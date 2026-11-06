@@ -18,6 +18,7 @@
 #include <mutex>
 #include <optional>
 #include <random>
+#include <set>
 #include <stdexcept>
 #include <thread>
 
@@ -58,7 +59,52 @@ std::string seconds_text(std::chrono::nanoseconds d) {
 using net::Connection;
 using net::note_first_error;
 
+std::string join(const std::vector<std::string>& v) {
+    std::string out;
+    for (const auto& s : v) {
+        if (!out.empty())
+            out += ',';
+        out += s;
+    }
+    return out;
+}
+
 } // namespace
+
+UpstreamPlan plan_upstream(const std::vector<std::string>& fixed, const std::vector<std::string>& current,
+                           const std::vector<std::string>& demanded, std::size_t cap) {
+    UpstreamPlan p;
+    std::set<std::string, std::less<>> want(fixed.begin(), fixed.end());
+    std::set<std::string, std::less<>> extra;
+    for (const auto& s : demanded)
+        if (!want.contains(s))
+            extra.insert(s);
+    // Candidates in order of precedence: those streaming already, then newcomers.
+    const std::set<std::string, std::less<>> cur(current.begin(), current.end());
+    std::vector<std::string> order;
+    for (const auto& s : current)
+        if (extra.contains(s))
+            order.push_back(s);
+    for (const auto& s : extra)
+        if (!cur.contains(s))
+            order.push_back(s);
+    for (const auto& s : order) {
+        if (!alpaca::streamable_symbol(s) || (cap != 0 && want.size() >= cap)) {
+            p.skipped.push_back(s);
+            continue;
+        }
+        want.insert(s);
+    }
+    p.want.assign(want.begin(), want.end());
+    for (const auto& s : p.want)
+        if (!cur.contains(s))
+            p.add.push_back(s);
+    for (const auto& s : cur)
+        if (!want.contains(s))
+            p.drop.push_back(s);
+    std::sort(p.skipped.begin(), p.skipped.end());
+    return p;
+}
 
 struct AlpacaFeed::Impl {
     Impl(Gateway& g, AlpacaFeedConfig c) : gateway(g), cfg(std::move(c)) {
@@ -71,6 +117,15 @@ struct AlpacaFeed::Impl {
     AlpacaFeedStats st;
     std::thread thread;
     bool started = false;
+
+    // io thread only.
+    /// What the last session subscribed to: newcomers queue behind these.
+    std::vector<std::string> upstream;
+    std::vector<std::string> last_skipped;
+    /// Set while a session is authenticated: brings the upstream subscription in
+    /// line with what clients want now. The demand listener posts calls to it.
+    std::function<void()> resync;
+
     asio::ssl::context ssl{asio::ssl::context::tls_client};
     /// Declared last, so destroyed first: tearing it down destroys the suspended
     /// coroutines and, with them, their sockets — before anything they reference.
@@ -87,6 +142,18 @@ struct AlpacaFeed::Impl {
     }
     void set_state(const char* state) {
         update([&](AlpacaFeedStats& s) { s.state = state; });
+    }
+    std::vector<std::string> demanded() const {
+        return cfg.on_demand ? gateway.demanded_symbols() : std::vector<std::string>{};
+    }
+    void note_skipped(const std::vector<std::string>& skipped) {
+        update([&](AlpacaFeedStats& s) { s.skipped = skipped.size(); });
+        if (skipped == last_skipped)
+            return;
+        last_skipped = skipped;
+        if (!skipped.empty())
+            log(std::format("not streaming [{}]: over the {}-symbol cap, or not a stock symbol", join(skipped),
+                            cfg.max_symbols));
     }
 
     awaitable<void> supervise();
@@ -171,6 +238,29 @@ awaitable<void> AlpacaFeed::Impl::session(bool& connected, bool& authenticated) 
         wake.cancel(); // wakes the writer if it is waiting
     };
 
+    // Follow the clients: drop what nobody wants first, so the account's symbol
+    // cap has room, then add. Alpaca answers each with the whole subscription.
+    auto sync_upstream = [&] {
+        const UpstreamPlan plan = plan_upstream(cfg.symbols, upstream, demanded(), cfg.max_symbols);
+        note_skipped(plan.skipped);
+        if (plan.add.empty() && plan.drop.empty())
+            return;
+        if (!plan.drop.empty())
+            send(ws::Opcode::Text, alpaca::unsubscribe_message(plan.drop, cfg.bars));
+        if (!plan.add.empty())
+            send(ws::Opcode::Text, alpaca::subscribe_message(plan.add, cfg.bars));
+        upstream = plan.want;
+        update([&](AlpacaFeedStats& s) { s.upstream = upstream.size(); });
+        log(std::format("following clients: +[{}] -[{}], {} symbol(s) upstream", join(plan.add), join(plan.drop),
+                        upstream.size()));
+    };
+    // Declared after everything sync_upstream refers to, so it is destroyed
+    // first: once this session is gone, a posted resync finds nothing to call.
+    struct ResyncGuard {
+        std::function<void()>& slot;
+        ~ResyncGuard() { slot = nullptr; }
+    } resync_guard{resync};
+
     auto handle_text = [&](const std::string& text) {
         alpaca::Batch batch;
         std::string err;
@@ -187,15 +277,24 @@ awaitable<void> AlpacaFeed::Impl::session(bool& connected, bool& authenticated) 
                 case alpaca::Control::Kind::Connected:
                     send(ws::Opcode::Text, alpaca::auth_message(cfg.key, cfg.secret));
                     break;
-                case alpaca::Control::Kind::Authenticated:
+                case alpaca::Control::Kind::Authenticated: {
                     authenticated = true;
-                    update([](AlpacaFeedStats& s) {
+                    // A new connection subscribes to everything wanted now; the
+                    // last session's list only decides who goes first under the cap.
+                    const UpstreamPlan plan = plan_upstream(cfg.symbols, upstream, demanded(), cfg.max_symbols);
+                    upstream = plan.want;
+                    note_skipped(plan.skipped);
+                    update([&](AlpacaFeedStats& s) {
                         ++s.authenticated;
-                        s.state = "subscribing";
+                        s.upstream = upstream.size();
+                        s.state = upstream.empty() ? "streaming" : "subscribing";
                     });
-                    log(std::format("authenticated; subscribing to {} symbol(s)", cfg.symbols.size()));
-                    send(ws::Opcode::Text, alpaca::subscribe_message(cfg.symbols, cfg.bars));
+                    log(std::format("authenticated; subscribing to {} symbol(s)", upstream.size()));
+                    if (!upstream.empty())
+                        send(ws::Opcode::Text, alpaca::subscribe_message(upstream, cfg.bars));
+                    resync = sync_upstream;
                     break;
+                }
                 case alpaca::Control::Kind::Subscription:
                     update([&](AlpacaFeedStats& s) {
                         s.state = "streaming";
@@ -403,11 +502,21 @@ void AlpacaFeed::start() {
     if (impl_->started)
         return;
     impl_->started = true;
+    if (impl_->cfg.on_demand)
+        impl_->gateway.set_demand_listener([im = impl_.get()] {
+            asio::post(im->io, [im] {
+                if (im->resync)
+                    im->resync();
+            });
+        });
     asio::co_spawn(impl_->io, impl_->supervise(), asio::detached);
     impl_->thread = std::thread([this] { impl_->io.run(); });
 }
 
 void AlpacaFeed::stop() {
+    // First, so no I/O thread posts to the io_context while it goes away.
+    if (impl_->started && impl_->cfg.on_demand)
+        impl_->gateway.set_demand_listener(nullptr);
     impl_->io.stop();
     if (impl_->thread.joinable())
         impl_->thread.join();
@@ -418,6 +527,14 @@ void AlpacaFeed::stop() {
 AlpacaFeedStats AlpacaFeed::stats() const {
     std::lock_guard lock(impl_->mu);
     return impl_->st;
+}
+
+std::string AlpacaFeed::status_line() const {
+    const AlpacaFeedStats s = stats();
+    const std::string& path = impl_->cfg.path;
+    const std::string stream = path.substr(path.find_last_of('/') + 1);
+    return std::format("FEED alpaca stream={} state={} on_demand={} upstream={} cap={}\n", stream, s.state,
+                       impl_->cfg.on_demand ? 1 : 0, s.upstream, impl_->cfg.max_symbols);
 }
 
 } // namespace fmdg

@@ -7,6 +7,7 @@
 #include "trading/OrderMatcher.h"
 #include "trading/PaperTrading.h"
 #include "trading/brokers/alpaca/AlpacaWebSocket.h"
+#include "trading/gateway/GatewayFeed.h"
 #include "trading/instruments/InstrumentService.h"
 #include "trading/websocket/AliceBlueWebSocket.h"
 #include "trading/websocket/AngelOneWebSocket.h"
@@ -77,6 +78,7 @@ void AccountDataStream::start() {
     if (running_)
         return;
     running_ = true;
+    gateway_feed_failed_ = false; // a fresh start asks the gateway again
 
     // Try to init WebSocket if broker supports it
     ws_init();
@@ -1120,72 +1122,12 @@ void AccountDataStream::ws_init() {
     }
 
     if (broker_id_ == "alpaca") {
-        auto creds = AccountManager::instance().load_credentials(account_id_);
-        if (creds.api_key.isEmpty() || creds.api_secret.isEmpty())
+        // A market-data gateway that streams live Alpaca trades holds the account's
+        // one stream connection: take the trades from it. With none (or once it is
+        // gone for good), the account's own WebSocket, exactly as before.
+        if (!gateway_feed_failed_ && ws_init_alpaca_gateway())
             return;
-
-        auto* aws = new AlpacaWebSocket(creds.api_key, creds.api_secret, this);
-        ws_ = aws;
-
-        connect(aws, &AlpacaWebSocket::tick_received, this, [this](const BrokerQuote& q) {
-            ++ws_tick_count_;
-            quote_cache_[q.symbol] = q;
-            emit quote_updated(account_id_, q.symbol, q);
-        });
-
-        connect(aws, &AlpacaWebSocket::trade_received, this, [this](const BrokerTrade& trade) {
-            auto it = quote_cache_.find(trade.symbol);
-            if (it != quote_cache_.end()) {
-                it->ltp = trade.price;
-                const auto dt = QDateTime::fromString(trade.timestamp, Qt::ISODateWithMs);
-                it->timestamp = dt.isValid() ? dt.toMSecsSinceEpoch() : 0;
-                emit quote_updated(account_id_, trade.symbol, it.value());
-            }
-        });
-
-        connect(aws, &AlpacaWebSocket::bar_received, this, [this](const QString& symbol, const BrokerCandle& bar) {
-            auto it = quote_cache_.find(symbol);
-            if (it != quote_cache_.end()) {
-                it->open = bar.open;
-                it->high = bar.high;
-                it->low = bar.low;
-                it->close = bar.close;
-                it->volume = bar.volume;
-                it->change = bar.close - bar.open;
-                it->change_pct = bar.open > 0 ? ((bar.close - bar.open) / bar.open) * 100.0 : 0;
-                emit quote_updated(account_id_, symbol, it.value());
-            }
-        });
-
-        connect(aws, &AlpacaWebSocket::connected, this, [this]() {
-            LOG_INFO(ADS_TAG, QString("Alpaca WS connected for %1").arg(account_id_));
-            emit connection_state_changed(account_id_, ConnectionState::Connected);
-            QStringList symbols;
-            if (!selected_symbol_.isEmpty())
-                symbols.append(selected_symbol_);
-            for (const QString& s : subscribed_symbols()) {
-                if (!symbols.contains(s))
-                    symbols.append(s);
-            }
-            if (auto* a = qobject_cast<AlpacaWebSocket*>(ws_))
-                a->subscribe(symbols);
-        });
-
-        connect(aws, &AlpacaWebSocket::disconnected, this, [this]() {
-            LOG_WARN(ADS_TAG, QString("Alpaca WS disconnected for %1").arg(account_id_));
-            emit connection_state_changed(account_id_, ConnectionState::Disconnected);
-        });
-
-        connect(aws, &AlpacaWebSocket::error_occurred, this, [this](const QString& err) {
-            LOG_ERROR(ADS_TAG, QString("Alpaca WS error: %1").arg(err));
-            check_token_expiry(err);
-        });
-
-        connect(aws, &AlpacaWebSocket::market_closed, this, [this]() {
-            LOG_INFO(ADS_TAG, QString("Alpaca market closed for %1 — falling back to polling").arg(account_id_));
-        });
-
-        aws->open();
+        ws_init_alpaca_direct();
         return;
     }
 
@@ -1597,6 +1539,127 @@ void AccountDataStream::ws_init() {
     aows->open();
 }
 
+// ── Alpaca: through the market-data gateway, or directly ────────────────────
+
+QStringList AccountDataStream::ws_symbol_universe() const {
+    QStringList symbols;
+    if (!selected_symbol_.isEmpty())
+        symbols.append(selected_symbol_);
+    for (const QString& s : subscribed_symbols())
+        if (!symbols.contains(s))
+            symbols.append(s);
+    return symbols;
+}
+
+bool AccountDataStream::ws_init_alpaca_gateway() {
+    const auto where = gateway_feed::endpoints(qEnvironmentVariable("FINCEPT_GATEWAY"),
+                                               qEnvironmentVariable("FINCEPT_GATEWAY_FEED"));
+    if (!where.enabled) {
+        LOG_INFO(ADS_TAG, QString("Alpaca live data for %1: own stream (%2)").arg(account_id_, where.reason));
+        return false;
+    }
+    auto* gf = new GatewayFeed(where, this);
+    ws_ = gf;
+
+    connect(gf, &GatewayFeed::note, this, [](const QString& line) { LOG_INFO("GatewayFeed", line); });
+    connect(gf, &GatewayFeed::trade_received, this, &AccountDataStream::on_gateway_trade);
+    connect(gf, &GatewayFeed::connected, this, [this]() {
+        LOG_INFO(ADS_TAG, QString("Alpaca live data for %1 via the market-data gateway").arg(account_id_));
+        emit connection_state_changed(account_id_, ConnectionState::Connected);
+        ws_resubscribe(); // symbols added while it was connecting
+    });
+    connect(gf, &GatewayFeed::disconnected, this, [this]() {
+        LOG_WARN(ADS_TAG, QString("Gateway feed disconnected for %1").arg(account_id_));
+        emit connection_state_changed(account_id_, ConnectionState::Disconnected);
+    });
+    connect(gf, &GatewayFeed::error_occurred, this,
+            [](const QString& err) { LOG_WARN(ADS_TAG, QString("Gateway feed: %1").arg(err)); });
+    connect(gf, &GatewayFeed::unavailable, this, [this, gf](const QString& why) {
+        if (ws_ != gf)
+            return;
+        LOG_INFO(ADS_TAG, QString("Alpaca live data for %1: own stream (gateway %2: %3)")
+                              .arg(account_id_, gf->endpoint_text(), why));
+        // For the life of this stream: the account's own connection from here on.
+        gateway_feed_failed_ = true;
+        ws_teardown();
+        if (running_)
+            ws_init_alpaca_direct();
+    });
+
+    gf->set_subscriptions(ws_symbol_universe());
+    gf->open();
+    return true;
+}
+
+void AccountDataStream::on_gateway_trade(const gateway_feed::Trade& t) {
+    ++ws_tick_count_;
+    BrokerQuote& q = quote_cache_[t.symbol]; // created on the first trade: there are no quote messages here
+    if (gateway_feed::merge_trade(q, t))
+        emit quote_updated(account_id_, t.symbol, q);
+}
+
+void AccountDataStream::ws_init_alpaca_direct() {
+    auto creds = AccountManager::instance().load_credentials(account_id_);
+    if (creds.api_key.isEmpty() || creds.api_secret.isEmpty())
+        return;
+
+    auto* aws = new AlpacaWebSocket(creds.api_key, creds.api_secret, this);
+    ws_ = aws;
+
+    connect(aws, &AlpacaWebSocket::tick_received, this, [this](const BrokerQuote& q) {
+        ++ws_tick_count_;
+        quote_cache_[q.symbol] = q;
+        emit quote_updated(account_id_, q.symbol, q);
+    });
+
+    connect(aws, &AlpacaWebSocket::trade_received, this, [this](const BrokerTrade& trade) {
+        auto it = quote_cache_.find(trade.symbol);
+        if (it != quote_cache_.end()) {
+            it->ltp = trade.price;
+            const auto dt = QDateTime::fromString(trade.timestamp, Qt::ISODateWithMs);
+            it->timestamp = dt.isValid() ? dt.toMSecsSinceEpoch() : 0;
+            emit quote_updated(account_id_, trade.symbol, it.value());
+        }
+    });
+
+    connect(aws, &AlpacaWebSocket::bar_received, this, [this](const QString& symbol, const BrokerCandle& bar) {
+        auto it = quote_cache_.find(symbol);
+        if (it != quote_cache_.end()) {
+            it->open = bar.open;
+            it->high = bar.high;
+            it->low = bar.low;
+            it->close = bar.close;
+            it->volume = bar.volume;
+            it->change = bar.close - bar.open;
+            it->change_pct = bar.open > 0 ? ((bar.close - bar.open) / bar.open) * 100.0 : 0;
+            emit quote_updated(account_id_, symbol, it.value());
+        }
+    });
+
+    connect(aws, &AlpacaWebSocket::connected, this, [this]() {
+        LOG_INFO(ADS_TAG, QString("Alpaca WS connected for %1").arg(account_id_));
+        emit connection_state_changed(account_id_, ConnectionState::Connected);
+        if (auto* a = qobject_cast<AlpacaWebSocket*>(ws_))
+            a->subscribe(ws_symbol_universe());
+    });
+
+    connect(aws, &AlpacaWebSocket::disconnected, this, [this]() {
+        LOG_WARN(ADS_TAG, QString("Alpaca WS disconnected for %1").arg(account_id_));
+        emit connection_state_changed(account_id_, ConnectionState::Disconnected);
+    });
+
+    connect(aws, &AlpacaWebSocket::error_occurred, this, [this](const QString& err) {
+        LOG_ERROR(ADS_TAG, QString("Alpaca WS error: %1").arg(err));
+        check_token_expiry(err);
+    });
+
+    connect(aws, &AlpacaWebSocket::market_closed, this, [this]() {
+        LOG_INFO(ADS_TAG, QString("Alpaca market closed for %1 — falling back to polling").arg(account_id_));
+    });
+
+    aws->open();
+}
+
 void AccountDataStream::ws_teardown() {
     if (!ws_)
         return;
@@ -1613,6 +1676,8 @@ bool AccountDataStream::ws_active() const {
         return fws->is_connected() && ws_tick_count_ > 0;
     if (auto* aws = qobject_cast<AlpacaWebSocket*>(ws_))
         return aws->is_connected() && ws_tick_count_ > 0;
+    if (auto* gf = qobject_cast<GatewayFeed*>(ws_))
+        return gf->is_connected() && ws_tick_count_ > 0;
     if (auto* zws = qobject_cast<ZerodhaWebSocket*>(ws_))
         return zws->is_connected() && ws_tick_count_ > 0;
     if (auto* aows = qobject_cast<AngelOneWebSocket*>(ws_))
@@ -1631,6 +1696,8 @@ bool AccountDataStream::ws_connected() const {
         return fws->is_connected();
     if (auto* aws = qobject_cast<AlpacaWebSocket*>(ws_))
         return aws->is_connected();
+    if (auto* gf = qobject_cast<GatewayFeed*>(ws_))
+        return gf->is_connected();
     if (auto* zws = qobject_cast<ZerodhaWebSocket*>(ws_))
         return zws->is_connected();
     if (auto* aows = qobject_cast<AngelOneWebSocket*>(ws_))
@@ -1675,16 +1742,12 @@ void AccountDataStream::ws_resubscribe() {
         fws->set_subscriptions(fyers_symbols);
     }
 
-    if (auto* aws = qobject_cast<AlpacaWebSocket*>(ws_)) {
-        QStringList symbols;
-        if (!selected_symbol_.isEmpty())
-            symbols.append(selected_symbol_);
-        for (const QString& s : subscribed_symbols()) {
-            if (!symbols.contains(s))
-                symbols.append(s);
-        }
-        aws->set_subscriptions(symbols);
-    }
+    if (auto* aws = qobject_cast<AlpacaWebSocket*>(ws_))
+        aws->set_subscriptions(ws_symbol_universe());
+
+    // The gateway feed sends only the differences, so this is cheap to repeat.
+    if (auto* gf = qobject_cast<GatewayFeed*>(ws_))
+        gf->set_subscriptions(ws_symbol_universe());
 
     // Zerodha KiteTicker — resolve current symbols → numeric instrument tokens.
     if (auto* zws = qobject_cast<ZerodhaWebSocket*>(ws_)) {

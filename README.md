@@ -95,6 +95,7 @@ many TCP clients:
 - **Feed:** Alpaca's real-time stream, through a WebSocket client written for the gateway (RFC 6455 framing, TLS with certificate checks, ping-based liveness, reconnect with backoff, error handling by code), or a synthetic feed for benchmarks. Alpaca allows one stream connection per account, so the gateway holds it and fans it out.
 - **Storage:** minute bars go into PostgreSQL through a connection pool written for the gateway. The pool caps connections (counting ones being opened), never holds its lock across a network round trip, health-checks idle connections and discards broken ones. A writer thread batches upserts, so the feed never waits on the database.
 - **History for the terminal:** a sync keeps the stored minutes complete from Alpaca's REST API: a backfill, then a top-up each minute, paced under the rate limit, with backpressure from the database. A `HISTORY` query, answered on a worker pool through the connection pool, returns any intraday timeframe aggregated in SQL. It also says up to when the data is complete. The terminal's realtime scan warms from it, and falls back to the broker for whatever the gateway cannot vouch for.
+- **Live data for the terminal:** when a gateway streams live Alpaca trades (it says so on the request port), the terminal takes its US-equity trades from the push port and never opens its own Alpaca socket. The gateway subscribes upstream to whatever its clients ask for, within the plan's symbol cap. The terminal's client reconnects with backoff, resubscribes after a reconnect and drops repeated ticks. With no usable gateway it uses its own stream as before.
 
 | | |
 | --- | --- |
@@ -105,8 +106,9 @@ many TCP clients:
 | Scan warm-up, 6 symbols, broker vs gateway | 0.59 s vs 0.21 s; the same bars, symbol for symbol |
 | History for 504 symbols (S&P 500 + SPY), 55 days of 15m bars | 2.1 s from the gateway; the broker path needs 504 requests, at least 2.5 min on the free plan |
 | Backfill, 504 symbols × 60 days of one-minute bars | 5.37 M bars in 252 s, 512 requests, no 429s |
-| Tests | 138: unit, end-to-end over sockets, concurrency, fuzzing, the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links), the pool, bar storage and `HISTORY` against a real PostgreSQL (including a killed server session), the REST sync against a fake server; clean under AddressSanitizer; 9 deliberately planted bugs all caught |
+| Tests | Gateway 149: unit, end-to-end over sockets, concurrency, fuzzing, the feed against a fake Alpaca server (dropped links, bad keys, the connection limit, dead links, following the clients' subscriptions), the pool, bar storage and `HISTORY` against a real PostgreSQL (including a killed server session), the REST sync against a fake server; clean under AddressSanitizer; 14 deliberately planted bugs all caught. Terminal's gateway client 29, against a fake gateway (malformed frames, a link dropped mid-frame, resubscribing after a reconnect); 12 planted bugs all caught |
 | Live check | Alpaca's test stream over TLS 1.3: trades reached the request port, minute bars landed in PostgreSQL about 1.4 s after each minute closed |
+| Terminal on the gateway, market hours | On the push port 29 ms after the account stream started, no second Alpaca connection; fallback to its own stream 35 s after the gateway was killed; scan signals matched the trades. The terminal's own stream fired 6 of 11 times on IEX quote midpoints with no trade behind them |
 
 Architecture, design trade-offs, the full benchmark matrix and its limits:
 **[gateway/README.md](gateway/README.md)**.

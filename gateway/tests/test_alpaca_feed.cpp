@@ -7,6 +7,7 @@
 
 #include "fmdg/alpaca_feed.h"
 #include "fmdg/gateway.h"
+#include "fmdg/protocol.h"
 #include "fmdg/ws_codec.h"
 
 #include <gtest/gtest.h>
@@ -38,6 +39,7 @@ struct Script {
     bool answer_pings = true;
     bool close_after = false; ///< then send a Close frame (1001 "going away")
     bool drop_after = false;  ///< then drop TCP without a Close
+    int drop_after_messages = 0; ///< drop TCP once the client has sent this many text messages
 };
 
 std::string server_frame(std::uint8_t first_byte, std::string_view payload) {
@@ -150,6 +152,7 @@ class FakeAlpaca {
                                       ws::accept_key(key) + "\r\n\r\n";
             co_await asio::async_write(s, asio::buffer(reply), use_awaitable);
             co_await send_text(s, R"([{"T":"success","msg":"connected"}])");
+            int texts = 0;
 
             for (;;) {
                 const ClientFrame f = co_await read_frame(s);
@@ -168,6 +171,7 @@ class FakeAlpaca {
                     std::lock_guard lock(mu_);
                     received_.push_back(f.payload);
                 }
+                ++texts;
                 if (f.payload.rfind(R"({"action":"auth")", 0) == 0) {
                     if (sc.auth_error)
                         co_await send_text(s, std::format(R"([{{"T":"error","code":{},"msg":"scripted"}}])",
@@ -184,6 +188,8 @@ class FakeAlpaca {
                     if (sc.drop_after)
                         co_return;
                 }
+                if (sc.drop_after_messages && texts >= sc.drop_after_messages)
+                    co_return;
             }
         } catch (const std::exception&) {
             // the client hung up
@@ -269,6 +275,36 @@ struct Harness {
     std::vector<std::string> logs;
     std::vector<alpaca::Bar> bars;
 };
+
+/// A push-port client that only sends: subscriptions are all these tests need.
+struct PushClient {
+    explicit PushClient(std::uint16_t port) : socket(io) {
+        socket.connect({asio::ip::make_address("127.0.0.1"), port});
+    }
+    void send(proto::MsgType type, const std::vector<std::string>& symbols) {
+        proto::Bytes b;
+        proto::append_symbols(b, type, symbols);
+        asio::write(socket, asio::buffer(b));
+    }
+    void close() {
+        asio::error_code ignored;
+        socket.shutdown(tcp::socket::shutdown_both, ignored);
+        socket.close(ignored);
+    }
+    asio::io_context io;
+    tcp::socket socket;
+};
+
+std::string sub_msg(std::string_view action, std::string_view list) {
+    return std::format(R"({{"action":"{}","trades":[{}],"bars":[{}],"updatedBars":[{}]}})", action, list, list, list);
+}
+
+bool received(const FakeAlpaca& server, const std::string& message) {
+    for (const auto& m : server.received())
+        if (m == message)
+            return true;
+    return false;
+}
 
 bool wait_for(const std::function<bool()>& done, std::chrono::milliseconds limit = 5s) {
     const auto end = std::chrono::steady_clock::now() + limit;
@@ -399,4 +435,107 @@ TEST(AlpacaFeed, AServerCloseIsEchoedAndFollowedByAReconnect) {
         << h.all_logs();
     EXPECT_GE(server.closes(), 1); // the client answered the Close
     EXPECT_TRUE(h.logged("server closed the stream (1001: going away)"));
+}
+
+// ── following what push clients subscribe to ────────────────────────────────
+
+TEST(UpstreamPlan, FixedSymbolsThenDemandedUpToTheCap) {
+    // AAPL is fixed; clients want MSFT, TSLA, NVDA; cap 3 leaves room for two.
+    const UpstreamPlan p = plan_upstream({"AAPL"}, {}, {"TSLA", "MSFT", "NVDA", "AAPL"}, 3);
+    EXPECT_EQ(p.want, (std::vector<std::string>{"AAPL", "MSFT", "NVDA"})); // newcomers in name order
+    EXPECT_EQ(p.add, p.want);
+    EXPECT_TRUE(p.drop.empty());
+    EXPECT_EQ(p.skipped, (std::vector<std::string>{"TSLA"}));
+}
+
+TEST(UpstreamPlan, SymbolsAlreadyStreamingKeepTheirPlace) {
+    // TSLA streams already; AMD, a newcomer that sorts first, must not push it out.
+    const UpstreamPlan p = plan_upstream({}, {"TSLA"}, {"AMD", "TSLA"}, 1);
+    EXPECT_EQ(p.want, (std::vector<std::string>{"TSLA"}));
+    EXPECT_TRUE(p.add.empty());
+    EXPECT_TRUE(p.drop.empty());
+    EXPECT_EQ(p.skipped, (std::vector<std::string>{"AMD"}));
+}
+
+TEST(UpstreamPlan, DropsWhatNobodyWantsButNeverAFixedSymbol) {
+    const UpstreamPlan p = plan_upstream({"SPY"}, {"SPY", "TSLA", "AMD"}, {"AMD"}, 0);
+    EXPECT_EQ(p.want, (std::vector<std::string>{"AMD", "SPY"}));
+    EXPECT_TRUE(p.add.empty());
+    EXPECT_EQ(p.drop, (std::vector<std::string>{"TSLA"}));
+}
+
+TEST(UpstreamPlan, OnlyStockSymbolsGoUpstreamAndFixedOnesIgnoreTheCap) {
+    const UpstreamPlan p = plan_upstream({"A", "B", "C"}, {}, {"*", "D", "msft"}, 2);
+    EXPECT_EQ(p.want, (std::vector<std::string>{"A", "B", "C"}));
+    EXPECT_EQ(p.skipped, (std::vector<std::string>{"*", "D", "msft"}));
+}
+
+TEST(AlpacaFeed, FollowsWhatPushClientsSubscribeTo) {
+    FakeAlpaca server({Script{}});
+    Harness h(server); // AAPL and MSFT always
+    ASSERT_TRUE(wait_for([&] { return h.feed->stats().state == "streaming"; })) << h.all_logs();
+
+    PushClient c(h.gateway.push_port());
+    c.send(proto::MsgType::Subscribe, {"TSLA", "MSFT", "*"});
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("subscribe", R"("TSLA")")); })) << h.all_logs();
+    EXPECT_EQ(h.feed->stats().upstream, 3u);
+    EXPECT_EQ(h.feed->stats().skipped, 1u);
+    EXPECT_TRUE(h.logged("not streaming [*]"));
+    EXPECT_EQ(h.feed->status_line(), "FEED alpaca stream=test state=streaming on_demand=1 upstream=3 cap=0\n");
+
+    c.send(proto::MsgType::Unsubscribe, {"TSLA"});
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("unsubscribe", R"("TSLA")")); })) << h.all_logs();
+    EXPECT_EQ(h.feed->stats().upstream, 2u);
+
+    // A second client's symbol, then its disconnect: that symbol goes, the fixed MSFT stays.
+    PushClient d(h.gateway.push_port());
+    d.send(proto::MsgType::Subscribe, {"NVDA", "MSFT"});
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("subscribe", R"("NVDA")")); })) << h.all_logs();
+    d.close();
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("unsubscribe", R"("NVDA")")); })) << h.all_logs();
+    c.close();
+    std::this_thread::sleep_for(100ms);
+    for (const auto& m : server.received()) {
+        if (m.rfind(R"({"action":"unsubscribe")", 0) == 0) {
+            EXPECT_EQ(m.find("MSFT"), std::string::npos) << m;
+            EXPECT_EQ(m.find("AAPL"), std::string::npos) << m;
+        }
+        EXPECT_EQ(m.find(R"("*")"), std::string::npos) << m; // never passed upstream
+    }
+}
+
+TEST(AlpacaFeed, AReconnectSubscribesToWhatClientsStillWant) {
+    // The first connection drops right after the client's TSLA subscription went upstream.
+    FakeAlpaca server({Script{.drop_after_messages = 3}, Script{}});
+    Harness h(server);
+    ASSERT_TRUE(wait_for([&] { return h.feed->stats().state == "streaming"; })) << h.all_logs();
+    PushClient c(h.gateway.push_port());
+    c.send(proto::MsgType::Subscribe, {"TSLA"});
+    ASSERT_TRUE(wait_for([&] { return server.connections() == 2 && h.feed->stats().authenticated == 2; }))
+        << h.all_logs();
+    // The new connection asks for everything at once, the client's symbol included.
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("subscribe", R"("AAPL","MSFT","TSLA")")); }))
+        << h.all_logs();
+}
+
+TEST(AlpacaFeed, WithoutOnDemandClientsDoNotChangeTheSubscription) {
+    FakeAlpaca server({Script{}});
+    Harness h(server, [](AlpacaFeedConfig& c) { c.on_demand = false; });
+    ASSERT_TRUE(wait_for([&] { return h.feed->stats().state == "streaming"; })) << h.all_logs();
+    PushClient c(h.gateway.push_port());
+    c.send(proto::MsgType::Subscribe, {"TSLA"});
+    std::this_thread::sleep_for(300ms);
+    EXPECT_EQ(server.received().size(), 2u); // auth and the fixed subscription only
+    EXPECT_EQ(h.feed->status_line(), "FEED alpaca stream=test state=streaming on_demand=0 upstream=2 cap=0\n");
+}
+
+TEST(AlpacaFeed, WithNoFixedSymbolsItWaitsForClients) {
+    FakeAlpaca server({Script{}});
+    Harness h(server, [](AlpacaFeedConfig& c) { c.symbols.clear(); });
+    ASSERT_TRUE(wait_for([&] { return h.feed->stats().authenticated == 1; })) << h.all_logs();
+    EXPECT_EQ(h.feed->stats().state, "streaming");
+    EXPECT_EQ(server.received().size(), 1u); // auth; nothing to subscribe to yet
+    PushClient c(h.gateway.push_port());
+    c.send(proto::MsgType::Subscribe, {"SPY"});
+    ASSERT_TRUE(wait_for([&] { return received(server, sub_msg("subscribe", R"("SPY")")); })) << h.all_logs();
 }

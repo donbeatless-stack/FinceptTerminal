@@ -25,8 +25,16 @@ struct AlpacaFeedConfig {
 
     std::string key;    ///< API key id
     std::string secret; ///< API secret; never logged
-    std::vector<std::string> symbols;
+    std::vector<std::string> symbols; ///< always streamed
     bool bars = true; ///< also subscribe to minute bars and their late corrections
+    /// Also stream what push clients subscribe to: a symbol is added upstream
+    /// when its first client subscribes and dropped when its last one leaves
+    /// (`symbols` stay). This is what lets a client — the terminal — use the
+    /// gateway instead of the account's one stream connection.
+    bool on_demand = true;
+    /// Upstream symbols at most, `symbols` included (the free plan streams 30);
+    /// 0 = no cap. Demanded symbols over it are left out and counted.
+    std::size_t max_symbols = 0;
 
     /// Budget for resolve + TCP connect + TLS + WebSocket upgrade, and again for
     /// the server's "connected" through "authenticated".
@@ -48,6 +56,8 @@ struct AlpacaFeedStats {
     std::string state = "idle"; ///< idle, connecting, authenticating, streaming, backoff, stopped
     std::string last_error;
     std::string subscription;    ///< what the server confirmed, e.g. "trades=[AAPL,MSFT] bars=[…]"
+    std::size_t upstream = 0;    ///< symbols subscribed upstream now
+    std::size_t skipped = 0;     ///< demanded symbols left out (over max_symbols, or not a stock symbol)
     std::uint64_t connects = 0;      ///< WebSocket upgrades completed
     std::uint64_t authenticated = 0; ///< sessions that authenticated
     std::uint64_t disconnects = 0;   ///< sessions that ended after connecting
@@ -58,6 +68,20 @@ struct AlpacaFeedStats {
     std::uint64_t malformed = 0; ///< unparsable messages or items
     std::uint64_t server_errors = 0;
 };
+
+/// Which symbols to stream upstream: all of `fixed`, then what clients
+/// `demanded` — only symbols Alpaca would take (alpaca::streamable_symbol) and
+/// only up to `cap` in total (0 = no cap). Symbols already streaming
+/// (`current`) keep their place ahead of newcomers, so a new request never
+/// pushes out a symbol someone is already watching.
+struct UpstreamPlan {
+    std::vector<std::string> want;    ///< sorted
+    std::vector<std::string> add;     ///< in `want`, not in `current`
+    std::vector<std::string> drop;    ///< in `current`, not in `want`
+    std::vector<std::string> skipped; ///< demanded but left out; sorted
+};
+UpstreamPlan plan_upstream(const std::vector<std::string>& fixed, const std::vector<std::string>& current,
+                           const std::vector<std::string>& demanded, std::size_t cap);
 
 /// Alpaca's real-time stock stream as the gateway's feed: one WebSocket over
 /// TLS, its trades turned into Ticks and handed to Gateway::ingest() — so it is
@@ -84,6 +108,10 @@ class AlpacaFeed {
     void stop();
 
     AlpacaFeedStats stats() const;
+    /// The request port's FEED reply: "FEED alpaca stream=<iex|sip|…> state=<state>
+    /// on_demand=<0|1> upstream=<n> cap=<n>" and a newline. A client uses it to
+    /// tell a gateway that streams live trades from one that only serves history.
+    std::string status_line() const;
 
   private:
     struct Impl;

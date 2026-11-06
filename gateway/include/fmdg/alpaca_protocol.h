@@ -26,6 +26,14 @@ std::string auth_message(std::string_view key, std::string_view secret);
 /// {"action":"subscribe","trades":[…]} plus "bars" and "updatedBars" when
 /// `bars` is set. Symbols are JSON-escaped, never trusted.
 std::string subscribe_message(const std::vector<std::string>& symbols, bool bars);
+/// The same shape with "unsubscribe": drops those channels of `symbols`.
+std::string unsubscribe_message(const std::vector<std::string>& symbols, bool bars);
+
+/// Whether a symbol a push client asked for may be passed on to Alpaca: an
+/// upper-case letter, then up to 15 upper-case letters, digits or dots
+/// ("BRK.B"). Above all it keeps out "*", which would subscribe to every trade
+/// on the feed.
+bool streamable_symbol(std::string_view s);
 
 struct Trade {
     std::string symbol;

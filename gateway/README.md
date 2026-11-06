@@ -10,7 +10,7 @@ server, rebuilt on Asio (IOCP on Windows, epoll on Linux):
 | Port | Connection | Purpose |
 | --- | --- | --- |
 | **8589** | long | Binary protocol: a client subscribes to symbols once, then updates are pushed to it |
-| **8588** | short | Text: one request line in (`PING`, `SNAPSHOT <sym>...`, `STATS`), one reply out, connection closed |
+| **8588** | short | Text: one request line in (`PING`, `SNAPSHOT <sym>...`, `STATS`, `FEED`, `HISTORY ...`), one reply out, connection closed |
 
 ## Contents
 
@@ -19,6 +19,7 @@ server, rebuilt on Asio (IOCP on Windows, epoll on Linux):
 - [Alpaca feed](#alpaca-feed)
 - [Bar storage and the connection pool](#bar-storage-and-the-connection-pool)
 - [History for the terminal](#history-for-the-terminal)
+- [Live data for the terminal](#live-data-for-the-terminal)
 - [Testing](#testing)
 - [Performance](#performance)
 - [Build and run](#build-and-run)
@@ -170,6 +171,16 @@ run side by side, joined with Asio's `&&`, so whichever fails first ends the ses
 cancels the other. Only the writer writes: auth, subscribe, pongs, pings and the
 close reply all go through its queue, so the TLS stream never has two writes in flight.
 
+**Following the clients.** `--alpaca-symbols` are always streamed. On top of them the
+feed streams whatever push clients subscribe to, so a client such as the terminal can use
+the gateway instead of the account's one stream connection
+([Live data for the terminal](#live-data-for-the-terminal)).
+- **Demand:** the distributor reports when a symbol gains its first subscriber or loses its last. The report only posts a note to the feed's thread. There the feed compares what clients want with what it streams, and sends Alpaca an `unsubscribe` for what nobody wants (first, so the cap has room), then a `subscribe` for the rest. `--alpaca-symbols` are never dropped.
+- **Reconnects:** a new session subscribes to everything wanted at that moment, in one message.
+- **Cap:** `--alpaca-max-symbols`, 30 on IEX (the free plan's limit). Symbols already streaming keep their place, so a new request never pushes out one someone is watching. The rest are counted (`skipped`) and logged.
+- **Only stock symbols go upstream:** an upper-case letter, then letters, digits or dots. Above all this keeps out `*`, which would subscribe to every trade on the feed.
+- `--alpaca-no-demand` turns it off: only `--alpaca-symbols` stream.
+
 **Liveness by ping, not by silence.** Outside market hours an IEX symbol can go quiet for
 minutes, so "no message for 15 s means dead" (the terminal's watchdog) reconnects a
 healthy link over and over. The feed sends a WebSocket ping every 15 s and treats two
@@ -307,9 +318,135 @@ The table holds 5.37 million rows in 648 MB. A 15-minute rollup table maintained
 write would turn that into a scan of a fifteenth of the rows; it is the next optimisation
 if warm-up time matters.
 
+## Live data for the terminal
+
+Alpaca allows one stream connection per account, so the terminal and a gateway cannot
+both stream. When a gateway streams live trades, the terminal now takes them from the
+push port and never opens its own Alpaca socket; the gateway subscribes upstream to
+whatever the terminal asks for ([Following the clients](#alpaca-feed)).
+
+```
+Alpaca stream ◀─subscribe / unsubscribe─┐
+      │                                  │  what push clients want, within the symbol cap
+      ▼                                  │
+  AlpacaFeed ──▶ gateway ──push 8589──▶ GatewayFeed ──▶ AccountDataStream ──▶ quotes, watchlists, scans
+                    ▲                   (terminal)
+                    └──── FEED on 8588: is there a live feed to rely on?
+```
+
+**Choosing the source** (`fincept-qt/src/trading/gateway/GatewayFeed.h`). For an Alpaca
+account the terminal first sends `FEED` to the request port.
+- **Use the gateway:** `FEED alpaca stream=iex` (or `sip`) in any state but `stopped`. The gateway holds the account's stream, or is about to. Then the terminal connects to the push port.
+- **Use its own stream, exactly as before:**
+  - nothing listening;
+  - a history-only gateway (`FEED none`, started with `--feed none`, which still listens on 8589);
+  - an older gateway (`ERR unknown command`);
+  - the test or delayed stream;
+  - a stopped feed (a bad key).
+- **How long the fallback takes:** the first attempt's 1 s timeout. On Windows a port nobody listens on is refused only after about 2 s of SYN retries (2.1 s measured on loopback), so the timeout ends it. The timeout is not shorter because the UI thread is busy at start-up, and a false "no gateway" would send the terminal to Alpaca against the gateway's connection.
+- **Once connected:** a dropped link is retried with backoff (0.5 s, doubling to 10 s, 50–100 % jitter). After 30 s without a connection the terminal falls back to its own stream until its account stream restarts. The limit is checked after each failed attempt, so the switch can come one backoff later (35.7 s in the check below).
+- **Liveness:** a heartbeat every 5 s, which the gateway echoes. Three intervals with no byte at all mean a dead link.
+- **Switches:** `FINCEPT_GATEWAY=off` turns the gateway off altogether. `FINCEPT_GATEWAY_FEED=off` keeps history from the gateway but the live feed on the broker. `FINCEPT_GATEWAY_FEED=host:port` points at another push port.
+
+**Subscriptions** are a set. A change goes out as the `Subscribe`/`Unsubscribe` difference,
+and a new connection subscribes the whole set again. Symbols the gateway would reject
+(it closes the connection on one) never go out.
+
+**What the terminal gets: trades.** Each one carries a last price and an exchange time.
+- **Duplicates dropped:** a trade seen twice (a snapshot racing a live tick: the sequence is not newer) is dropped. So is a snapshot no newer than the quote already shown, which is what a reconnect sends.
+- **No quotes on this path:** the gateway carries no quotes, so in gateway mode bid/ask are cleared rather than left stale. The paper order matcher then prices on the last trade, as it does whenever bid/ask are missing.
+- **No bar fields:** the one-minute bar fields of a quote are not updated either. The realtime scan builds its own bars from the trades.
+
+**Checked in the app, after hours** (2026-11-05, release build, Alpaca paper account, the
+realtime scan from [History for the terminal](#history-for-the-terminal): `Price Above EMA 20`, 15m, six symbols):
+- **Onto the gateway:** 16 ms from the scan starting the account stream to the terminal being on the push port, the FEED question included.
+- **Upstream:** in the same second the gateway subscribed the six symbols on Alpaca, which confirmed them; `FEED` then reported `upstream=6`.
+- **Warm-up:** from `HISTORY`, 6 of 6 symbols in 177 ms.
+- **No second connection:** the terminal's log has no `AlpacaWS` line; it never opened its own stream.
+- **Gateway killed:** the terminal saw the drop within 0.4 s and retried. After 35.7 s without a connection it switched to its own stream. That stream checked Alpaca's clock, found the market closed, and waited for the open, as before.
+
+**Checked in the app, market hours** (2026-11-06, 15:42–16:00 ET, same scan). There were
+three runs, and each warmed from the gateway's `HISTORY`. Every `FIRE` line was then
+checked against the gateway's own one-minute IEX bars with
+[`tools/live_check/scan_ab_check.py`](../tools/live_check/scan_ab_check.py).
+
+How the check works:
+- The scan compares the last price with an EMA(20) of the closed 15m bars plus the
+  previous and the last tick.
+- So the EMA it prints gives away the price it used.
+- That price must lie in the range the symbol traded in over the two minutes before.
+
+| Run | Live data | Start | Fires | Backed by a trade price |
+| --- | --- | --- | --- | --- |
+| 1 | gateway | app just launched | TSLA, AMD | 2 of 2 |
+| 2 | own stream (after the fallback below) | scan restarted | TSLA, AMD, NVDA | 2 of 3 |
+| 3 | own stream (`FEED none`) | app just launched | TSLA, AMD, NVDA, AMD, TSLA, SPY, AAPL, MSFT | 4 of 8 |
+
+- **Gateway run:**
+  - **Startup:** the terminal was on the push port 29 ms after its account stream started. The gateway subscribed the six symbols upstream in the same second.
+  - **Warm-up:** 6 of 6 from `HISTORY` in 173 ms. In every run, each symbol's bar count and last-500-closes sum matched the gateway's bars.
+  - **No second connection:** no `AlpacaWS` line in the log.
+  - **Throughput over 4 minutes:** 2,745 trades came in and 1,817 were delivered (928 conflated).
+  - **Latency inside the gateway:** p50 37 µs, p99 74 µs, p99.9 221 µs. No protocol errors.
+- **Fallback with the market open:**
+  - The gateway was killed at 15:46:21. The terminal saw the drop 0.5 s later.
+  - It was on its own stream after 35.0 s.
+  - Connecting, authenticating and subscribing the six symbols took 0.36 s.
+- **Same signals where the trades say so:** in every run, the symbols whose trades were above the EMA (TSLA, AMD) fired, and no such symbol was missed.
+- **Fires with no trade behind them, own stream only:**
+  - Six of the own stream's 11 fires had no trade price behind them: NVDA at 15:50 and 15:55, TSLA at 15:59, and SPY, AAPL and MSFT at 16:00:01, just after the close.
+  - For example, NVDA fired above 187.69 while it traded at 186.15–186.83.
+  - The reason: that stream's last price includes IEX quote midpoints, `(bid+ask)/2`, and IEX's book can be wide, most of all at the close.
+  - The gateway path passes trades only, so this cannot happen there.
+- **One startup race, not caused by the gateway:**
+  - In run 1 the EMA values fit only if the price went in three times, not twice: once more as an extra closed bar.
+  - The cause is in the terminal. When the scan opens its quote feeds before the stream is up, `AccountDataStream::set_active_feed` fetches REST quotes. `AlpacaBroker::get_quotes` stamps them in seconds, and the scan reads them as milliseconds.
+  - That quote opens a bar dated January 1970, which the first live tick then closes into the EMA.
+  - Whether this happens is a race: the REST reply must arrive before the first tick. On the own stream, IEX quotes arrive within 0.1 s of connecting, so they win. On the gateway path, the first trade waits for the upstream subscribe, so the REST reply wins.
+  - The extra bar sits at about the live price, so it moved the EMA by cents.
+
+**Tests** (`fincept-qt/tests/tst_gateway_feed.cpp`, 29 cases). The codec is tested as pure
+functions: byte layout against the gateway's, frames split at every byte, bad headers,
+strict bodies, the FEED verdicts, the environment switches, the quote merge. The client
+runs against a fake gateway on loopback, a request port answering FEED and a push port
+that acks and sends scripted frames:
+- **Falling back on the first attempt:** nothing listening, a history-only gateway, an older one, the test stream, a stopped feed, a silent request port. Each is asked once, never retried.
+- **Normal operation:** snapshot then live trades; subscription differences; a trade for a symbol just unsubscribed; repeats, older sequences, unknown ids and zero prices dropped.
+- **Broken links:**
+  - five kinds of malformed frame, each dropping the link, after which it reconnects;
+  - a link dropped in the middle of a frame, with a symbol added while down: the reconnect resubscribes the whole new set, and a restarted gateway's sequence 1 counts as new;
+  - heartbeats keeping a quiet link up, and a silent one dropped;
+  - an Error frame;
+  - giving up after the outage limit;
+  - `close()` being final.
+
+15 back-to-back runs were clean. **Mutation testing:** twelve bugs planted one at a time, all caught:
+
+| # | Bug planted | Caught by |
+| --- | --- | --- |
+| T1 | No resubscribe on a new connection | 5 tests |
+| T2 | A repeated sequence number passes | `repeats_unknown_ids_and_bad_prices_are_dropped` |
+| T3 | Sequence numbers kept across connections | `a_link_dropped_mid_frame_resubscribes_everything_on_reconnect` |
+| T4 | Unknown frame types accepted | `bad_headers_are_reported_not_skipped`, the malformed-frame test |
+| T5 | The first failure retried instead of falling back | `nothing_listening_falls_back_at_once`, `a_gateway_without_a_live_feed_is_not_used` |
+| T6 | No `Unsubscribe` difference sent | `subscription_changes_go_out_as_differences` |
+| T7 | No liveness check | `heartbeats_go_out_and_a_silent_link_is_dropped` |
+| T8 | An old snapshot overwrites the shown quote | `merging_a_trade_into_the_shown_quote` |
+| T9 | Trades for unsubscribed symbols passed on | `subscription_changes_go_out_as_differences` |
+| T10 | A bad header does not drop the link | the malformed-frame test |
+| T11 | Never gives up after a drop | `gives_up_after_a_long_outage` |
+| T12 | Any Alpaca stream accepted (test, delayed) | `feed_status_decides_whether_to_use_the_gateway`, `a_gateway_without_a_live_feed_is_not_used` |
+
+T3 went uncaught at first: after the reconnect, the test sent sequence 1 for a symbol
+with no earlier sequence; it now sends one for the symbol that reached 100. T5 needs
+more than waiting for the verdict, which a retrying client also delivers (later), so the
+tests check that the fallback is quick and that FEED is asked once. A timing race in the
+reconnect test also turned up: a symbol added after the disconnect could arrive after
+the reconnect. It is now added inside the disconnect handler.
+
 ## Testing
 
-138 GoogleTest cases (`tests/`):
+149 GoogleTest cases (`tests/`):
 - Unit tests for every component.
 - End-to-end tests over real loopback sockets: subscribe/snapshot/live ordering, unsubscribe, heartbeats, every error path, the symbol and client limits, shutdown, port conflicts, fan-out, the request port.
 - Concurrency tests: two-thread ring and queue stress, concurrent interning, sleep/wake transitions, re-subscribe racing publish, and slow-client isolation with a conservation check (`deliveries == ticks_out + conflated`).
@@ -356,6 +493,13 @@ if warm-up time matters.
   - `complete_to` waiting for the store
   - a dropped keep-alive connection
   - backpressure
+- Following the clients, with a real push client and the fake Alpaca server:
+  - a client's symbol goes upstream, and is dropped when the client unsubscribes or disconnects; a fixed symbol never is
+  - `*` never goes upstream
+  - a reconnect subscribes to everything clients still want, in one message
+  - with on-demand off, clients change nothing; with no fixed symbols, nothing is subscribed until a client asks
+  - `plan_upstream`: the cap, and symbols already streaming keeping their place
+  - the distributor reports demand only on a first or last subscriber, a disconnect included
 
 They run clean under Release, Debug (MSVC checked iterators) and AddressSanitizer. The
 original 58 survived 30 back-to-back repetitions; the 32 feed tests, 20.
@@ -387,6 +531,16 @@ mechanism was broken on purpose and the suite re-run:
 M3 and M5 are nanosecond-wide races, so their tests are probabilistic. Repeating the
 suite catches them; a single run might not. M3 and M4 had dedicated tests added after
 the first mutation run showed that the general tests missed them.
+
+**Mutation testing, following the clients.** Five bugs, each caught:
+
+| # | Bug planted | Caught by |
+| --- | --- | --- |
+| G1 | A disconnect does not report the demand it ends | `DemandChangesOnlyWithAFirstOrLastSubscriber`, `FollowsWhatPushClientsSubscribeTo` |
+| G2 | Any client symbol goes upstream, `*` included | `FollowsWhatPushClientsSubscribeTo` |
+| G3 | A reconnect subscribes to the fixed symbols only | `AReconnectSubscribesToWhatClientsStillWant` |
+| G4 | Nothing is ever unsubscribed upstream | `FollowsWhatPushClientsSubscribeTo` |
+| G5 | A first subscriber does not report new demand | 4 tests |
 
 ## Performance
 
@@ -469,6 +623,7 @@ Asio, GoogleTest, OpenSSL and simdjson come from vcpkg through `vcpkg.json`.
 
 ```bat
 build\win\fmdg.exe --feed alpaca --alpaca-symbols AAPL,MSFT,SPY  :: gateway + Alpaca's IEX stream
+build\win\fmdg.exe --feed alpaca                                  :: only what push clients subscribe to
 build\win\fmdg.exe --feed alpaca --alpaca-stream test            :: FAKEPACA, around the clock
 build\win\fmdg.exe --feed-symbols 100 --feed-rate 10000        :: gateway + synthetic feed
 build\win\fmdg_loadgen.exe --port 8589 --clients 50            :: measure it from another terminal
@@ -490,23 +645,27 @@ build\win\fmdg.exe --feed alpaca --alpaca-symbols AAPL,MSFT ^
 build\win\fmdg_pg_bench.exe --conninfo "..." --threads 8   :: pool vs connect-per-query
 ```
 
-To serve history to the terminal, add a sync (it needs `--pg` and the same credentials;
-`--feed` is optional, since the terminal keeps its own stream connection). `@FILE` lists
-one symbol per line:
+To serve history to the terminal, add a sync (it needs `--pg` and the same credentials).
+With `--feed alpaca` the gateway also holds the live stream and the terminal takes its
+trades from the push port; with `--feed none` the terminal keeps its own stream. `@FILE`
+lists one symbol per line:
 
 ```bat
-build\win\fmdg.exe --feed none --pg "..." --sync-symbols @sp500.txt --sync-days 60
+build\win\fmdg.exe --feed alpaca --pg "..." --sync-symbols @sp500.txt --sync-days 60  :: history + live
+build\win\fmdg.exe --feed none --pg "..." --sync-symbols @sp500.txt --sync-days 60    :: history only
 ```
 
-The terminal asks `127.0.0.1:8588` by default; set `FINCEPT_GATEWAY=host:port` to point it
-elsewhere, or `off` to skip the gateway.
+The terminal asks `127.0.0.1:8588` (history, `FEED`) and `127.0.0.1:8589` (live trades)
+by default. `FINCEPT_GATEWAY=host:port` points it elsewhere, `off` skips the gateway;
+`FINCEPT_GATEWAY_FEED=host:port` or `off` does the same for the live feed alone.
 
-On the request port, any line-based client works, for example `PING`, `SNAPSHOT SYM0000 SYM0001` or `STATS`.
+On the request port, any line-based client works, for example `PING`, `FEED`, `SNAPSHOT SYM0000 SYM0001` or `STATS`.
 
 ## Limitations and next steps
 
 - **Linux:** a `linux` preset is included, but only the Windows build has been compiled and tested so far. CI on both is the next step.
-- **Real feed:** Alpaca trades flow in and minute bars are stored; quotes are not ingested (a `Tick` carries one price). The terminal takes history from the gateway but still keeps its own live stream: the next step is the terminal subscribing to the gateway's push port, so the gateway holds the account's one stream connection.
+- **Real feed:** Alpaca trades flow in and minute bars are stored; quotes are not ingested (a `Tick` carries one price). So a terminal on the gateway shows last trades without bid/ask; a quote message type on the push port is the next step there.
+- **One stream per account, held by whoever came first:** a terminal that fell back to its own stream (the gateway was gone for 30 s) keeps it until its account stream restarts, and a gateway started meanwhile waits on 406 until then.
 - **History:** daily bars are not served (they need the exchange calendar, not UTC midnights), and raw prices are stored, so a split inside the window would differ from the broker's split-adjusted bars. The broker path covers both.
 - **Pool fairness:** waiters wake through a condition variable, which is not FIFO; under sustained overload one waiter can lose to newer arrivals until its timeout. A ticket queue would fix that if it ever shows up in practice.
 - **Per-client queue:** it uses a mutex and `std::unordered_map`. Dense symbol ids would allow a flat array, but that costs memory per client in proportion to the largest id subscribed.

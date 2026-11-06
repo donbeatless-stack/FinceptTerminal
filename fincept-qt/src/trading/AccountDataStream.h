@@ -23,6 +23,10 @@
 
 namespace fincept::trading {
 
+namespace gateway_feed {
+struct Trade;
+}
+
 class AccountDataStream : public QObject {
     Q_OBJECT
   public:
@@ -171,6 +175,14 @@ class AccountDataStream : public QObject {
     bool ws_active() const;
     bool ws_connected() const; // connected+authenticated, regardless of tick count
     void ws_resubscribe();
+    // Alpaca: the market-data gateway's push port when a gateway streams live
+    // Alpaca trades (it holds the account's one stream connection), else the
+    // account's own AlpacaWebSocket. False when the gateway is turned off.
+    bool ws_init_alpaca_gateway();
+    void ws_init_alpaca_direct();
+    void on_gateway_trade(const gateway_feed::Trade& trade);
+    // selected_symbol_ first, then every consumer's symbols, deduped.
+    QStringList ws_symbol_universe() const;
     // Wire the common BrokerWebSocketBase signals (tick/depth/connect/error) into
     // this stream. Used by all Phase 2 adapters that share BrokerWebSocketBase.
     void wire_base_ws(class BrokerWebSocketBase* ws);
@@ -187,6 +199,9 @@ class AccountDataStream : public QObject {
     // so the failure is surfaced to the user exactly once, not on every retry.
     // Reset when the socket reconnects.
     bool ws_permission_denied_ = false;
+    // The gateway feed gave up (none running, or gone for good): this stream
+    // uses the broker's own socket until it is restarted.
+    bool gateway_feed_failed_ = false;
 
     // Polling timers
     QTimer* quote_timer_ = nullptr;

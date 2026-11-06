@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace fmdg {
 
@@ -97,6 +98,13 @@ class Gateway {
     void ingest(Tick t);
 
     SymbolTable& symbols();
+    /// Called whenever the set of symbols some push client is subscribed to
+    /// changes, so an upstream feed can follow what clients ask for. Runs on an
+    /// I/O thread and must only take a note (post to its own thread); nullptr
+    /// removes it, and after that returns it is not running. One listener.
+    void set_demand_listener(std::function<void()> listener);
+    /// The symbols at least one push client is subscribed to now.
+    std::vector<std::string> demanded_symbols() const;
     std::uint16_t push_port() const;    ///< the bound port (resolves 0)
     std::uint16_t request_port() const; ///< the bound port (resolves 0)
     GatewayStats stats() const;
