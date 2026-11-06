@@ -10,7 +10,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](https://isocpp.org/)
 [![Qt6](https://img.shields.io/badge/Qt-6-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-111a24)](#build-from-source)
+[![Platforms](https://img.shields.io/badge/platforms-Windows%2C%20macOS%2C%20Linux-111a24)](#build-from-source)
 
 [Overview](#overview) · [Screenshots](#screenshots) · [Features](#features) · [Engineering](#engineering-highlights) · [Build](#build-from-source) · [License](#license)
 
