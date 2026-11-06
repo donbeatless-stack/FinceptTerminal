@@ -19,7 +19,6 @@ docs/
 *.md
 package.json
 package-lock.json
-funding.json
 updates.json
 fincept_icon.ico
 setup.sh

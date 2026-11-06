@@ -4,8 +4,6 @@ This file is the **contribution policy** — the rules every PR must follow. Git
 
 Looking for **how to build, where code lives, code conventions?** → [`docs/CONTRIBUTING.md`](../docs/CONTRIBUTING.md).
 
-Maintainers' operational runbook → [`.github/MAINTAINERS.md`](./MAINTAINERS.md).
-
 ---
 
 ## TL;DR
@@ -67,7 +65,7 @@ The PR description must explain the user-visible effect and the reasoning. "Smal
 - `README.md` / `CONTRIBUTING.md` rewrites that don't fix an actual error.
 - PRs that add the author to a contributors / credits file, or add a CODEOWNERS entry for themselves.
 - PRs that delete "dead code" without an analysis proving it's unreachable.
-- PRs that touch `CLAUDE.md`, this file, `MAINTAINERS.md`, or any `docs/*` file without an explicit maintainer ask.
+- PRs that touch `CLAUDE.md`, this file, or any `docs/*` file without an explicit maintainer ask.
 - PRs whose body is only "fix bug" / "small improvements" / "update code".
 
 ---
