@@ -419,7 +419,7 @@ ApiResponse<QVector<BrokerQuote>> AlpacaBroker::get_quotes(const BrokerCredentia
             q.change = q.ltp - prev_close;
             q.change_pct = (q.change / prev_close) * 100.0;
         }
-        q.timestamp = ts;
+        q.timestamp = ts * 1000; // BrokerQuote timestamps are ms; `ts` (the response's) is seconds
         quotes.append(q);
     }
 
@@ -594,7 +594,7 @@ static BrokerQuote parse_quote_ba(const QJsonObject& q, const QString& symbol) {
     bq.ask = q.value("ap").toDouble();
     bq.bid_size = q.value("bs").toDouble();
     bq.ask_size = q.value("as").toDouble();
-    bq.timestamp = QDateTime::fromString(q.value("t").toString(), Qt::ISODateWithMs).toSecsSinceEpoch();
+    bq.timestamp = QDateTime::fromString(q.value("t").toString(), Qt::ISODateWithMs).toMSecsSinceEpoch();
     if (bq.bid > 0 && bq.ask > 0)
         bq.ltp = (bq.bid + bq.ask) / 2.0;
     return bq;
@@ -902,7 +902,7 @@ ApiResponse<BrokerQuote> AlpacaBroker::get_snapshot(const BrokerCredentials& cre
         q.change = q.ltp - prev_close;
         q.change_pct = (q.change / prev_close) * 100.0;
     }
-    q.timestamp = ts;
+    q.timestamp = ts * 1000; // ms, like every BrokerQuote
     return {true, q, "", ts};
 }
 
@@ -1211,7 +1211,7 @@ ApiResponse<QVector<BrokerQuote>> AlpacaBroker::get_multi_quotes(const BrokerCre
                 q.change = q.ltp - prev_close;
                 q.change_pct = (q.change / prev_close) * 100.0;
             }
-            q.timestamp = ts;
+            q.timestamp = ts * 1000; // ms, like every BrokerQuote
             all_quotes.append(q);
         }
     }

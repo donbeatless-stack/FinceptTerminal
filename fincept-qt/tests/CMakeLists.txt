@@ -190,6 +190,12 @@ fincept_add_test(tst_gateway_feed
     "${PROJECT_SOURCE_DIR}/src/trading/gateway/GatewayFeedProtocol.cpp")
 target_link_libraries(tst_gateway_feed PRIVATE Qt6::Network)
 
+# tst_candle_aggregator — ticks into bars after a warm-up; a first tick from before the
+# warm history ends (a quote stamped in seconds, a late print) must not open a bar.
+fincept_add_test(tst_candle_aggregator
+    tst_candle_aggregator.cpp
+    "${PROJECT_SOURCE_DIR}/src/algo_engine/CandleAggregator.cpp")
+
 # src/python/PythonProcessPool.{h,cpp} with scripts/fincept_worker.py, against a real
 # interpreter (FINCEPT_TEST_PYTHON, else python3/python on PATH; skipped if none):
 # fresh-process semantics per call, timeouts, crashes, recycling, Unavailable.
@@ -266,5 +272,5 @@ set_target_properties(bench_realtime_scan PROPERTIES UNITY_BUILD OFF FOLDER "tes
 message(STATUS "Fincept tests: tst_broker_modify_fields, tst_result, tst_order_validator, tst_indicator_engine, "
                "tst_streaming_indicators, tst_series_operand_source, tst_condition_evaluator, "
                "tst_live_operand_source, tst_indicator_warmup, tst_alpaca_bars_paging, tst_gateway_history, "
-               "tst_gateway_feed, tst_python_process_pool "
+               "tst_gateway_feed, tst_candle_aggregator, tst_python_process_pool "
                "(+ bench_streaming_indicators, bench_backtest_eval, bench_realtime_scan, bench_python_pool)")

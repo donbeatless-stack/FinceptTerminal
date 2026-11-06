@@ -16,6 +16,11 @@ void CandleAggregator::on_tick(double price, double volume, int64_t timestamp_ms
     QMutexLocker lock(&mutex_);
 
     if (!has_first_tick_) {
+        // The first tick must not open a bar that ends before the warm history does
+        // (a stale REST quote, a late print, a timestamp in seconds read as ms): the
+        // next live tick would close it into the series as an extra bar.
+        if (!buffer_.isEmpty() && timestamp_ms < buffer_.constLast().open_time + period_ms_)
+            return;
         has_first_tick_ = true;
         int64_t candle_start = align_to_period(timestamp_ms);
         current_.open_time = candle_start;

@@ -404,6 +404,11 @@ How the check works:
   - That quote opens a bar dated January 1970, which the first live tick then closes into the EMA.
   - Whether this happens is a race: the REST reply must arrive before the first tick. On the own stream, IEX quotes arrive within 0.1 s of connecting, so they win. On the gateway path, the first trade waits for the upstream subscribe, so the REST reply wins.
   - The extra bar sits at about the live price, so it moved the EMA by cents.
+  - **Fixed the same day**, in two places:
+    - `AlpacaBroker` stamps its REST quotes in milliseconds, like every other `BrokerQuote`.
+    - `CandleAggregator` no longer lets a first tick open a bar that ends before the warm history does. That also covers a late print, and other brokers' REST quotes, which are still stamped in seconds.
+    - Tests: `fincept-qt/tests/tst_candle_aggregator.cpp`, 4 cases; 4 planted bugs, all caught.
+    - Not yet re-checked during market hours.
 
 **Tests** (`fincept-qt/tests/tst_gateway_feed.cpp`, 29 cases). The codec is tested as pure
 functions: byte layout against the gateway's, frames split at every byte, bad headers,
